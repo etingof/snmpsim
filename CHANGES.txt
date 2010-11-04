@@ -2,6 +2,7 @@
 -----
 
 - Use OS-specific file extension separator for better portability.
+- Support .db extensions voluntarily added by gdbm on OS X.
 
 0.0.8
 -----
