@@ -4,6 +4,7 @@
 - Use OS-specific file extension separator for better portability.
 - Support .db extensions voluntarily added by gdbm on OS X.
 - Fix to null-typed value read from .dump device file.
+- Legacy SNMPv1/v2c community string generation policy dropped.
 
 0.0.8
 -----
