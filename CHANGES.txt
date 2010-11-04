@@ -1,4 +1,9 @@
-Oct 27 2010
------------
+0.0.9
+-----
 
-Initial public release.
+- Use OS-specific file extension separator for better portability.
+
+0.0.8
+-----
+
+- Initial public release.
