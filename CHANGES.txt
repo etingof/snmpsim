@@ -1,6 +1,8 @@
 0.0.9
 -----
 
+- Simulator now builds a table of loaded device files in a
+  dedicated 'index' context.
 - Use OS-specific file extension separator for better portability.
 - Support .db extensions voluntarily added by gdbm on OS X.
 - Fix to null-typed value read from .dump device file.
