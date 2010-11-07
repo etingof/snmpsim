@@ -161,6 +161,26 @@ $ snmpwalk -On -n 1a80634d11a76ee4e29b46bc8085d871 -u simulator -A auctoritas -X
 Notice "-n <snmp-context>" parameter passed to snmpwalk to address particular
 simulated device at Simulator.
 
+When simulating a large pool of devices or if your Simulator runs on a
+distant machine, it is convenient to have a directory of all simulated
+devices and their community/context names. Simulator maintains this
+information within its internal, dedicated SNMP context 'index':
+
+$ snmpwalk -On -v2c -c index localhost:1161 .1.3.6
+.1.3.6.1.4.1.20408.999.1.1.1 = STRING: "./devices/linux/slackware/1.3.6.1.2.1.1.1/127.0.0.1@public.snmprec"
+.1.3.6.1.4.1.20408.999.1.2.1 = STRING: "devices/linux/slackware/1.3.6.1.2.1.1.1/127.0.0.1@public"
+.1.3.6.1.4.1.20408.999.1.3.1 = STRING: "9535d96c66759362b3521f4e273fc749"
+
+or
+
+$ snmpwalk -O n -l authPriv -u simulator -A auctoritas -X privatus -n index localhost:1161 .1.3.6
+.1.3.6.1.4.1.20408.999.1.1.1 = STRING: "./devices/linux/slackware/1.3.6.1.2.1.1.1/127.0.0.1@public.snmprec"
+.1.3.6.1.4.1.20408.999.1.2.1 = STRING: "devices/linux/slackware/1.3.6.1.2.1.1.1/127.0.0.1@public"
+.1.3.6.1.4.1.20408.999.1.3.1 = STRING: "9535d96c66759362b3521f4e273fc749"
+
+Where first column holds device file path, second - community string, and 
+third - SNMPv3 context name.
+
 Performance improvement
 -----------------------
 
