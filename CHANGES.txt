@@ -9,6 +9,7 @@
 - Legacy SNMPv1/v2c community string generation policy dropped.
 - SNMPv3 VACM initialization dropped altogether, as the specialized
   SMI backend used by Simulator does not implement access control.
+- Fix to support zero-length dump files.
 
 0.0.8
 -----
