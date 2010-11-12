@@ -12,6 +12,7 @@
 - Fix to support zero-length device files.
 - Ignore value syntax errors in device files occured when responding.
 - Optionally validate device file data while indexing.
+- Allow forced device files re-indexing.
 
 0.0.8
 -----
