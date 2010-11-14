@@ -13,7 +13,6 @@
 - Ignore value syntax errors in device files occured when responding.
 - Optionally validate device file data while indexing.
 - Allow forced device files re-indexing.
-- Disable message authentication & encryption by default for SNMPv3.
 
 0.0.8
 -----
