@@ -21,7 +21,7 @@ except ImportError:
 
 options = {
     'name': "snmpsim",
-    'version': "0.0.9",
+    'version': "0.0.10",
     'description': "SNMP devices simulator",
     'author': "Ilya Etingof",
     'author_email': "ilya@glas.net ",

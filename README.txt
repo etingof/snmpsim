@@ -98,7 +98,7 @@ Simulator.
 Getting help:
 
 $ snmpsimd.py -h
-Usage: snmpsimd.py [--help] [--debug=<category>] [--device-dir=<dir>] [--agent-address=<X.X.X.X>] [--agent-port=<port>] [--v2c-arch ] [--v3-user=<username>] [--v3-auth-key=<key>] [--v3-priv-key=<key>] [--v3-priv-proto=<DES|AES>]
+Usage: snmpsimd.py [--help] [--debug=<category>] [--device-dir=<dir>] [--force-index-rebuild] [--validate-device-data] [--agent-address=<X.X.X.X>] [--agent-port=<port>] [--v2c-arch ] [--v3-user=<username>] [--v3-auth-key=<key>] [--v3-priv-key=<key>] [--v3-priv-proto=<DES|AES>]
 
 Running Simulator:
 
