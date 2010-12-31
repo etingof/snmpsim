@@ -12,14 +12,24 @@ It's very easy to install it, just type (as root on Linux):
 
 try:
     from setuptools import setup
+    params = {
+        'install_requires': [ 'pysnmp' ],
+        'zip_safe': True
+        }
 except ImportError:
     for arg in sys.argv:
         if "egg" in arg:
             howto_install_setuptools()
             sys.exit(1)
     from distutils.core import setup
+    if sys.version_info > (2, 2):
+        params = {
+            'requires': [ 'pysnmp' ]
+            }
+    else:
+        params = {}
 
-options = {
+params.update( {
     'name': "snmpsim",
     'version': "0.0.10",
     'description': "SNMP devices simulator",
@@ -28,12 +38,12 @@ options = {
     'url': "http://sourceforge.net/projects/snmpsim/",
     'scripts': [ 'snmpsimd.py', 'snmprec.py' ],
     'license': "BSD"
-  }
+  } )
 
 if "py2exe" in sys.argv:
     import py2exe
     # fix executables
-    options['console'] = options['scripts']
-    del options['scripts']
+    params['console'] = params['scripts']
+    del params['scripts']
 
-apply(setup, (), options)
+apply(setup, (), params)
