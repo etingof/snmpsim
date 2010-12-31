@@ -98,7 +98,7 @@ Simulator.
 Getting help:
 
 $ snmpsimd.py -h
-Usage: snmpsimd.py [--help] [--debug=<category>] [--device-dir=<dir>] [--force-index-rebuild] [--validate-device-data] [--agent-address=<X.X.X.X>] [--agent-port=<port>] [--v2c-arch ] [--v3-user=<username>] [--v3-auth-key=<key>] [--v3-priv-key=<key>] [--v3-priv-proto=<DES|AES>]
+Usage: snmpsimd.py [--help] [--debug=<category>] [--device-dir=<dir>] [--force-index-rebuild] [--validate-device-data] [--agent-address=<X.X.X.X>] [--agent-port=<port>] [--v2c-arch ] [--v3-only] [--v3-user=<username>] [--v3-auth-key=<key>] [--v3-priv-key=<key>] [--v3-priv-proto=<DES|AES>]
 
 Running Simulator:
 
@@ -190,12 +190,23 @@ lower-level SNMPv2c architecture at the expense of not supporting v3
 operations.
 
 Use the --v2c-arch command line parameter to switch Simulator into SNMPv2c
-operation mode.
+(v1/v2c) operation mode.
+
+When Simulator runs over thousands of device files, startup may take time
+(tens of seconds). Most of it goes into configuring SNMPv1/v2c credentials
+into SNMPv3 engine so startup time can be dramatically reduced by either
+using --v2c-arch mode (as mentioned above) or by turning off SNMPv1/v2c
+configuration at SNMPv3 engine with --v3-only command-line flag.
 
 Installation
 ------------
 
-First, download Simulator from SourceForge download servers.
+The easiest way to download and install Simulator and its dependencies
+is to use easy install:
+
+$ easy_install snmpsim
+
+Alternatively, you can download Simulator from SourceForge download servers:
 
 https://sourceforge.net/projects/snmpsim
 

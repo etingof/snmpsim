@@ -1,6 +1,9 @@
 0.0.10
 ------
 
+- --v3-only command-line flag added to save on large number of
+  [expensive] addV1System() calls.
+
 0.0.9
 -----
 
