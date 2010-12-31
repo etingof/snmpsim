@@ -3,6 +3,7 @@
 
 - --v3-only command-line flag added to save on large number of
   [expensive] addV1System() calls.
+- setuptools dependencies improved
 
 0.0.9
 -----
