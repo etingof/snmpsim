@@ -31,7 +31,7 @@ except ImportError:
 
 params.update( {
     'name': "snmpsim",
-    'version': "0.0.10",
+    'version': "0.0.11",
     'description': "SNMP devices simulator",
     'author': "Ilya Etingof",
     'author_email': "ilya@glas.net ",
