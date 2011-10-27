@@ -1,3 +1,15 @@
+0.0.12
+------
+
+- Major overhawl for Python 2.4 -- 3.2 compatibility:
+  + drop explicit long integer type use
+  + map()/filter() replaced with list comprehension
+  + apply() replaced with */**args
+  + dictionary operations made 2K/3K compatible
+  + division operator made 2K/3K compatible
+  + exception syntax made 2K/3K compatible
+  + tuple function arguments resolved to scalars to become py3k compatible
+
 0.0.11
 ------
 
