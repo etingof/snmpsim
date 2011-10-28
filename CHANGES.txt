@@ -1,5 +1,5 @@
-0.0.12
-------
+0.1.1
+-----
 
 - Major overhawl for Python 2.4 -- 3.2 compatibility:
   + drop explicit long integer type use
