@@ -1,7 +1,9 @@
 0.1.2
 -----
 
-- Fix to values tags matching at snmpsimd.py.
+- Some more py2k refactoring.
+- Fix to values tags matching at snmpsimd.py (simulator did not work otherwise).
+- Fixes to sys.exc_info invocation.
 
 0.1.1
 -----
