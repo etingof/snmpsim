@@ -72,6 +72,76 @@ There are no special requirements for device file name and location. Note,
 that Simulator treats device file path as an SNMPv1/v2c community string
 and its MD5 hash constitutes SNMPv3 context name.
 
+Another way to produce device files is to run the mib2dev.py tool against
+virtually any MIB file. With that method you do not have to have a donor
+device and the values, that are normally returned by a donor device, will
+instead be chosen randomly.
+
+Keep in mind that you may run into either of two issues with these randomly
+chosen values:
+
+1. Some MIB data suggest certain correlation between formally unrelated
+   pieces of information. Such relationships may be described informally,
+   e.g. in natural language in the Description field. The automated
+   values generation procedure has no chance to assure proper correlations,
+   in that case the overall snapshot may appear inconsistent.
+
+2. Some data types specified in the MIB may impose certain restrictions on
+   the type instance values. For example an integer-typed Managed Object
+   may be allowed to be either 0 or 12. If a guessed value turns out to be 2,
+   it will be incompatible with this type. While it is possible to introspect
+   type objects and generate a compliant value, the mib2dev.py tool does
+   not do that [yet]. A non-compliant value will result an exception on
+   MIB node instantiation. In that case the mib2dev.py script will revert
+   to an interactive mode and ask you for a compliant value.
+
+On the bright side, the mib2dev.py tool will respect Managed Object type
+(e.g type associated with the OIDs), and produce valid indices for the MIB
+tables.
+
+Device file generation from a MIB file would look like this:
+
+$ mib2dev.py 
+Usage: mib2dev.py [--help] [--debug=<category>] [--quiet] [--pysnmp-mib-dir=<path>] [--mib-module=<name>] [--start-oid=<OID>] [--stop-oid=<OID>] [--manual-values] [--output-file=<filename>] [--string-pool=<words>] [--integer32-range=<min,max>]
+
+Please note that you would first have to convert an ASN.1 (e.g. text) MIB
+into a pysnmp module (with the libsmi2pysnmp tool shipped with pysnmp
+disitribution). Assuming we have the IF-MIB.py module in the pysnmp search
+path, run:
+
+$ mib2dev.py --mib-module=IF-MIB 
+# MIB module: IF-MIB
+1.3.6.1.2.1.2.1.0|2|3
+1.3.6.1.2.1.2.2.1.1.2|2|4
+1.3.6.1.2.1.2.2.1.2.2|4|whisky au juge blond qui
+1.3.6.1.2.1.2.2.1.3.2|2|4
+1.3.6.1.2.1.2.2.1.4.2|2|3
+1.3.6.1.2.1.2.2.1.5.2|66|1453149645
+1.3.6.1.2.1.2.2.1.6.2|4|Portez ce vieux whisky
+1.3.6.1.2.1.2.2.1.7.2|2|2
+1.3.6.1.2.1.2.2.1.8.2|2|1
+1.3.6.1.2.1.2.2.1.9.2|67|3622365885
+1.3.6.1.2.1.2.2.1.10.2|65|1132976988
+1.3.6.1.2.1.2.2.1.11.2|65|645067793
+1.3.6.1.2.1.2.2.1.12.2|65|29258291
+1.3.6.1.2.1.2.2.1.13.2|65|2267341229
+1.3.6.1.2.1.2.2.1.14.2|65|3666596422
+1.3.6.1.2.1.2.2.1.15.2|65|1846597313
+1.3.6.1.2.1.2.2.1.16.2|65|1260601176
+1.3.6.1.2.1.2.2.1.17.2|65|1631945174
+1.3.6.1.2.1.2.2.1.18.2|65|499457590
+1.3.6.1.2.1.2.2.1.19.2|65|278923014
+1.3.6.1.2.1.2.2.1.20.2|65|3153307863
+1.3.6.1.2.1.2.2.1.21.2|66|1395745280
+1.3.6.1.2.1.2.2.1.22.2|6|1.3.6.1.3.99.148.60.97.205.134.179
+# End of SNMPv2-SMI, 23 OID(s) dumped
+
+One of the useful options are the --string-pool and --integer32-ranges. They
+let you specify an alternative set of words and integer values ranges
+to be used in random values generation.
+
+Finally, you could always modify your device files with a text editor.
+
 Simulating SNMP Agents
 ----------------------
 

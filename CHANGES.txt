@@ -1,8 +1,15 @@
+0.1.3
+-----
+
+- Initial revision of the mib2dev.py tool.
+- Some more MIB-originated device files added.
+
 0.1.2
 -----
 
 - Some more py2k refactoring (some features did not work otherwise).
-- Fix to values tags matching at snmpsimd.py (simulator did not work otherwise).
+- Fix to values tags matching at snmpsimd.py (simulator did not work
+  otherwise).
 - Fixes to sys.exc_info invocation.
 
 0.1.1

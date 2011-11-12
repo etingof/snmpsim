@@ -28,12 +28,12 @@ except ImportError:
 
 params.update( {
     'name': "snmpsim",
-    'version': "0.1.2",
+    'version': "0.1.3",
     'description': "SNMP devices simulator",
     'author': "Ilya Etingof",
     'author_email': "ilya@glas.net ",
     'url': "http://sourceforge.net/projects/snmpsim/",
-    'scripts': [ 'snmpsimd.py', 'snmprec.py' ],
+    'scripts': [ 'snmpsimd.py', 'snmprec.py', 'mib2dev.py' ],
     'license': "BSD",
     'classifiers': [
         'Development Status :: 5 - Production/Stable',
