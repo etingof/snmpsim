@@ -2,28 +2,31 @@
 SNMP Simulator
 --------------
 
-This software is intended for testing SNMP Managers against SNMP Agents
-built into various network devices.
+This software is intended for testing SNMP Managers against a large number
+of SNMP Agents that represent a potentially very large network populated 
+with different kinds of SNMP-capable devices.
 
 Typical use case for this software starts with recording a snapshot of
-SNMP objects of a donor Agent into a text file using "snmprec" tool. Then
-Simulator daemon would be run over the snapshots so that it could respond
-to SNMP queries in the same way as donor SNMP Agent did at the time of
-recording.
+SNMP objects of donor Agents into text files using "snmprec" tool.
+Another option is to generate snapshots from MIB files what is useful
+if you do not posess a donor device. Then Simulator daemon would be run 
+over the snapshots so that it could respond to SNMP queries in the same
+way as donor SNMP Agents did at the time of recording.
 
 Technically, SNMP Simulator is a multi-context SNMP Agent. That means that
 it handles multiple sets of Managed Object all at once. Each device is
-simulated as a dedicated SNMP context.
+simulated within a dedicated SNMP context.
 
 SNMPv3 Manager talking to Simulator has to specify SNMP context name in
 queries, while SNMPv1/v2c Manager can use specific SNMP community name
-(logically bound to SNMP context) to access particular set of Managed Objects.
+(logically bound to SNMP context) to access particular set of Managed
+Objects.
 
-Recording SNMP snapshots
+Producing SNMP snapshots
 ------------------------
 
-To record an SNMP snapshot you need to run the snmprec tool against your
-donor device. This tool will execute a series of SNMP GETNEXT queries
+Primary method of recording an SNMP snapshot is to run snmprec tool against
+your donor device. This tool will execute a series of SNMP GETNEXT queries
 for a specified range of OIDs over a chosen SNMP protocol version and store
 response data in a text file (AKA device file).
 
@@ -104,10 +107,11 @@ Device file generation from a MIB file would look like this:
 $ mib2dev.py 
 Usage: mib2dev.py [--help] [--debug=<category>] [--quiet] [--pysnmp-mib-dir=<path>] [--mib-module=<name>] [--start-oid=<OID>] [--stop-oid=<OID>] [--manual-values] [--output-file=<filename>] [--string-pool=<words>] [--integer32-range=<min,max>]
 
-Please note that you would first have to convert an ASN.1 (e.g. text) MIB
-into a pysnmp module (with the libsmi2pysnmp tool shipped with pysnmp
-disitribution). Assuming we have the IF-MIB.py module in the pysnmp search
-path, run:
+Please note that to run mib2dev.py you would first have to convert an ASN.1
+(e.g. text) MIB into a pysnmp module (with the libsmi2pysnmp tool shipped
+with pysnmp disitribution).
+
+Assuming we have the IF-MIB.py module in the pysnmp search path, run:
 
 $ mib2dev.py --mib-module=IF-MIB 
 # MIB module: IF-MIB
