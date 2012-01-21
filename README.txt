@@ -8,10 +8,11 @@ with different kinds of SNMP-capable devices.
 
 Typical use case for this software starts with recording a snapshot of
 SNMP objects of donor Agents into text files using "snmprec" tool.
-Another option is to generate snapshots from MIB files what is useful
-if you do not posess a donor device. Then Simulator daemon would be run 
-over the snapshots so that it could respond to SNMP queries in the same
-way as donor SNMP Agents did at the time of recording.
+Another option is to generate snapshots directly from MIB files with
+"mib2dev" tool. The latter appears useful whenever you do not posess a
+physical donor device. Then Simulator daemon would be run over the
+snapshots so that it could respond to SNMP queries in the same way as
+donor SNMP Agents did at the time of recording.
 
 Technically, SNMP Simulator is a multi-context SNMP Agent. That means that
 it handles multiple sets of Managed Object all at once. Each device is
@@ -53,13 +54,13 @@ Device file recording would look like this:
 $ snmprec.py  -h
 Usage: snmprec.py [--help] [--debug=<category>] [--quiet] [--v1|2c|3] [--community=<string>] [--v3-user=<username>] [--v3-auth-key=<key>] [--v3-priv-key=<key>] [--v3-auth-proto=<MD5|SHA>] [--v3-priv-proto=<DES|AES>] [--context=<string>] [--agent-address=<IP>] [--agent-port] [--start-oid=<OID>] [--stop-oid=<OID>] [--output-file=<filename>]
 $
-$ snmprec.py --agent-address 127.0.0.1 --start-oid=1.3.6.1.2.1.2.1.0 --stop-oid=1.3.6.1.2.1.5  --output-file=devices/linux/slackware/1.3.6.1.2.1/127.0.0.1\@public.snmprec
+$ snmprec.py --agent-address 127.0.0.1 --start-oid=1.3.6.1.2.1.2.1.0 --stop-oid=1.3.6.1.2.1.5  --output-file=devices/linux/1.3.6.1.2.1/127.0.0.1\@public.snmprec
 OIDs dumped: 304, elapsed: 1.94 sec, rate: 157.00 OIDs/sec
 $
-$ ls -l devices/linux/slackware/1.3.6.1.2.1/127.0.0.1\@public.snmprec
--rw-r--r-- 1 ilya users 16252 Oct 26 14:49 devices/linux/slackware/1.3.6.1.2.1/127.0.0.1@public.snmprec
+$ ls -l devices/linux/1.3.6.1.2.1/127.0.0.1\@public.snmprec
+-rw-r--r-- 1 ilya users 16252 Oct 26 14:49 devices/linux/1.3.6.1.2.1/127.0.0.1@public.snmprec
 $
-$ head devices/linux/slackware/1.3.6.1.2.1/127.0.0.1\@public.snmprec
+$ head devices/linux/1.3.6.1.2.1/127.0.0.1\@public.snmprec
 1.3.6.1.2.1.2.2.1.1.1|2|1
 1.3.6.1.2.1.2.2.1.1.2|2|2
 1.3.6.1.2.1.2.2.1.2.1|4|lo
@@ -154,10 +155,9 @@ Your collection of device files should look like this:
 $ find devices
 devices
 devices/linux
-devices/linux/slackware
-devices/linux/slackware/1.3.6.1.2.1
-devices/linux/slackware/1.3.6.1.2.1/127.0.0.1@public.snmprec
-devices/linux/slackware/1.3.6.1.2.1/127.0.0.1@public.dbm
+devices/linux/1.3.6.1.2.1
+devices/linux/1.3.6.1.2.1/127.0.0.1@public.snmprec
+devices/linux/1.3.6.1.2.1/127.0.0.1@public.dbm
 devices/3com
 devices/3com/switch8800
 devices/3com/switch8800/1.3.6.1.4.1
@@ -177,11 +177,11 @@ Usage: snmpsimd.py [--help] [--debug=<category>] [--device-dir=<dir>] [--force-i
 Running Simulator:
 
 $ snmpsimd.py --agent-port=1161
-Index ./devices/linux/slackware/1.3.6.1.2.1/127.0.0.1@public.dbm out of date
-Indexing device file ./devices/linux/slackware/1.3.6.1.2.1/127.0.0.1@public.snmprec...
+Index ./devices/linux/1.3.6.1.2.1/127.0.0.1@public.dbm out of date
+Indexing device file ./devices/linux/1.3.6.1.2.1/127.0.0.1@public.snmprec...
 ...303 entries indexed
-Device file ./devices/linux/slackware/1.3.6.1.2.1/127.0.0.1@public.snmprec, dbhash-indexed, closed
-SNMPv1/2c community name: @linux/slackware/1.3.6.1.2.1/127.0.0.1@public
+Device file ./devices/linux/1.3.6.1.2.1/127.0.0.1@public.snmprec, dbhash-indexed, closed
+SNMPv1/2c community name: @linux/1.3.6.1.2.1/127.0.0.1@public
 SNMPv3 context name: 6d42b10f70ddb49c6be1d27f5ce2239e
 
 Device file ./devices/3com/switch8800/1.3.6.1.4.1/172.17.1.22@public.dump, dbhash-indexed, closed
@@ -204,7 +204,7 @@ At this point you can run you favorite SNMP Manager to talk to either
 of the two simulated devices. For instance, to talk to simulated Linux
 box over SNMP v2:
 
-$ snmpwalk -On -v2c -c '@linux/slackware/1.3.6.1.2.1/127.0.0.1@public' localhost:1161 .1.3.6
+$ snmpwalk -On -v2c -c '@linux/1.3.6.1.2.1/127.0.0.1@public' localhost:1161 .1.3.6
 .1.3.6.1.2.1.2.2.1.1.1 = INTEGER: 1
 .1.3.6.1.2.1.2.2.1.1.2 = INTEGER: 2
 .1.3.6.1.2.1.2.2.1.2.1 = STRING: lo
@@ -241,15 +241,15 @@ devices and their community/context names. Simulator maintains this
 information within its internal, dedicated SNMP context 'index':
 
 $ snmpwalk -On -v2c -c index localhost:1161 .1.3.6
-.1.3.6.1.4.1.20408.999.1.1.1 = STRING: "./devices/linux/slackware/1.3.6.1.2.1.1.1/127.0.0.1@public.snmprec"
-.1.3.6.1.4.1.20408.999.1.2.1 = STRING: "devices/linux/slackware/1.3.6.1.2.1.1.1/127.0.0.1@public"
+.1.3.6.1.4.1.20408.999.1.1.1 = STRING: "./devices/linux/1.3.6.1.2.1.1.1/127.0.0.1@public.snmprec"
+.1.3.6.1.4.1.20408.999.1.2.1 = STRING: "devices/linux/1.3.6.1.2.1.1.1/127.0.0.1@public"
 .1.3.6.1.4.1.20408.999.1.3.1 = STRING: "9535d96c66759362b3521f4e273fc749"
 
 or
 
 $ snmpwalk -O n -l authPriv -u simulator -A auctoritas -X privatus -n index localhost:1161 .1.3.6
-.1.3.6.1.4.1.20408.999.1.1.1 = STRING: "./devices/linux/slackware/1.3.6.1.2.1.1.1/127.0.0.1@public.snmprec"
-.1.3.6.1.4.1.20408.999.1.2.1 = STRING: "devices/linux/slackware/1.3.6.1.2.1.1.1/127.0.0.1@public"
+.1.3.6.1.4.1.20408.999.1.1.1 = STRING: "./devices/linux/1.3.6.1.2.1.1.1/127.0.0.1@public.snmprec"
+.1.3.6.1.4.1.20408.999.1.2.1 = STRING: "devices/linux/1.3.6.1.2.1.1.1/127.0.0.1@public"
 .1.3.6.1.4.1.20408.999.1.3.1 = STRING: "9535d96c66759362b3521f4e273fc749"
 
 Where first column holds device file path, second - community string, and 
@@ -324,4 +324,4 @@ your device and send me its output file. Make sure that your device
 does not have any private information.
 
 ---
-Written by Ilya Etingof <ilya@glas.net>, 2010-2011
+Written by Ilya Etingof <ilya@glas.net>, 2010-2012
