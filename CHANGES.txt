@@ -1,6 +1,7 @@
 0.1.4
 -----
 
+- Fix to infinite loop possibly occurring at OID search routine.
 - Fix to mib2dev.py MIB path handling.
 
 0.1.3
