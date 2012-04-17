@@ -13,7 +13,7 @@ It's very easy to install it, just type (as root on Linux):
 try:
     from setuptools import setup
     params = {
-        'install_requires': [ 'pysnmp>=4.2.1' ],
+        'install_requires': [ 'pysnmp>=4.2.2' ],
         'zip_safe': True
         }
 except ImportError:
