@@ -22,9 +22,9 @@ except ImportError:
             howto_install_setuptools()
             sys.exit(1)
     from distutils.core import setup
-    params = {
-        'requires': [ 'pysnmp(>=4.2.1)' ]
-        }
+    params = {}
+    if sys.version_info[:2] > (2, 4):
+        params['requires'] = [ 'pysnmp(>=4.2.2)' ]
 
 params.update( {
     'name': "snmpsim",
