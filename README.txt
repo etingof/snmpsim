@@ -1,6 +1,9 @@
 
 SNMP Simulator
 --------------
+                                      Simulations are like miniskirts, 
+                                      they show a lot and hide the essentials.
+                                                         -- Hubert Kirrman
 
 This software is intended for testing SNMP Managers against a large number
 of SNMP Agents that represent a potentially very large network populated 
