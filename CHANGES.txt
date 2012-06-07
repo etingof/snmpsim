@@ -5,6 +5,7 @@
 - Fix to infinite loop possibly occurring at OID search routine.
 - Fix to DBM key type (string vs byte issue)
 - Fix to mib2dev.py MIB path handling.
+- Fix to index object to make "snmpwalk -c index" work again.
 - Fix to SNMPv2 exception objects translation into SNMPv1 PDU in the
   --v2c-only mode
 
