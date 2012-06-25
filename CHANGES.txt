@@ -1,6 +1,8 @@
 0.1.4
 -----
 
+- Simulator now supports more SNMPv3 authentication (SHA) and encryption
+  (3DES, AES192, AES256) algorithms provided by pysnmp.
 - Simulator now rebuilds existing indices of unknown format.
 - Fix to infinite loop possibly occurring at OID search routine.
 - Fix to DBM key type (string vs byte issue)
