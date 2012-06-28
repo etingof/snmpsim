@@ -175,11 +175,11 @@ Simulator.
 Getting help:
 
 $ snmpsimd.py -h
-Usage: snmpsimd.py [--help] [--debug=<category>] [--device-dir=<dir>] [--force-index-rebuild] [--validate-device-data] [--agent-address=<X.X.X.X>] [--agent-port=<port>] [--v2c-arch ] [--v3-only] [--v3-user=<username>] [--v3-auth-key=<key>] [--v3-priv-key=<key>] [--v3-priv-proto=<DES|AES>]
+Usage: snmpsimd.py [--help] [--debug=<category>] [--device-dir=<dir>] [--force-index-rebuild] [--validate-device-data] [--agent-udpv4-endpoint=<X.X.X.X[:NNNNN]>] [--v2c-arch] [--v3-only] [--v3-user=<username>] [--v3-auth-key=<key>] [--v3-auth-proto=<SHA|NONE|MD5>] [--v3-priv-key=<key>] [--v3-priv-proto=<3DES|AES256|NONE|DES|AES|AES128|AES192>]
 
 Running Simulator:
 
-$ snmpsimd.py --agent-port=1161
+$ snmpsimd.py --agent-udpv4-endpoint=127.0.0.1:1161
 Index ./devices/linux/1.3.6.1.2.1/127.0.0.1@public.dbm out of date
 Indexing device file ./devices/linux/1.3.6.1.2.1/127.0.0.1@public.snmprec...
 ...303 entries indexed
@@ -195,8 +195,9 @@ SNMPv3 context name: 1a80634d11a76ee4e29b46bc8085d871
 SNMPv3 credentials:
 Username: simulator
 Authentication key: auctoritas
+Authentication protocol: MD5
 Encryption (privacy) key: privatus
-Encryption protocol: (1, 3, 6, 1, 6, 3, 10, 1, 2, 2)
+Encryption protocol: DES
 
 Listening at ('127.0.0.1', 1161)
 ...
