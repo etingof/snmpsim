@@ -55,7 +55,7 @@ There is a pipe-separated triplet of OID-tag-value items where:
 Device file recording would look like this:
 
 $ snmprec.py  -h
-Usage: snmprec.py [--help] [--debug=<category>] [--quiet] [--v1|2c|3] [--community=<string>] [--v3-user=<username>] [--v3-auth-key=<key>] [--v3-priv-key=<key>] [--v3-auth-proto=<SHA|MD5>] [--v3-priv-proto=<3DES|AES256|DES|AES|AES128|AES192>] [--context=<string>] [--agent-udpv4-endpoint=<X.X.X.X[:NNNNN]>] [--start-oid=<OID>] [--stop-oid=<OID>] [--output-file=<filename>]
+Usage: snmprec.py [--help] [--debug=<category>] [--quiet] [--v1|2c|3] [--community=<string>] [--v3-user=<username>] [--v3-auth-key=<key>] [--v3-priv-key=<key>] [--v3-auth-proto=<SHA|MD5>] [--v3-priv-proto=<3DES|AES256|DES|AES|AES128|AES192>] [--context=<string>] [--agent-udpv4-endpoint=<X.X.X.X:NNNNN>] [--agent-udpv6-endpoint=<[X:X:..X]:NNNNN>] [--start-oid=<OID>] [--stop-oid=<OID>] [--output-file=<filename>]
 $
 $ snmprec.py --agent-udpv4-endpoint=127.0.0.1 --start-oid=1.3.6.1.2.1.2.1.0 --stop-oid=1.3.6.1.2.1.5  --output-file=devices/linux/1.3.6.1.2.1/127.0.0.1\@public.snmprec
 SNMP version 1
@@ -177,22 +177,22 @@ Simulator.
 Getting help:
 
 $ snmpsimd.py -h
-Usage: snmpsimd.py [--help] [--debug=<category>] [--device-dir=<dir>] [--force-index-rebuild] [--validate-device-data] [--agent-udpv4-endpoint=<X.X.X.X[:NNNNN]>] [--v2c-arch] [--v3-only] [--v3-user=<username>] [--v3-auth-key=<key>] [--v3-auth-proto=<SHA|NONE|MD5>] [--v3-priv-key=<key>] [--v3-priv-proto=<3DES|AES256|NONE|DES|AES|AES128|AES192>]
+Usage: snmpsimd.py [--help] [--debug=<category>] [--device-dir=<dir>] [--force-index-rebuild] [--validate-device-data] [--agent-udpv4-endpoint=<X.X.X.X:NNNNN>] [--agent-udpv6-endpoint=<[X:X:..X]:NNNNN>] [--v2c-arch] [--v3-only] [--v3-user=<username>] [--v3-auth-key=<key>] [--v3-auth-proto=<SHA|NONE|MD5>] [--v3-priv-key=<key>] [--v3-priv-proto=<3DES|AES256|NONE|DES|AES|AES128|AES192>]
 
 Running Simulator:
 
-$ snmpsimd.py --agent-udpv4-endpoint=127.0.0.1:1161
+$ snmpsimd.py --agent-udpv4-endpoint=127.0.0.1:1161 --agent-udpv6-endpoint='[::1]:1161'
 Index ./devices/linux/1.3.6.1.2.1/127.0.0.1@public.dbm out of date
 Indexing device file ./devices/linux/1.3.6.1.2.1/127.0.0.1@public.snmprec...
 ...303 entries indexed
+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 Device file ./devices/linux/1.3.6.1.2.1/127.0.0.1@public.snmprec, dbhash-indexed, closed
 SNMPv1/2c community name: @linux/1.3.6.1.2.1/127.0.0.1@public
 SNMPv3 context name: 6d42b10f70ddb49c6be1d27f5ce2239e
-
+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 Device file ./devices/3com/switch8800/1.3.6.1.4.1/172.17.1.22@public.dump, dbhash-indexed, closed
 SNMPv1/2c community name: @3com/switch8800/1.3.6.1.4.1/172.17.1.22@public
 SNMPv3 context name: 1a80634d11a76ee4e29b46bc8085d871
-
 
 SNMPv3 credentials:
 Username: simulator
@@ -201,7 +201,8 @@ Authentication protocol: MD5
 Encryption (privacy) key: privatus
 Encryption protocol: DES
 
-Listening at ('127.0.0.1', 1161)
+Listening at UDP/IPv4 endpoints: 127.0.0.1:1161
+Listening at UDP/IPv6 endpoints: [::1]:1161
 ...
 
 An unprivileged port is chosen in this example to avoid running as root.
