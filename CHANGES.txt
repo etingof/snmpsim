@@ -9,6 +9,7 @@
   options now obsolete.
 - The snmprec.py tool Agent address specification syntax unified with that
   of snmpsimd.py.
+- Some runtime diagnostics added to snmprec.py.
 - The snmpsimd.py tool unconditionally rebuilds existing indices of
   unknown format.
 - Fix to snmprec.py to make SNMP debugging working again.
