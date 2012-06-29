@@ -1,14 +1,17 @@
 0.1.4
 -----
 
-- Simulator now supports more SNMPv3 authentication (SHA) and encryption
-  (3DES, AES192, AES256) algorithms provided by pysnmp.
+- The snmpsimd.py and snmprec.py tools now support additional SNMPv3 
+  authentication (SHA) and encryption (3DES, AES192, AES256) algorithms
+  provided by pysnmp.
 - Simulator now supports binding to multiple UDPv4 endpoints
   via --agent-udpv4-endpoint option, the --agent-address and --agent-port
   options now obsolete.
 - The snmprec.py tool Agent address specification syntax unified with that
   of snmpsimd.py.
-- Simulator now rebuilds existing indices of unknown format.
+- The snmpsimd.py tool unconditionally rebuilds existing indices of
+  unknown format.
+- Fix to snmprec.py to make SNMP debugging working again.
 - Fix to infinite loop possibly occurring at OID search routine.
 - Fix to DBM key type (string vs byte issue)
 - Fix to mib2dev.py MIB path handling.
