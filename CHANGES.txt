@@ -6,6 +6,8 @@
 - Simulator now supports binding to multiple UDPv4 endpoints
   via --agent-udpv4-endpoint option, the --agent-address and --agent-port
   options now obsolete.
+- The snmprec.py tool Agent address specification syntax unified with that
+  of snmpsimd.py.
 - Simulator now rebuilds existing indices of unknown format.
 - Fix to infinite loop possibly occurring at OID search routine.
 - Fix to DBM key type (string vs byte issue)
