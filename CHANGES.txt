@@ -13,6 +13,7 @@
 - The snmpsimd.py tool unconditionally rebuilds existing indices of
   unknown format.
 - Fix to snmprec.py to make SNMP debugging working again.
+- Fix to snmprec.py to properly support non-default SNMP context name.
 - Fix to infinite loop possibly occurring at OID search routine.
 - Fix to DBM key type (string vs byte issue)
 - Fix to mib2dev.py MIB path handling.
