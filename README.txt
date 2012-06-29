@@ -55,9 +55,9 @@ There is a pipe-separated triplet of OID-tag-value items where:
 Device file recording would look like this:
 
 $ snmprec.py  -h
-Usage: snmprec.py [--help] [--debug=<category>] [--quiet] [--v1|2c|3] [--community=<string>] [--v3-user=<username>] [--v3-auth-key=<key>] [--v3-priv-key=<key>] [--v3-auth-proto=<MD5|SHA>] [--v3-priv-proto=<DES|AES>] [--context=<string>] [--agent-address=<IP>] [--agent-port] [--start-oid=<OID>] [--stop-oid=<OID>] [--output-file=<filename>]
+Usage: snmprec.py [--help] [--debug=<category>] [--quiet] [--v1|2c|3] [--community=<string>] [--v3-user=<username>] [--v3-auth-key=<key>] [--v3-priv-key=<key>] [--v3-auth-proto=<MD5|SHA>] [--v3-priv-proto=<DES|AES>] [--context=<string>] [--agent-udpv4-endpoint=<X.X.X.X[:NNNNN]>] [--start-oid=<OID>] [--stop-oid=<OID>] [--output-file=<filename>]
 $
-$ snmprec.py --agent-address 127.0.0.1 --start-oid=1.3.6.1.2.1.2.1.0 --stop-oid=1.3.6.1.2.1.5  --output-file=devices/linux/1.3.6.1.2.1/127.0.0.1\@public.snmprec
+$ snmprec.py --agent-udpv4-endpoint=127.0.0.1 --start-oid=1.3.6.1.2.1.2.1.0 --stop-oid=1.3.6.1.2.1.5  --output-file=devices/linux/1.3.6.1.2.1/127.0.0.1\@public.snmprec
 OIDs dumped: 304, elapsed: 1.94 sec, rate: 157.00 OIDs/sec
 $
 $ ls -l devices/linux/1.3.6.1.2.1/127.0.0.1\@public.snmprec
