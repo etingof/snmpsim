@@ -1,7 +1,8 @@
 0.1.4
 -----
 
-- UDP/IPv6 transport support added to snmpsimd.py and snmprec.py tools.
+- UDP/IPv6 and UNIX domain socket transports support added to
+  snmpsimd.py and snmprec.py tools.
 - The snmpsimd.py and snmprec.py tools now support additional SNMPv3 
   authentication (SHA) and encryption (3DES, AES192, AES256) algorithms
   provided by pysnmp.

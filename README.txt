@@ -55,7 +55,7 @@ There is a pipe-separated triplet of OID-tag-value items where:
 Device file recording would look like this:
 
 $ snmprec.py  -h
-Usage: snmprec.py [--help] [--debug=<category>] [--quiet] [--v1|2c|3] [--community=<string>] [--v3-user=<username>] [--v3-auth-key=<key>] [--v3-priv-key=<key>] [--v3-auth-proto=<SHA|MD5>] [--v3-priv-proto=<3DES|AES256|DES|AES|AES128|AES192>] [--context=<string>] [--agent-udpv4-endpoint=<X.X.X.X:NNNNN>] [--agent-udpv6-endpoint=<[X:X:..X]:NNNNN>] [--start-oid=<OID>] [--stop-oid=<OID>] [--output-file=<filename>]
+Usage: snmprec.py [--help] [--debug=<category>] [--quiet] [--v1|2c|3] [--community=<string>] [--v3-user=<username>] [--v3-auth-key=<key>] [--v3-priv-key=<key>] [--v3-auth-proto=<SHA|MD5>] [--v3-priv-proto=<3DES|AES256|DES|AES|AES128|AES192>] [--context=<string>] [--agent-udpv4-endpoint=<X.X.X.X:NNNNN>] [--agent-udpv6-endpoint=<[X:X:..X]:NNNNN>] [--agent-unix-endpoint=</path/to/named/pipe>] [--start-oid=<OID>] [--stop-oid=<OID>] [--output-file=<filename>]
 $
 $ snmprec.py --agent-udpv4-endpoint=127.0.0.1 --start-oid=1.3.6.1.2.1.2.1.0 --stop-oid=1.3.6.1.2.1.5  --output-file=devices/linux/1.3.6.1.2.1/127.0.0.1\@public.snmprec
 SNMP version 1
@@ -177,11 +177,11 @@ Simulator.
 Getting help:
 
 $ snmpsimd.py -h
-Usage: snmpsimd.py [--help] [--debug=<category>] [--device-dir=<dir>] [--force-index-rebuild] [--validate-device-data] [--agent-udpv4-endpoint=<X.X.X.X:NNNNN>] [--agent-udpv6-endpoint=<[X:X:..X]:NNNNN>] [--v2c-arch] [--v3-only] [--v3-user=<username>] [--v3-auth-key=<key>] [--v3-auth-proto=<SHA|NONE|MD5>] [--v3-priv-key=<key>] [--v3-priv-proto=<3DES|AES256|NONE|DES|AES|AES128|AES192>]
+Usage: snmpsimd.py [--help] [--debug=<category>] [--device-dir=<dir>] [--force-index-rebuild] [--validate-device-data] [--agent-udpv4-endpoint=<X.X.X.X:NNNNN>] [--agent-udpv6-endpoint=<[X:X:..X]:NNNNN>] [--agent-unix-endpoint=</path/to/named/pipe>] [--v2c-arch] [--v3-only] [--v3-user=<username>] [--v3-auth-key=<key>] [--v3-auth-proto=<SHA|NONE|MD5>] [--v3-priv-key=<key>] [--v3-priv-proto=<3DES|AES256|NONE|DES|AES|AES128|AES192>]
 
 Running Simulator:
 
-$ snmpsimd.py --agent-udpv4-endpoint=127.0.0.1:1161 --agent-udpv6-endpoint='[::1]:1161'
+$ snmpsimd.py --agent-udpv4-endpoint=127.0.0.1:1161 --agent-udpv6-endpoint='[::1]:1161' --agent-unix-endpoint=/tmp/snmpsimd-socket
 Index ./devices/linux/1.3.6.1.2.1/127.0.0.1@public.dbm out of date
 Indexing device file ./devices/linux/1.3.6.1.2.1/127.0.0.1@public.snmprec...
 ...303 entries indexed
@@ -203,13 +203,15 @@ Encryption protocol: DES
 
 Listening at UDP/IPv4 endpoints: 127.0.0.1:1161
 Listening at UDP/IPv6 endpoints: [::1]:1161
+Listening at UNIX domain socket endpoints: /tmp/snmpsimd-socket
 ...
 
 An unprivileged port is chosen in this example to avoid running as root.
 
 At this point you can run you favorite SNMP Manager to talk to either
-of the two simulated devices. For instance, to talk to simulated Linux
-box over SNMP v2:
+of the two simulated devices through whatever transport you prefer.
+For instance, to talk to simulated Linux box over SNMP v2 through
+UDP over IPv4 run:
 
 $ snmpwalk -On -v2c -c '@linux/1.3.6.1.2.1/127.0.0.1@public' localhost:1161 .1.3.6
 .1.3.6.1.2.1.2.2.1.1.1 = INTEGER: 1
