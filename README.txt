@@ -201,10 +201,10 @@ Authentication protocol: MD5
 Encryption (privacy) key: privatus
 Encryption protocol: DES
 
-Listening at UDP/IPv4 endpoints: 127.0.0.1:1161
-Listening at UDP/IPv6 endpoints: [::1]:1161
-Listening at UNIX domain socket endpoints: /tmp/snmpsimd-socket
-...
+Listening at:
+  UDP/IPv4 endpoint 127.0.0.1:1161, transport ID 1.3.6.1.6.1.1.0
+  UDP/IPv6 endpoint [::1]:1161, transport ID 1.3.6.1.2.1.100.1.2.0
+  UNIX domain endpoint /tmp/snmpsimd-socket, transport ID 1.3.6.1.2.1.100.1.13.0
 
 An unprivileged port is chosen in this example to avoid running as root.
 
@@ -243,6 +243,40 @@ $ snmpwalk -On -n 1a80634d11a76ee4e29b46bc8085d871 -u simulator -A auctoritas -X
 
 Notice "-n <snmp-context>" parameter passed to snmpwalk to address particular
 simulated device at Simulator.
+
+Transport address based simulation
+----------------------------------
+
+Sometimes Managers can't easily change community name to address particular
+simulated device instance as mention in the previous section. Or it may be
+useful to present the same simulated device to different SNMP Managers
+differently.
+
+When running in --v2c-arch mode, Simulator would attempt to find device
+file to fullfill a request by probing files by paths  constructed from
+request data. This path construction rules are as follows:
+
+<community> / <transport-ID> / <source-address> .snmprec
+<community> / <transport-ID> .snmprec
+<community> .snmprec
+
+In other words, Simulator first tries to take community name and 
+destination and source addresses into account. If that does not match
+to any existing file, the next probe would use community name and
+destination address. The last resort is to probe files by just
+community name, as described in previous chapters.
+
+Transport ID is an OID that identifies transport endpoint (e.g. protocol,
+address and port). It is reported by the Simulator on startup for each
+endpoint it is listening on.
+
+For example, to make Simulator reporting from particular file to
+a Manager at 192.168.1.10 whenever community name "public" is used and
+queries are sent to Simulator over UDP/IPv4 to 192.168.1.1 interface,
+device file public/1.3.6.1.6.1.1.0/192.168.1.10.snmprec should be used.
+
+Listing simulated devices
+-------------------------
 
 When simulating a large pool of devices or if your Simulator runs on a
 distant machine, it is convenient to have a directory of all simulated

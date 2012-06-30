@@ -1,6 +1,8 @@
 0.1.4
 -----
 
+- Simulator device file selection by a combination of Community,
+  Transport ID and source address implemented.
 - UDP/IPv6 and UNIX domain socket transports support added to
   snmpsimd.py and snmprec.py tools.
 - The snmpsimd.py and snmprec.py tools now support additional SNMPv3 
