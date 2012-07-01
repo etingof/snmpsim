@@ -15,8 +15,11 @@
 - Some runtime diagnostics added to snmprec.py.
 - The snmpsimd.py tool unconditionally rebuilds existing indices of
   unknown format.
-- Fix to device files handling - open them in 'binary' mode to make sure
-  they would index correctly (on Windows).
+- Device files handling indexing made faster by not calling <fileobj>.tell().
+  That also required opening files in 'binary' mode to make sure offset
+  calculation will work correctly.
+- Attempt to open DBM in "fast" and "unsync" modes when building indices
+  to speed-up index generation.
 - Fix to snmprec.py to make SNMP debugging working again.
 - Fix to snmprec.py to properly support non-default SNMP context name.
 - Fix to infinite loop possibly occurring at OID search routine.
