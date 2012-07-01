@@ -262,13 +262,23 @@ request data. This path construction rules are as follows:
 
 In other words, Simulator first tries to take community name and 
 destination and source addresses into account. If that does not match
-to any existing file, the next probe would use community name and
+any existing file, the next probe would use community name and
 destination address. The last resort is to probe files by just
 community name, as described in previous chapters.
 
 Transport ID is an OID that identifies transport endpoint (e.g. protocol,
 address and port). It is reported by the Simulator on startup for each
 endpoint it is listening on.
+
+When mapping source-address into a file, the following transformation
+rules apply:
+
+UDP/IPv4:
+  192.168.1.1               -> 192.168.1.1
+UDP/IPv6:
+  fe80::12e:410f:40d1:2d13' -> fe80__12e_410f_40d1_2d13
+UNIX local domain sockets:
+  /tmp/snmpsim.socket       -> _tmp_snmpsim.socket
 
 For example, to make Simulator reporting from particular file to
 a Manager at 192.168.1.10 whenever community name "public" is used and
