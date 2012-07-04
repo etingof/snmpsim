@@ -20,6 +20,7 @@
   calculation will work correctly.
 - Attempt to open DBM in "fast" and "unsync" modes when building indices
   to speed-up index generation.
+- Package meta information updated.
 - Fix to snmprec.py to make SNMP debugging working again.
 - Fix to snmprec.py to properly support non-default SNMP context name.
 - Fix to infinite loop possibly occurring at OID search routine.
