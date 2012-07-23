@@ -27,12 +27,28 @@ Topic :: System :: Monitoring
 Topic :: System :: Networking :: Monitoring
 """
 
-def howto_install_setuptools():
-    print("""Error: You need setuptools Python package!
+def howto_install_distribute():
+    print("""
+   Error: You need the distribute Python package!
 
-It's very easy to install it, just type (as root on Linux):
+   It's very easy to install it, just type (as root on Linux):
+
+   wget http://python-distribute.org/distribute_setup.py
+   python distribute_setup.py
+
+   Then you could make eggs from this package.
+""")
+
+def howto_install_setuptools():
+    print("""
+   Error: You need setuptools Python package!
+
+   It's very easy to install it, just type (as root on Linux):
+
    wget http://peak.telecommunity.com/dist/ez_setup.py
    python ez_setup.py
+
+   Then you could make eggs from this package.
 """)
 
 try:
@@ -44,7 +60,10 @@ try:
 except ImportError:
     for arg in sys.argv:
         if "egg" in arg:
-            howto_install_setuptools()
+            if sys.version_info[0] > 2:
+                howto_install_distribute()
+            else:
+                howto_install_setuptools()
             sys.exit(1)
     from distutils.core import setup
     params = {}
