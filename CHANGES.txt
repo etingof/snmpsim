@@ -12,6 +12,7 @@
   endpoints. The --agent-address & --agent-port options are now obsolete.
 - The snmprec.py tool Agent address specification syntax unified with that
   of snmpsimd.py.
+- Multiple --device-dir c/l options are now supported by snmpsimd.py.
 - Some runtime diagnostics added to snmprec.py.
 - The snmpsimd.py tool unconditionally rebuilds existing indices of
   unknown format.
