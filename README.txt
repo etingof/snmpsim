@@ -181,7 +181,7 @@ Usage: snmpsimd.py [--help] [--debug=<category>] [--device-dir=<dir>] [--force-i
 
 Running Simulator:
 
-$ snmpsimd.py --agent-udpv4-endpoint=127.0.0.1:1161 --agent-udpv6-endpoint='[::1]:1161' --agent-unix-endpoint=/tmp/snmpsimd-socket
+$ snmpsimd.py --agent-udpv4-endpoint=127.0.0.1:1161 --agent-udpv6-endpoint='[::1]:1161' --agent-unix-endpoint=/tmp/snmpsimd.socket
 Index ./devices/linux/1.3.6.1.2.1/127.0.0.1@public.dbm out of date
 Indexing device file ./devices/linux/1.3.6.1.2.1/127.0.0.1@public.snmprec...
 ...303 entries indexed
@@ -204,9 +204,11 @@ Encryption protocol: DES
 Listening at:
   UDP/IPv4 endpoint 127.0.0.1:1161, transport ID 1.3.6.1.6.1.1.0
   UDP/IPv6 endpoint [::1]:1161, transport ID 1.3.6.1.2.1.100.1.2.0
-  UNIX domain endpoint /tmp/snmpsimd-socket, transport ID 1.3.6.1.2.1.100.1.13.0
+  UNIX domain endpoint /tmp/snmpsimd.socket, transport ID 1.3.6.1.2.1.100.1.13.0
 
-An unprivileged port is chosen in this example to avoid running as root.
+Please note that multiple transports are supported in Simulator version 0.1.4
+and later.  An unprivileged port is chosen in this example to avoid running
+as root.
 
 At this point you can run you favorite SNMP Manager to talk to either
 of the two simulated devices through whatever transport you prefer.
@@ -252,23 +254,24 @@ simulated device instance as mention in the previous section. Or it may be
 useful to present the same simulated device to different SNMP Managers
 differently.
 
-When running in --v2c-arch mode, Simulator would attempt to find device
-file to fullfill a request by probing files by paths  constructed from
-request data. This path construction rules are as follows:
+When running in --v2c-arch mode, Simulator (version 0.1.4 and later) would
+attempt to find device file to fullfill a request by probing files by paths
+constructed from pieces of request data. This path construction rules are
+as follows:
 
 <community> / <transport-ID> / <source-address> .snmprec
 <community> / <transport-ID> .snmprec
 <community> .snmprec
 
-In other words, Simulator first tries to take community name and 
+In other words, Simulator first tries to take community name,
 destination and source addresses into account. If that does not match
 any existing file, the next probe would use community name and
 destination address. The last resort is to probe files by just
 community name, as described in previous chapters.
 
-Transport ID is an OID that identifies transport endpoint (e.g. protocol,
-address and port). It is reported by the Simulator on startup for each
-endpoint it is listening on.
+Transport ID is an OID that also identifies local transport endpoint (e.g.
+protocol, local address and port Simulator is listening on). It is reported
+by the Simulator on startup for each endpoint it is listening on.
 
 When mapping source-address into a file, the following transformation
 rules apply:
@@ -278,12 +281,14 @@ UDP/IPv4:
 UDP/IPv6:
   fe80::12e:410f:40d1:2d13' -> fe80__12e_410f_40d1_2d13
 UNIX local domain sockets:
-  /tmp/snmpsim.socket       -> _tmp_snmpsim.socket
+  /tmp/snmpmanager.FAB24243 -> snmpmanager.FAB24243
 
 For example, to make Simulator reporting from particular file to
 a Manager at 192.168.1.10 whenever community name "public" is used and
-queries are sent to Simulator over UDP/IPv4 to 192.168.1.1 interface,
-device file public/1.3.6.1.6.1.1.0/192.168.1.10.snmprec should be used.
+queries are sent to Simulator over UDP/IPv4 to 192.168.1.1 interface
+(which is reported by Simulator under transport ID 1.3.6.1.6.1.1.0),
+device file public/1.3.6.1.6.1.1.0/192.168.1.10.snmprec whould be used
+for building responses.
 
 Listing simulated devices
 -------------------------
