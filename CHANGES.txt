@@ -30,7 +30,7 @@
 - Fix to index object to make "snmpwalk -c index" work again.
 - Fix to index object registration in --v2c-arch mode.
 - Fix to SNMPv2 exception objects translation into SNMPv1 PDU in the
-  --v2c-only mode
+  --v2c-arch mode
 
 0.1.3
 -----
@@ -66,7 +66,7 @@
 0.0.10
 ------
 
-- --v3-only command-line flag added to save on large number of
+- --v3-arch command-line flag added to save on large number of
   [expensive] addV1System() calls.
 - setuptools dependencies improved
 
