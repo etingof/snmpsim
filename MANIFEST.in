@@ -1,2 +1,2 @@
 include *.txt
-recursive-include devices *.snmprec
+recursive-include devices *.snmprec README.txt
