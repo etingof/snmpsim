@@ -52,6 +52,8 @@ There is a pipe-separated triplet of OID-tag-value items where:
   is appended.
 * Value is either a printable string, a number or a hexifed value.
 
+No other information or comments is allowed in the device file.
+
 Device file recording would look like this:
 
 $ snmprec.py  -h
