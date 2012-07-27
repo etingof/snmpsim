@@ -1,6 +1,7 @@
 0.1.5
 -----
 
+- Allow and ignore comments in .snmprec files.
 - Fix to snmpsimd.py to ignore possibly missing .dbm file on failed
   index rebuild.
 
