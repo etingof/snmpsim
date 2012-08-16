@@ -1,6 +1,8 @@
 0.1.5
 -----
 
+- Simulator device file selection by a combination of ContextName,
+  Transport ID and source address implemented.
 - Fix to snmpsimd.py to ignore possibly missing .dbm file on failed
   index rebuild.
 
@@ -8,7 +10,7 @@
 -----
 
 - Simulator device file selection by a combination of Community,
-  Transport ID and source address implemented.
+  Transport ID and source address implemented (for --v2c-arch mode).
 - UDP/IPv6 and UNIX domain socket transports support added to
   snmpsimd.py and snmprec.py tools.
 - The snmpsimd.py and snmprec.py tools now support additional SNMPv3 
