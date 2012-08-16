@@ -294,7 +294,8 @@ for building responses.
 
 When Simulator is NOT running in --v2c-arch mode, e.g. SNMPv3 engine is
 used, similar rules apply to SNMPv3 context name rather than to SNMPv1/2c
-community name. In that case path construction would work like this:
+community name. In that case device file path construction would work
+like this:
 
 <context-name> / <transport-ID> / <source-address> .snmprec
 <context-name> / <transport-ID> .snmprec
