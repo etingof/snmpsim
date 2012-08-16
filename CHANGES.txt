@@ -3,6 +3,8 @@
 
 - Simulator device file selection by a combination of ContextName,
   Transport ID and source address implemented.
+- Rudimentary MIB write support added (snmpset now works). Still need to
+  support MIB-defined constraints.
 - Fix to snmpsimd.py to ignore possibly missing .dbm file on failed
   index rebuild.
 
