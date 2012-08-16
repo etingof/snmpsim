@@ -265,11 +265,11 @@ as follows:
 <community> / <transport-ID> .snmprec
 <community> .snmprec
 
-In other words, Simulator first tries to take community name,
-destination and source addresses into account. If that does not match
-any existing file, the next probe would use community name and
-destination address. The last resort is to probe files by just
-community name, as described in previous chapters.
+In other words, Simulator first tries to take community name (which
+by the way may be an empty tring), destination and source addresses
+into account. If that does not match any existing file, the next probe
+would use community name and destination address. The last resort is to
+probe files by just community name, as described in previous chapters.
 
 Transport ID is an OID that also identifies local transport endpoint (e.g.
 protocol, local address and port Simulator is listening on). It is reported
@@ -290,6 +290,21 @@ a Manager at 192.168.1.10 whenever community name "public" is used and
 queries are sent to Simulator over UDP/IPv4 to 192.168.1.1 interface
 (which is reported by Simulator under transport ID 1.3.6.1.6.1.1.0),
 device file public/1.3.6.1.6.1.1.0/192.168.1.10.snmprec whould be used
+for building responses.
+
+When Simulator is NOT running in --v2c-arch mode, e.g. SNMPv3 engine is
+used, similar rules apply to SNMPv3 context name rather than to SNMPv1/2c
+community name. In that case path construction would work like this:
+
+<context-name> / <transport-ID> / <source-address> .snmprec
+<context-name> / <transport-ID> .snmprec
+<context-name> .snmprec
+
+For example, to make Simulator reporting from particular file to
+a Manager at 192.168.1.10 whenever context-name is an empty string and
+queries are sent to Simulator over UDP/IPv4 to 192.168.1.1 interface
+(which is reported by Simulator under transport ID 1.3.6.1.6.1.1.0),
+device file 1.3.6.1.6.1.1.0/192.168.1.10.snmprec whould be used
 for building responses.
 
 Listing simulated devices
