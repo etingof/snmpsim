@@ -7,6 +7,8 @@
   support MIB-defined constraints.
 - Fix to snmpsimd.py to ignore possibly missing .dbm file on failed
   index rebuild.
+- Fix to OID search code what used to always pick the first OID in file
+  while looking for EOL (Python3 only).
 
 0.1.4
 -----
