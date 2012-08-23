@@ -266,7 +266,7 @@ as follows:
 <community> .snmprec
 
 In other words, Simulator first tries to take community name (which
-by the way may be an empty tring), destination and source addresses
+by the way may be an empty string), destination and source addresses
 into account. If that does not match any existing file, the next probe
 would use community name and destination address. The last resort is to
 probe files by just community name, as described in previous chapters.
