@@ -1,3 +1,10 @@
+0.1.6
+-----
+
+- Shared device files now supported. Snapshots can now be indicated
+  as shared through a symbolic link. Managers can use different
+  credentials to access and modify the same set of Managed Objects.
+  
 0.1.5
 -----
 

@@ -308,6 +308,41 @@ queries are sent to Simulator over UDP/IPv4 to 192.168.1.1 interface
 device file 1.3.6.1.6.1.1.0/192.168.1.10.snmprec whould be used
 for building responses.
 
+Sharing device files
+--------------------
+
+If a symbolic link is used as a device file, it would serve as an
+alternative CommunityName/ContextName for the Managed Objects collection
+read from the snapshot file being pointed to. Shared device files are
+mentioned explicitly on Simulator startup:
+
+$ snmpsimd.py --agent-udpv4-endpoint=127.0.0.1:1161
+Device file ./devices/public/1.3.6.1.6.1.1.0/127.0.0.1.snmprec, dbhash-indexed, closed
+SNMPv1/2c community name: public/1.3.6.1.6.1.1.0/127.0.0.1
+SNMPv3 context name: 6d42b10f70ddb49c6be1d27f5ce2239e
+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+Shared device file ./devices/public/1.3.6.1.6.1.1.0/127.0.0.1.snmprec, dbhash-indexed, closed
+SNMPv1/2c community name: public/1.3.6.1.6.1.1.0/192.168.1.1
+SNMPv3 context name: 1a80634d11a76ee4e29b46bc8085d871
+
+SNMPv3 credentials:
+Username: simulator
+Authentication key: auctoritas
+Authentication protocol: MD5
+Encryption (privacy) key: privatus
+Encryption protocol: DES
+
+Listening at:
+  UDP/IPv4 endpoint 127.0.0.1:1161, transport ID 1.3.6.1.6.1.1.0
+^C
+
+In the screenshot above, the public/1.3.6.1.6.1.1.0/127.0.0.1.snmprec
+file is shared wuth the public/1.3.6.1.6.1.1.0/192.168.1.1.snmprec
+symbolic link.
+
+Now Managers can then use different credentials to access and modify the
+same set of Managed Objects.
+
 Listing simulated devices
 -------------------------
 
