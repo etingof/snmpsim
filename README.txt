@@ -337,7 +337,7 @@ Listening at:
 ^C
 
 In the screenshot above, the public/1.3.6.1.6.1.1.0/127.0.0.1.snmprec
-file is shared wuth the public/1.3.6.1.6.1.1.0/192.168.1.1.snmprec
+file is shared with the public/1.3.6.1.6.1.1.0/192.168.1.1.snmprec
 symbolic link.
 
 Now Managers can then use different credentials to access and modify the
