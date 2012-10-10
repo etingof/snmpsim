@@ -248,6 +248,29 @@ $ snmpwalk -On -n 1a80634d11a76ee4e29b46bc8085d871 -u simulator -A auctoritas -X
 Notice "-n <snmp-context>" parameter passed to snmpwalk to address particular
 simulated device at Simulator.
 
+Listing simulated devices
+-------------------------
+
+When simulating a large pool of devices or if your Simulator runs on a
+distant machine, it is convenient to have a directory of all simulated
+devices and their community/context names. Simulator maintains this
+information within its internal, dedicated SNMP context 'index':
+
+$ snmpwalk -On -v2c -c index localhost:1161 .1.3.6
+.1.3.6.1.4.1.20408.999.1.1.1 = STRING: "./devices/linux/1.3.6.1.2.1.1.1/127.0.0.1@public.snmprec"
+.1.3.6.1.4.1.20408.999.1.2.1 = STRING: "devices/linux/1.3.6.1.2.1.1.1/127.0.0.1@public"
+.1.3.6.1.4.1.20408.999.1.3.1 = STRING: "9535d96c66759362b3521f4e273fc749"
+
+or
+
+$ snmpwalk -O n -l authPriv -u simulator -A auctoritas -X privatus -n index localhost:1161 .1.3.6
+.1.3.6.1.4.1.20408.999.1.1.1 = STRING: "./devices/linux/1.3.6.1.2.1.1.1/127.0.0.1@public.snmprec"
+.1.3.6.1.4.1.20408.999.1.2.1 = STRING: "devices/linux/1.3.6.1.2.1.1.1/127.0.0.1@public"
+.1.3.6.1.4.1.20408.999.1.3.1 = STRING: "9535d96c66759362b3521f4e273fc749"
+
+Where first column holds device file path, second - community string, and 
+third - SNMPv3 context name.
+
 Transport address based simulation
 ----------------------------------
 
@@ -343,28 +366,49 @@ symbolic link.
 Now Managers can then use different credentials to access and modify the
 same set of Managed Objects.
 
-Listing simulated devices
--------------------------
+Simulation based on snmpwalk output
+-----------------------------------
 
-When simulating a large pool of devices or if your Simulator runs on a
-distant machine, it is convenient to have a directory of all simulated
-devices and their community/context names. Simulator maintains this
-information within its internal, dedicated SNMP context 'index':
+In some cases you may not be able to run snmprec.py against a donor 
+device. For instance if you can't setup snmprec.py on a system from
+where donor device is available or donor device is gone leaving you with
+just Net-SNMP's snmpwalk dumps you have collected in the past. This is 
+where walk2dev.py tool comes in handy. Just pass it your snmpwalk dumps
+and it will do its best to produce .snmprec files for you.
 
-$ snmpwalk -On -v2c -c index localhost:1161 .1.3.6
-.1.3.6.1.4.1.20408.999.1.1.1 = STRING: "./devices/linux/1.3.6.1.2.1.1.1/127.0.0.1@public.snmprec"
-.1.3.6.1.4.1.20408.999.1.2.1 = STRING: "devices/linux/1.3.6.1.2.1.1.1/127.0.0.1@public"
-.1.3.6.1.4.1.20408.999.1.3.1 = STRING: "9535d96c66759362b3521f4e273fc749"
+$ walk2dev.py --help
+Usage: walk2dev.py [--help] [--quiet] [--start-oid=<OID>] [--stop-oid=<OID>]
+[--input-file=<filename>] [--output-file=<filename>]
 
-or
+So you could try it out by simply piping it up with snmpwalk like this:
 
-$ snmpwalk -O n -l authPriv -u simulator -A auctoritas -X privatus -n index localhost:1161 .1.3.6
-.1.3.6.1.4.1.20408.999.1.1.1 = STRING: "./devices/linux/1.3.6.1.2.1.1.1/127.0.0.1@public.snmprec"
-.1.3.6.1.4.1.20408.999.1.2.1 = STRING: "devices/linux/1.3.6.1.2.1.1.1/127.0.0.1@public"
-.1.3.6.1.4.1.20408.999.1.3.1 = STRING: "9535d96c66759362b3521f4e273fc749"
+$ snmpwalk -v2c -c public -ObentU localhost 1.3.6 | walk2dev.py 
+1.3.6.1.2.1.1.1.0|4|Linux ray 2.6.38.3-smp #2 SMP Sat Jun 9 23:39:07 
+CDT 2011 i686
+1.3.6.1.2.1.1.2.0|6|1.3.6.1.4.1.8072.3.2.10
+1.3.6.1.2.1.1.3.0|67|188586707
+...
+1.3.6.1.6.3.16.1.5.2.1.6.10.112.122.125.116.101.109.119.215.201.219|2|1
+WARNING: ignoring malformed line #855: '"\n'
+WARNING: ignoring malformed line #3782: '1.3.6.1.6.3.16.1.5.2.1.6.10
+.112.122.125.116.101.109.119.215.201.220 = No more variables left in this
+MIB View (It is past the end of the MIB tree)\n'
+OIDs dumped: 3780
+ 
+Unless given command-line arguments, the walk2dev.py tool will take
+snmpwalk's output on its input and report .snmprec-compliant data
+on its stderr. Possible warnings may appear on stdout.
 
-Where first column holds device file path, second - community string, and 
-third - SNMPv3 context name.
+Make sure you get snmpwalk producing plain OIDs and values! By default
+snmpwalk tries to beautify raw data from Agent with MIB information.
+As beautified data may not contain OIDs and numeric values, it could
+not be interpreted by the Simulator. Therefore always run snmpwalk
+with the "-ObentU" parameters pack.
+
+The snmpwalk lines that can't be parsed by walk2dev.py will be skipped
+and details reported to stdout for your further consideration. In particular,
+current implementation does not cope well with multi-line strings
+sometimes produced by snmpwalk. This may be improved in the future.
 
 Performance improvement
 -----------------------
