@@ -2,6 +2,7 @@
 -----
 
 - Net-SNMP's snmpwalk into .snmprec format convertion tool added.
+- Fixes to --start-oid & --stop-oid params to make the working again.
 - Shared device files now supported. Snapshots can now be indicated
   as shared through a symbolic link. Managers can use different
   credentials to access and modify the same set of Managed Objects.
