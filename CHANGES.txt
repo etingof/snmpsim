@@ -1,6 +1,7 @@
 0.1.6
 -----
 
+- SimpleAgentPro's .sapwalk files supported added to Simulator.
 - Net-SNMP's snmpwalk into .snmprec format convertion tool added.
 - Fixes to --start-oid & --stop-oid params to make the working again.
 - Shared device files now supported. Snapshots can now be indicated
