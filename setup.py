@@ -83,7 +83,7 @@ params.update( {
     'url': "http://sourceforge.net/projects/snmpsim/",
     'platforms': ['any'],
     'classifiers': [ x for x in classifiers.split('\n') if x ],
-    'scripts': [ 'snmpsimd.py', 'snmprec.py', 'mib2dev.py', 'walk2dev.py' ],
+    'scripts': [ 'snmpsimd.py', 'snmprec.py', 'mib2dev.py' ],
     'license': "BSD"
   } )
 
