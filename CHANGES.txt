@@ -1,9 +1,11 @@
 0.1.6
 -----
 
-- Net-SNMP's snmpwalk -ObentU .snmpwalk files support added to Simulator.
+- Net-SNMP's .snmpwalk files created with the "snmpwalk -ObentU" command
+  can now be used by the Simulator directly.
 - SimpleAgentPro's .sapwalk files support added to Simulator.
 - Fixes to --start-oid & --stop-oid params to make the working again.
+- Simulator reports supported device files types on startup.
 - Shared device files now supported. Snapshots can now be indicated
   as shared through a symbolic link. Managers can use different
   credentials to access and modify the same set of Managed Objects.
