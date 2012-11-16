@@ -372,32 +372,15 @@ Simulation based on snmpwalk output
 In some cases you may not be able to run snmprec.py against a donor 
 device. For instance if you can't setup snmprec.py on a system from
 where donor device is available or donor device is gone leaving you with
-just Net-SNMP's snmpwalk dumps you have collected in the past. This is 
-where walk2dev.py tool comes in handy. Just pass it your snmpwalk dumps
-and it will do its best to produce .snmprec files for you.
+just Net-SNMP's snmpwalk dumps you have collected in the past.
 
-$ walk2dev.py --help
-Usage: walk2dev.py [--help] [--quiet] [--start-oid=<OID>] [--stop-oid=<OID>]
-[--input-file=<filename>] [--output-file=<filename>]
+Simulator provides limited support for snmpwalk-generated data files.
+Just save snmpwalk output into a file with .snmpwalk suffix and put
+it into Simulator data directory. Once Simulator finds and indexes
+.snmpwalk files, it will report access information for them just
+as it does for its native .snmprec files.
 
-So you could try it out by simply piping it up with snmpwalk like this:
-
-$ snmpwalk -v2c -c public -ObentU localhost 1.3.6 | walk2dev.py 
-1.3.6.1.2.1.1.1.0|4|Linux ray 2.6.38.3-smp #2 SMP Sat Jun 9 23:39:07 
-CDT 2011 i686
-1.3.6.1.2.1.1.2.0|6|1.3.6.1.4.1.8072.3.2.10
-1.3.6.1.2.1.1.3.0|67|188586707
-...
-1.3.6.1.6.3.16.1.5.2.1.6.10.112.122.125.116.101.109.119.215.201.219|2|1
-WARNING: ignoring malformed line #855: '"\n'
-WARNING: ignoring malformed line #3782: '1.3.6.1.6.3.16.1.5.2.1.6.10
-.112.122.125.116.101.109.119.215.201.220 = No more variables left in this
-MIB View (It is past the end of the MIB tree)\n'
-OIDs dumped: 3780
- 
-Unless given command-line arguments, the walk2dev.py tool will take
-snmpwalk's output on its input and report .snmprec-compliant data
-on its stderr. Possible warnings may appear on stdout.
+$ snmpwalk -v2c -c public -ObentU localhost 1.3.6 > myagent.snmpwalk
 
 Make sure you get snmpwalk producing plain OIDs and values! By default
 snmpwalk tries to beautify raw data from Agent with MIB information.
@@ -405,10 +388,32 @@ As beautified data may not contain OIDs and numeric values, it could
 not be interpreted by the Simulator. Therefore always run snmpwalk
 with the "-ObentU" parameters pack.
 
-The snmpwalk lines that can't be parsed by walk2dev.py will be skipped
+The .snmpwalk lines that can't be parsed by the Simulator will be skipped
 and details reported to stdout for your further consideration. In particular,
 current implementation does not cope well with multi-line strings
 sometimes produced by snmpwalk. This may be improved in the future.
+
+Simulation based on SAP dump files
+----------------------------------
+
+Another possible format for taking and storing SNMP snapshots is
+SimpleSoft's Simple Agent Pro (http://www.smplsft.com/SimpleAgentPro.html).
+Although we have neither seen any documentation on its data files format
+nor ever owned or used Simple Agent Pro software, a sample data file
+published on an Internet (http://tech.chickenandporn.com/2011/05/26/snmp-ping/)
+reveals that SimpleAgentPro's file format is very similar to Net-SNMP's
+snmpwalk. It essentially looks like snmpwalk output with different field
+separators.
+
+Be aware that Simulator might not support some parts of SimpleAgentPro
+data files format so your milage may vary.
+
+In case you store your SNMP snapshots archives in SimpleAgentPro's
+data files and wish to use them with this Simulator, just put your
+SimpleAgentPro-formatted SNMP snapshot information (excluding comments)
+into text files having .sapwalk suffix and let Simulator find and index
+them. Once completed, Simulator will report access information for them
+just as it does for its native .snmprec files.
 
 Performance improvement
 -----------------------
