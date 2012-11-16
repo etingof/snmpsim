@@ -9,12 +9,12 @@ This software is intended for testing SNMP Managers against a large number
 of SNMP Agents that represent a potentially very large network populated 
 with different kinds of SNMP-capable devices.
 
-Typical use case for this software starts with recording a snapshot of
-SNMP objects of donor Agents into text files using "snmprec" tool.
-Another option is to generate snapshots directly from MIB files with
-"mib2dev" tool. The latter appears useful whenever you do not posess a
-physical donor device. Then Simulator daemon would be run over the
-snapshots so that it could respond to SNMP queries in the same way as
+Typical use case for this software starts with recording a snapshot of 
+SNMP objects of donor Agents into text files using "snmprec" tool. 
+Another option is to generate snapshots directly from MIB files with 
+"mib2dev" tool. The latter appears useful whenever you do not posess 
+a physical donor device. Then Simulator daemon would be run over the 
+snapshots so that it could respond to SNMP queries in the same way as 
 donor SNMP Agents did at the time of recording.
 
 Technically, SNMP Simulator is a multi-context SNMP Agent. That means that
@@ -25,6 +25,20 @@ SNMPv3 Manager talking to Simulator has to specify SNMP context name in
 queries, while SNMPv1/v2c Manager can use specific SNMP community name
 (logically bound to SNMP context) to access particular set of Managed
 Objects.
+
+It is also possible with the SNMP Simulator software to vary responses 
+based on Manager's transport address, not only SNMPv3 context or SNMPv1/v2c 
+community names.
+
+Current Simulator version supports trivial SNMP SET operations in volatile
+mode meaning that all previously SET values are lost upon daemon restart. 
+
+The Simulator software is fully free and open source. It's written from
+ground-up in an easy to learn and high-level scripting language called
+Python. Everyone is welcome to modify Simulator in any way to best suite
+their needs (note a [very permissive] BSD License is protecting Simulator).
+If you'd rather would like us customizing or developing particular
+Simulator feature for you, please let us know the details. 
 
 Producing SNMP snapshots
 ------------------------
