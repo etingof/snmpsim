@@ -66,6 +66,19 @@ There is a pipe-separated triplet of OID-tag-value items where:
   is appended.
 * Value is either a printable string, a number or a hexifed value.
 
+Valid tag values and their corresponding ASN.1/SNMP types are:
+
+* Integer32         - 2
+* OCTET STRING      - 4
+* NULL              - 5
+* OBJECT IDENTIFIER - 6
+* IpAddress         - 64
+* Counter32         - 65
+* Gauge32           - 66
+* TimeTicks         - 67
+* Opaque            - 68
+* Counter64         - 70
+
 No other information or comments is allowed in the device file.
 
 Device file recording would look like this:
