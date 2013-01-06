@@ -30,8 +30,14 @@ It is also possible with the SNMP Simulator software to vary responses
 based on Manager's transport address, not only SNMPv3 context or SNMPv1/v2c 
 community names.
 
-Current Simulator version supports trivial SNMP SET operations in volatile
-mode meaning that all previously SET values are lost upon daemon restart. 
+Even more powerful is Simulator's ability to gateway SNMP queries to
+its extension (also called "variation" modules). Once a variation module
+is invoked by Simulator core, it is expected to return a well-formed
+variable-binding sequence to be put into Simulator's response message.
+
+Simulator is shipped with a collecton of factory-build variation
+modules. Users of the Simulator software are welcome to develop their
+own variation modules if stock ones appears insufficient.
 
 The Simulator software is fully free and open source. It's written from
 ground-up in an easy to learn and high-level scripting language called
@@ -46,11 +52,11 @@ Producing SNMP snapshots
 Primary method of recording an SNMP snapshot is to run snmprec tool against
 your donor device. This tool will execute a series of SNMP GETNEXT queries
 for a specified range of OIDs over a chosen SNMP protocol version and store
-response data in a text file (AKA device file).
+response data in a text file.
 
-Device file format is optimized to be compact, human-readable and
+Data file format is optimized to be compact, human-readable and
 inexpensive to parse. It's also important to store full and exact
-response information in a most intact form. Here's an example device
+response information in a most intact form. Here's an example data 
 file content:
 
 1.3.6.1.2.1.1.1.0|4|Linux 2.6.25.5-smp SMP Tue Jun 19 14:58:11 CDT 2007 i686
@@ -66,35 +72,22 @@ There is a pipe-separated triplet of OID-tag-value items where:
   is appended.
 * Value is either a printable string, a number or a hexifed value.
 
-Valid tag values and their corresponding ASN.1/SNMP types are:
-
-* Integer32         - 2
-* OCTET STRING      - 4
-* NULL              - 5
-* OBJECT IDENTIFIER - 6
-* IpAddress         - 64
-* Counter32         - 65
-* Gauge32           - 66
-* TimeTicks         - 67
-* Opaque            - 68
-* Counter64         - 70
-
-No other information or comments is allowed in the device file.
+No other information or comments is allowed in the data file.
 
 Device file recording would look like this:
 
 $ snmprec.py  -h
 Usage: snmprec.py [--help] [--debug=<category>] [--quiet] [--version=<1|2c|3>] [--community=<string>] [--v3-user=<username>] [--v3-auth-key=<key>] [--v3-priv-key=<key>] [--v3-auth-proto=<SHA|MD5>] [--v3-priv-proto=<3DES|AES256|DES|AES|AES128|AES192>] [--context=<string>] [--agent-udpv4-endpoint=<X.X.X.X:NNNNN>] [--agent-udpv6-endpoint=<[X:X:..X]:NNNNN>] [--agent-unix-endpoint=</path/to/named/pipe>] [--start-oid=<OID>] [--stop-oid=<OID>] [--output-file=<filename>]
 $
-$ snmprec.py --agent-udpv4-endpoint=127.0.0.1 --start-oid=1.3.6.1.2.1.2.1.0 --stop-oid=1.3.6.1.2.1.5  --output-file=devices/linux/1.3.6.1.2.1/127.0.0.1\@public.snmprec
+$ snmprec.py --agent-udpv4-endpoint=127.0.0.1 --start-oid=1.3.6.1.2.1.2.1.0 --stop-oid=1.3.6.1.2.1.5  --output-file=snmpsim/data/linux/1.3.6.1.2.1/127.0.0.1\@public.snmprec
 SNMP version 1
 Community name: public
 OIDs dumped: 304, elapsed: 1.94 sec, rate: 157.00 OIDs/sec
 $
-$ ls -l devices/linux/1.3.6.1.2.1/127.0.0.1\@public.snmprec
--rw-r--r-- 1 ilya users 16252 Oct 26 14:49 devices/linux/1.3.6.1.2.1/127.0.0.1@public.snmprec
+$ ls -l snmpsim/data/linux/1.3.6.1.2.1/127.0.0.1\@public.snmprec
+-rw-r--r-- 1 ilya users 16252 Oct 26 14:49 snmpsim/data/linux/1.3.6.1.2.1/127.0.0.1@public.snmprec
 $
-$ head devices/linux/1.3.6.1.2.1/127.0.0.1\@public.snmprec
+$ head snmpsim/data/linux/1.3.6.1.2.1/127.0.0.1\@public.snmprec
 1.3.6.1.2.1.2.2.1.1.1|2|1
 1.3.6.1.2.1.2.2.1.1.2|2|2
 1.3.6.1.2.1.2.2.1.2.1|4|lo
@@ -106,11 +99,11 @@ $ head devices/linux/1.3.6.1.2.1/127.0.0.1\@public.snmprec
 1.3.6.1.2.1.2.2.1.5.1|66|10000000
 1.3.6.1.2.1.2.2.1.5.2|66|100000000
 
-There are no special requirements for device file name and location. Note,
-that Simulator treats device file path as an SNMPv1/v2c community string
+There are no special requirements for data file name and location. Note,
+that Simulator treats data file path as an SNMPv1/v2c community string
 and its MD5 hash constitutes SNMPv3 context name.
 
-Another way to produce device files is to run the mib2dev.py tool against
+Another way to produce data files is to run the mib2dev.py tool against
 virtually any MIB file. With that method you do not have to have a donor
 device and the values, that are normally returned by a donor device, will
 instead be chosen randomly.
@@ -179,47 +172,47 @@ One of the useful options are the --string-pool and --integer32-ranges. They
 let you specify an alternative set of words and integer values ranges
 to be used in random values generation.
 
-Finally, you could always modify your device files with a text editor.
+Finally, you could always modify your data files with a text editor.
 
 Simulating SNMP Agents
 ----------------------
 
-Your collection of device files should look like this:
+Your collection of data files should look like this:
 
-$ find devices
+$ find snmpsim/data
 devices
-devices/linux
-devices/linux/1.3.6.1.2.1
-devices/linux/1.3.6.1.2.1/127.0.0.1@public.snmprec
-devices/linux/1.3.6.1.2.1/127.0.0.1@public.dbm
-devices/3com
-devices/3com/switch8800
-devices/3com/switch8800/1.3.6.1.4.1
-devices/3com/switch8800/1.3.6.1.4.1/172.17.1.22@public.snmprec
-devices/3com/switch8800/1.3.6.1.4.1/172.17.1.22@public.dbm
+snmpsim/data/linux
+snmpsim/data/linux/1.3.6.1.2.1
+snmpsim/data/linux/1.3.6.1.2.1/127.0.0.1@public.snmprec
+snmpsim/data/linux/1.3.6.1.2.1/127.0.0.1@public.dbm
+snmpsim/data/3com
+snmpsim/data/3com/switch8800
+snmpsim/data/3com/switch8800/1.3.6.1.4.1
+snmpsim/data/3com/switch8800/1.3.6.1.4.1/172.17.1.22@public.snmprec
+snmpsim/data/3com/switch8800/1.3.6.1.4.1/172.17.1.22@public.dbm
 ...
 
-Notice those .dbm files -- they are by-OID indices of device files used
+Notice those .dbm files -- they are by-OID indices of data files used
 for fast lookup. These indices are created and updated automatically by
 Simulator.
 
 Getting help:
 
 $ snmpsimd.py -h
-Usage: snmpsimd.py [--help] [--debug=<category>] [--device-dir=<dir>] [--force-index-rebuild] [--validate-device-data] [--agent-udpv4-endpoint=<X.X.X.X:NNNNN>] [--agent-udpv6-endpoint=<[X:X:..X]:NNNNN>] [--agent-unix-endpoint=</path/to/named/pipe>] [--v2c-arch] [--v3-only] [--v3-user=<username>] [--v3-auth-key=<key>] [--v3-auth-proto=<SHA|NONE|MD5>] [--v3-priv-key=<key>] [--v3-priv-proto=<3DES|AES256|NONE|DES|AES|AES128|AES192>]
+Usage: snmpsimd.py [--help] [--version ] [--debug=<category>] [--data-dir=<dir>] [--force-index-rebuild] [--validate-data] [--variation-modules-dir=<dir>] [--variation-module-options=<module[=alias][:args]>] [--agent-udpv4-endpoint=<X.X.X.X:NNNNN>] [--agent-udpv6-endpoint=<[X:X:..X]:NNNNN>] [--agent-unix-endpoint=</path/to/named/pipe>] [--v2c-arch] [--v3-only] [--v3-user=<username>] [--v3-auth-key=<key>] [--v3-auth-proto=<SHA|NONE|MD5>] [--v3-priv-key=<key>] [--v3-priv-proto=<3DES|AES256|NONE|DES|AES|AES128|AES192>]
 
 Running Simulator:
 
 $ snmpsimd.py --agent-udpv4-endpoint=127.0.0.1:1161 --agent-udpv6-endpoint='[::1]:1161' --agent-unix-endpoint=/tmp/snmpsimd.socket
-Index ./devices/linux/1.3.6.1.2.1/127.0.0.1@public.dbm out of date
-Indexing device file ./devices/linux/1.3.6.1.2.1/127.0.0.1@public.snmprec...
+Index ./snmpsim/data/linux/1.3.6.1.2.1/127.0.0.1@public.dbm out of date
+Indexing data file ./snmpsim/data/linux/1.3.6.1.2.1/127.0.0.1@public.snmprec...
 ...303 entries indexed
 -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-Device file ./devices/linux/1.3.6.1.2.1/127.0.0.1@public.snmprec, dbhash-indexed, closed
+Device file ./snmpsim/data/linux/1.3.6.1.2.1/127.0.0.1@public.snmprec, dbhash-indexed, closed
 SNMPv1/2c community name: @linux/1.3.6.1.2.1/127.0.0.1@public
 SNMPv3 context name: 6d42b10f70ddb49c6be1d27f5ce2239e
 -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-Device file ./devices/3com/switch8800/1.3.6.1.4.1/172.17.1.22@public.dump, dbhash-indexed, closed
+Device file ./snmpsim/data/3com/switch8800/1.3.6.1.4.1/172.17.1.22@public.dump, dbhash-indexed, closed
 SNMPv1/2c community name: @3com/switch8800/1.3.6.1.4.1/172.17.1.22@public
 SNMPv3 context name: 1a80634d11a76ee4e29b46bc8085d871
 
@@ -284,18 +277,18 @@ devices and their community/context names. Simulator maintains this
 information within its internal, dedicated SNMP context 'index':
 
 $ snmpwalk -On -v2c -c index localhost:1161 .1.3.6
-.1.3.6.1.4.1.20408.999.1.1.1 = STRING: "./devices/linux/1.3.6.1.2.1.1.1/127.0.0.1@public.snmprec"
-.1.3.6.1.4.1.20408.999.1.2.1 = STRING: "devices/linux/1.3.6.1.2.1.1.1/127.0.0.1@public"
+.1.3.6.1.4.1.20408.999.1.1.1 = STRING: "./snmpsim/data/linux/1.3.6.1.2.1.1.1/127.0.0.1@public.snmprec"
+.1.3.6.1.4.1.20408.999.1.2.1 = STRING: "snmpsim/data/linux/1.3.6.1.2.1.1.1/127.0.0.1@public"
 .1.3.6.1.4.1.20408.999.1.3.1 = STRING: "9535d96c66759362b3521f4e273fc749"
 
 or
 
 $ snmpwalk -O n -l authPriv -u simulator -A auctoritas -X privatus -n index localhost:1161 .1.3.6
-.1.3.6.1.4.1.20408.999.1.1.1 = STRING: "./devices/linux/1.3.6.1.2.1.1.1/127.0.0.1@public.snmprec"
-.1.3.6.1.4.1.20408.999.1.2.1 = STRING: "devices/linux/1.3.6.1.2.1.1.1/127.0.0.1@public"
+.1.3.6.1.4.1.20408.999.1.1.1 = STRING: "./snmpsim/data/linux/1.3.6.1.2.1.1.1/127.0.0.1@public.snmprec"
+.1.3.6.1.4.1.20408.999.1.2.1 = STRING: "snmpsim/data/linux/1.3.6.1.2.1.1.1/127.0.0.1@public"
 .1.3.6.1.4.1.20408.999.1.3.1 = STRING: "9535d96c66759362b3521f4e273fc749"
 
-Where first column holds device file path, second - community string, and 
+Where first column holds data file path, second - community string, and 
 third - SNMPv3 context name.
 
 Transport address based simulation
@@ -307,7 +300,7 @@ useful to present the same simulated device to different SNMP Managers
 differently.
 
 When running in --v2c-arch mode, Simulator (version 0.1.4 and later) would
-attempt to find device file to fullfill a request by probing files by paths
+attempt to find data file to fullfill a request by probing files by paths
 constructed from pieces of request data. This path construction rules are
 as follows:
 
@@ -339,12 +332,12 @@ For example, to make Simulator reporting from particular file to
 a Manager at 192.168.1.10 whenever community name "public" is used and
 queries are sent to Simulator over UDP/IPv4 to 192.168.1.1 interface
 (which is reported by Simulator under transport ID 1.3.6.1.6.1.1.0),
-device file public/1.3.6.1.6.1.1.0/192.168.1.10.snmprec whould be used
+data file public/1.3.6.1.6.1.1.0/192.168.1.10.snmprec whould be used
 for building responses.
 
 When Simulator is NOT running in --v2c-arch mode, e.g. SNMPv3 engine is
 used, similar rules apply to SNMPv3 context name rather than to SNMPv1/2c
-community name. In that case device file path construction would work
+community name. In that case data file path construction would work
 like this:
 
 <context-name> / <transport-ID> / <source-address> .snmprec
@@ -355,23 +348,23 @@ For example, to make Simulator reporting from particular file to
 a Manager at 192.168.1.10 whenever context-name is an empty string and
 queries are sent to Simulator over UDP/IPv4 to 192.168.1.1 interface
 (which is reported by Simulator under transport ID 1.3.6.1.6.1.1.0),
-device file 1.3.6.1.6.1.1.0/192.168.1.10.snmprec whould be used
+data file 1.3.6.1.6.1.1.0/192.168.1.10.snmprec whould be used
 for building responses.
 
-Sharing device files
---------------------
+Sharing data files
+------------------
 
-If a symbolic link is used as a device file, it would serve as an
+If a symbolic link is used as a data file, it would serve as an
 alternative CommunityName/ContextName for the Managed Objects collection
-read from the snapshot file being pointed to. Shared device files are
+read from the snapshot file being pointed to. Shared data files are
 mentioned explicitly on Simulator startup:
 
 $ snmpsimd.py --agent-udpv4-endpoint=127.0.0.1:1161
-Device file ./devices/public/1.3.6.1.6.1.1.0/127.0.0.1.snmprec, dbhash-indexed, closed
+Device file ./snmpsim/data/public/1.3.6.1.6.1.1.0/127.0.0.1.snmprec, dbhash-indexed, closed
 SNMPv1/2c community name: public/1.3.6.1.6.1.1.0/127.0.0.1
 SNMPv3 context name: 6d42b10f70ddb49c6be1d27f5ce2239e
 -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-Shared device file ./devices/public/1.3.6.1.6.1.1.0/127.0.0.1.snmprec, dbhash-indexed, closed
+Shared data file ./snmpsim/data/public/1.3.6.1.6.1.1.0/127.0.0.1.snmprec, dbhash-indexed, closed
 SNMPv1/2c community name: public/1.3.6.1.6.1.1.0/192.168.1.1
 SNMPv3 context name: 1a80634d11a76ee4e29b46bc8085d871
 
@@ -442,6 +435,111 @@ into text files having .sapwalk suffix and let Simulator find and index
 them. Once completed, Simulator will report access information for them
 just as it does for its native .snmprec files.
 
+Using variation modules
+-----------------------
+
+Without variation modules, simulated SNMP Agents are always static
+in terms of data returned to SNMP Managers. They are also read-only.
+By configuring particular OIDs or whole subtrees to be gatewayed to
+variation modules allows you to make returned data changing in time.
+
+Another way of using variation modules is to gather data from some
+external source such as an SQL database or executed process or distant
+web-service.
+
+It's also possible to modify simulated values through SNMP SET operation
+and store modified values in a database so they will persist over Simulator
+restarts.
+
+Variation modules may be used for triggering events at other systems. For
+instance stock "notification" module will send SNMP TRAP/IMFORM messages
+to pre-configured SNMP Managers on SNMP SET request arrival to Simulator.
+
+Finally, variation module API let you develop your own code in Python
+to fulfill your special needs and use your variation module with stock
+Simulator.
+
+Here's the current list of variation modules supplied with Simulator:
+
+* counter - produces a non-decreasing sequence of integers over time
+* gauge - produces a random number in specified range
+* notification - sends SNMP TRAP/INFORM messages to disitant SNMP entity
+* volatilecache - accepts and stores (in memory) SNMP var-binds through SNMP SET
+* involatilecache - accepts and stores (in file) SNMP var-binds through
+                    SNMP SET 
+* sql - reads/writes var-binds from/to a SQL database
+* subprocess - executes external process and puts its stdout values into
+               response
+
+To make use of a variation module you will have to *edit* existing
+or create a new data file adding variation module into the "tag" field.
+
+Consider .snmprec file format is a sequence of lines in the following
+format:
+
+<OID>:<TAG>:<VALUE>
+
+whereas TAG field complies to its own format:
+
+TAGID[:MODULE]
+
+For example, the following .snmprec file contents will invoke the
+"volatilecache" module:
+
+1.3.6.1.2.1.1.1.0|4:volatilecache|I'm a string, please modify me
+1.3.6.1.2.1.1.3.0|2:volatilecache|42
+
+and cast its returned values into ASN.1 OCTET STRING and INTEGER respectively.
+
+Whenever a subtree is gatewayed to a variation module, TAGID part is left out
+as there might be no single type for all values within a subtree. Thus the
+empty TAGID sub-field serves as an indicator of a subtree:
+
+For example, the following data file will serve all OIDs under 1.3.6.1.2.1.1
+prefix to the "sql" variation module:
+
+1.3.6.1.2.1.1|:sql|system
+
+The value part is passed to variation module as-is. It is typically holds some
+module-specific configuration or initialization values.
+
+For example, the following .snmprec line invokes the "notification" variation
+module instructing it to send SNMP INFORM message to SNMP Manager at
+127.0.01:162 over SNMPv3 with specific SNMP params:
+
+1.3.6.1.2.1.1.3.0|67:notification|3,usr-md5-des,md5,authkey1,des,privkey1,udp,127.0.0.1,162,inform,1.3.6.1.6.3.1.1.5.2,
+
+A small (but growing) collection of variation modules are shipped along with
+Simulator and normally installed into the Python site-packages directory.
+User can pass Simulator an alternative modules directory through its command
+line.
+
+Simulator will load and bootstrap all variation modules it finds. Some
+modules can accept initialization parameters (like database connection
+credentials) through Simulator's --variation-module-options command-line
+parameter.
+
+For example, the following Simulator invocation will configure its
+"sql" variation module to use sqlite database (sqlite3 Python module)
+and /var/tmp/system.db database file:
+
+$ snmpsimd.py --variation-module-options=sql:sqlite3:/var/tmp/system.db
+
+In case you are using multiple database connections or database types
+all through the sql variation module, you could refer to each module instance
+in .snmprec files through a so-called variation module alias.
+
+The following command-line runs Simulator with two instances of the
+"involatilecache" variation module (dbA & dbB) each instance using 
+distinct database file for storing their persistent values:
+
+$ snmpsimd.py --variation-module-options=involatilecache=dbA:/var/tmp/fileA.db --variation-module-options=involatilecache=dbB:/var/tmp/fileB.db
+
+Whenever you consider coding your own variation module, take a look at the
+existing ones. The API is very simple - it basically takes three Python 
+functions (init, process, shutdown) where process() is expected to return
+a var-bind pair per each invocation.
+
 Performance improvement
 -----------------------
 
@@ -453,7 +551,7 @@ operations.
 Use the --v2c-arch command line parameter to switch Simulator into SNMPv2c
 (v1/v2c) operation mode.
 
-When Simulator runs over thousands of device files, startup may take time
+When Simulator runs over thousands of data files, startup may take time
 (tens of seconds). Most of it goes into configuring SNMPv1/v2c credentials
 into SNMPv3 engine so startup time can be dramatically reduced by either
 using --v2c-arch mode (as mentioned above) or by turning off SNMPv1/v2c
@@ -511,4 +609,4 @@ your device and send me its output file. Make sure that your device
 does not have any private information.
 
 ---
-Written by Ilya Etingof <ilya@glas.net>, 2010-2012
+Written by Ilya Etingof <ilya@glas.net>, 2010-2013

@@ -1,2 +1,3 @@
 include *.txt
-recursive-include devices *.snmprec README.txt
+recursive-include snmpsim/data *.snmprec *.txt
+recursive-include snmpsim/variation *.py

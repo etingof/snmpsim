@@ -1,3 +1,23 @@
+0.2.0
+-----
+
+- Major overhaul aimed at adding value variation features to the Simulator
+  core:
+  * data files may now hold not only terminal OIDs but also OID subtrees
+  * pluggable value variation modules interfaces and basic modules added
+  * write support added through the use of appropriate variation modules
+  * SQL backend for keeping and modifying SNMP snapshots added in form of
+    a value variation module
+  * subprocess execution variation module added what could be used
+    for external process invocation on SNMP request to Simulator
+  * SNMP Notification Originator variation module added what could be
+    used for sending SNMP TRAP/INFORM messages to SNMP entities
+    on SNMP requests to Simulator
+- SNMP snapshots now being called 'data files' rather than 'device files'
+  which is a legacy term.
+- Data files and variation modules are now installed into Python package
+  directory to ease package distribution across platforms.
+
 0.1.6
 -----
 

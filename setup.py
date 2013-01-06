@@ -7,6 +7,7 @@
    to respond like their original counterparts do.
 """
 import sys
+import os
 
 classifiers = """\
 Development Status :: 5 - Production/Stable
@@ -54,12 +55,12 @@ def howto_install_setuptools():
 try:
     from setuptools import setup
     params = {
-        'install_requires': [ 'pysnmp>=4.2.2' ],
-        'zip_safe': True
+        'install_requires': [ 'pysnmp>=4.2.4' ],
+        'zip_safe': False
         }
 except ImportError:
     for arg in sys.argv:
-        if "egg" in arg:
+        if 'egg' in arg:
             if sys.version_info[0] > 2:
                 howto_install_distribute()
             else:
@@ -73,21 +74,29 @@ except ImportError:
 doclines = [ x.strip() for x in __doc__.split('\n') if x ]
 
 params.update( {
-    'name': "snmpsim",
-    'version': "0.1.6",
+    'name': 'snmpsim',
+    'version': open(os.path.join('snmpsim, '__init__.py')).read().split('\'')[1]+'rc0',
     'description': doclines[0],
     'long_description': ' '.join(doclines[1:]),
     'maintainer': 'Ilya Etingof <ilya@glas.net>',
-    'author': "Ilya Etingof",
-    'author_email': "ilya@glas.net ",
-    'url': "http://sourceforge.net/projects/snmpsim/",
+    'author': 'Ilya Etingof',
+    'author_email': 'ilya@glas.net',
+    'url': 'http://sourceforge.net/projects/snmpsim/',
     'platforms': ['any'],
     'classifiers': [ x for x in classifiers.split('\n') if x ],
-    'scripts': [ 'snmpsimd.py', 'snmprec.py', 'mib2dev.py' ],
-    'license': "BSD"
-  } )
+    'scripts': [ os.path.join('scripts', 'snmpsimd.py'),
+                 os.path.join('scripts', 'snmprec.py'),
+                 os.path.join('scripts', 'mib2dev.py') ],
+    'license': 'BSD',
+    'packages': [ 'snmpsim' ],
+    'package_data': { 'snmpsim': [ os.path.join('data' ,'*.snmprec'),
+                                   os.path.join('data', '*', '*.snmprec'),
+                                   os.path.join('data', '*', '*', '*.snmprec'),
+                                   os.path.join('data', '*', '*', '*', '*.snmprec'),
+                                   os.path.join('variation', '*.py') ] }
+} )
 
-if "py2exe" in sys.argv:
+if 'py2exe' in sys.argv:
     import py2exe
     # fix executables
     params['console'] = params['scripts']
