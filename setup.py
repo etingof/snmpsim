@@ -75,7 +75,7 @@ doclines = [ x.strip() for x in __doc__.split('\n') if x ]
 
 params.update( {
     'name': 'snmpsim',
-    'version': open(os.path.join('snmpsim, '__init__.py')).read().split('\'')[1]+'rc0',
+    'version': open(os.path.join('snmpsim', '__init__.py')).read().split('\'')[1]+'rc0',
     'description': doclines[0],
     'long_description': ' '.join(doclines[1:]),
     'maintainer': 'Ilya Etingof <ilya@glas.net>',
