@@ -482,7 +482,7 @@ format:
 
 whereas TAG field complies to its own format:
 
-TAGID[:MODULE]
+TAG-ID[:MODULE-ID]
 
 For example, the following .snmprec file contents will invoke the
 "volatilecache" module:
@@ -490,11 +490,12 @@ For example, the following .snmprec file contents will invoke the
 1.3.6.1.2.1.1.1.0|4:volatilecache|I'm a string, please modify me
 1.3.6.1.2.1.1.3.0|2:volatilecache|42
 
-and cast its returned values into ASN.1 OCTET STRING and INTEGER respectively.
+and cast its returned values into ASN.1 OCTET STRING (4) and INTEGER (2)
+respectively.
 
-Whenever a subtree is gatewayed to a variation module, TAGID part is left out
+Whenever a subtree is gatewayed to a variation module, TAG-ID part is left out
 as there might be no single type for all values within a subtree. Thus the
-empty TAGID sub-field serves as an indicator of a subtree:
+empty TAG-ID sub-field serves as an indicator of a subtree:
 
 For example, the following data file will serve all OIDs under 1.3.6.1.2.1.1
 prefix to the "sql" variation module:
