@@ -472,7 +472,8 @@ Here's the current list of variation modules supplied with Simulator:
                response
 
 To make use of a variation module you will have to *edit* existing
-or create a new data file adding variation module into the "tag" field.
+or create a new data file adding reference to a variation module into the
+"tag" field.
 
 Consider .snmprec file format is a sequence of lines in the following
 format:
