@@ -478,7 +478,7 @@ or create a new data file adding reference to a variation module into the
 Consider .snmprec file format is a sequence of lines in the following
 format:
 
-<OID>:<TAG>:<VALUE>
+<OID>|<TAG>|<VALUE>
 
 whereas TAG field complies to its own format:
 
