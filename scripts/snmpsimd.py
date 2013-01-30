@@ -208,7 +208,7 @@ for variationModulesDir in variationModulesDirs:
             try:
                 execfile(mod, ctx)
             except Exception:
-                sys.stdout.write('variation module %s execution failure: %s\r\n' %  (opt[1], sys.exc_info()[1]))
+                sys.stdout.write('variation module %s execution failure: %s\r\n' %  (mod, sys.exc_info()[1]))
                 sys.exit(-1)
             else:
                 variationModules[alias] = ctx
