@@ -537,10 +537,84 @@ distinct database file for storing their persistent values:
 
 $ snmpsimd.py --variation-module-options=involatilecache=dbA:/var/tmp/fileA.db --variation-module-options=involatilecache=dbB:/var/tmp/fileB.db
 
+What follows is a brief description of some of the variation modules
+included into the distribution.
+
+Counter module
+==============
+
+The counter module maintains and returns a never decreasing integer value
+(except for the case of overflow) changing in time in accordance with 
+user-defined rules. This module is per-OID stateful and configurable.
+
+The counter module accepts the following comma-separated key=value parameters
+in .snmprec value field:
+
+  min - the minimum value ever stored and returned by this module.
+        Default is 0.
+  max - the maximum value ever stored and returned by this module.
+        Default is 2**32 (0xFFFFFFFF).
+  wrap - if zero, generated value will freeze when reaching 'max'. Otherwise
+         generated value is reset to 'min'.
+  function - defines elapsed-time-to-generated-value relationship. Can be
+             any of reasonably suitable mathematical function from the
+             math module such as sin, log, pow etc. The only requirement
+             is that used function accepts a single integer argument. 
+             Default is x = f(x).
+  rate - elapsed time scaler. Default is 1.
+  scale - function value scaler. Default is 1.
+  offset - constant value by which the return value increases on each
+           invocation. Default is 0.
+  deviation - random deviation maximum. Default is 0 which means no
+              deviation.
+
+This module generates values by execution of the following formula:
+
+  v = abs(function(UPTIME * rate) * scale + offset + RAND(0, deviation)
+
+Here's an example counter module use in a .snmprec file:
+
+  1.3.6.1.2.1.2.2.1.13.1|65:counter|max=100,scale=0.6,deviation=1,function=cos
+
+Gauge module
+============
+
+The gauge module maintains and returns an integer value changing in time
+in accordance with user-defined rules. This module is per-OID stateful and
+configurable.
+
+The gauge module accepts the following comma-separated key=value parameters
+in .snmprec value field:
+
+  min - the minimum value ever stored and returned by this module.
+        Default is 0.
+  max - the maximum value ever stored and returned by this module.
+        Default is 2**32 (0xFFFFFFFF).
+  function - defines elapsed-time-to-generated-value relationship. Can be
+             any of reasonably suitable mathematical function from the
+             math module such as sin, log, pow etc. The only requirement
+             is that used function accepts a single integer argument. 
+             Default is x = f(x).
+  rate - elapsed time scaler. Default is 1.
+  scale - function value scaler. Default is 1.
+  offset - constant value by which the return value increases on each
+           invocation. Default is 0.
+  deviation - random deviation minimum and maximum. Default is 0 which means no
+              deviation.
+
+This module generates values by execution of the following formula:
+
+  v = abs(function(UPTIME * rate) * scale + offset + RAND(-deviation, deviation)
+
+Here's an example gauge module use in a .snmprec file:
+
+  1.3.6.1.2.1.2.2.1.21.1|66:gauge|function=sin,scale=100,deviation=0.5
+
 Whenever you consider coding your own variation module, take a look at the
 existing ones. The API is very simple - it basically takes three Python 
 functions (init, process, shutdown) where process() is expected to return
 a var-bind pair per each invocation.
+
 
 Performance improvement
 -----------------------
