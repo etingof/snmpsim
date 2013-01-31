@@ -604,7 +604,7 @@ in .snmprec value field:
 
 This module generates values by execution of the following formula:
 
-  v = abs(function(UPTIME * rate) * scale + offset + RAND(-deviation, deviation)
+  v = function(UPTIME * rate) * scale + offset + RAND(-deviation, deviation)
 
 Here's an example gauge module use in a .snmprec file:
 
