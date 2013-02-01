@@ -414,7 +414,7 @@ class SnmprecParser:
             if 'dataValidation' in context:
                 return oid, self.tagMap[tag](value)
             if not context['nextFlag'] and not context['exactMatch'] or \
-               context['writeMode']:
+               context['setFlag']:
                 return context['origOid'], context['errorStatus']
         if not hasattr(value, 'tagSet'):
             value = self.tagMap[tag](value)
@@ -632,7 +632,7 @@ class DataFile(AbstractLayout):
         else:
             return hi
 
-    def processVarBinds(self, varBinds, nextFlag=False, writeMode=False):
+    def processVarBinds(self, varBinds, nextFlag=False, setFlag=False):
         rspVarBinds = []
 
         if nextFlag:
@@ -693,7 +693,7 @@ class DataFile(AbstractLayout):
                     break
 
                 try:
-                    _oid, _val = self.__textParser.evaluate(line, writeMode=writeMode, origOid=oid, origValue=val, dataFile=self.getTextFile(), subtreeFlag=subtreeFlag, nextFlag=nextFlag, exactMatch=exactMatch, errorStatus=errorStatus, varsRemaining=varsRemaining)
+                    _oid, _val = self.__textParser.evaluate(line, setFlag=setFlag, origOid=oid, origValue=val, dataFile=self.getTextFile(), subtreeFlag=subtreeFlag, nextFlag=nextFlag, exactMatch=exactMatch, errorStatus=errorStatus, varsRemaining=varsRemaining)
                     if _val is exval.endOfMib:
                         exactMatch = True
                         subtreeFlag = False
