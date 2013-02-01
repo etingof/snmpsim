@@ -541,7 +541,7 @@ What follows is a brief description of some of the variation modules
 included into the distribution.
 
 Counter module
-==============
+++++++++++++++
 
 The counter module maintains and returns a never decreasing integer value
 (except for the case of overflow) changing in time in accordance with 
@@ -577,7 +577,7 @@ Here's an example counter module use in a .snmprec file:
   1.3.6.1.2.1.2.2.1.13.1|65:counter|max=100,scale=0.6,deviation=1,function=cos
 
 Gauge module
-============
+++++++++++++
 
 The gauge module maintains and returns an integer value changing in time
 in accordance with user-defined rules. This module is per-OID stateful and
@@ -610,11 +610,184 @@ Here's an example gauge module use in a .snmprec file:
 
   1.3.6.1.2.1.2.2.1.21.1|66:gauge|function=sin,scale=100,deviation=0.5
 
+Volatile Cache module
++++++++++++++++++++++
+
+The volatile cache module lets you make particular OID at a .snmprec file
+writable via SNMP SET operation. The new value will be stored in Simulator
+process's memory and communicated back on SNMP GET/GETNEXT/GETBULK 
+operations. Stored data will be lost upon Simulator restart.
+
+The .snmprec value will be used as an initial value by the volatilecache
+module.
+
+Here's an example volatilecache module use in a .snmprec file:
+
+1.3.6.1.2.1.1.3.0|2:volatilecache|42
+
+In the above configuration, the initial value is 42 and can be modified by:
+
+snmpset -v2c -c <commiunity> localhost 1.3.6.1.2.1.1.3.0 i 24
+
+command (assuming correct community name and Simulator is running locally).
+
+Involatile cache module
++++++++++++++++++++++++
+
+The involatilecache module works similar to the volatilecache one, but
+the former has an ability of storing current values in a persistent
+database.
+
+Module invocation requires passing a name of a database file to be
+created if not already exists:
+
+$ snmpsimd.py --variation-module-options=involatilecache:/tmp/shelves.db
+
+All modifed values will be kept and then subsequently used on a per-OID
+basis in the specified file.
+
+Subprocess module
++++++++++++++++++
+
+The subprocess module can be used to execute an external program
+passing it request data and using its stdout output as a response value.
+
+Value part of .snmprec line should contain space-separated path
+to external program executable followed by optional command-line
+parameters.
+
+SNMP request parameters could be passed to the program to be executed
+by means of macro variables. With subprocess module, macro variables
+names always carry '@' sign at front and back (e.g. @MACRO@).
+
+Full list of supported macros follows:
+
+  @DATAFILE@ - resolves into the .snmprec file selected by Simulator
+               for serving current request
+  @OID@ - resolves into an OID of .snmprec line selected for serving
+          current request
+  @TAG@ - resolves into the <tag> component of snmprec line selected for
+          serving current request
+  @ORIGOID@ - resolves into currenty processed var-bind OID
+  @ORIGTAG@ - resolves into value type of currently processed var-bind
+  @ORIGVALUE@ - resolves into value of currently processed var-bind
+  @SETFLAG@ - resolves into '1' on SNMP SET, '0' otherwise
+  @NEXTFLAG@ - resolves into '1' on SNMP GETNEXT/GETBULK, '0' otherwise
+  @SUBTREEFLAG@ - resolves into '1' if the .snmprec file line selected
+                  for processing current request serves a subtree of
+                  OIDs rather than a single specific OID
+
+Here's an example subprocess module use in a .snmprec file:
+
+1.3.6.1.2.1.1.1.0|4:subprocess|echo SNMP Context is @DATAFILE@, received request for @ORIGOID@, matched @OID@, received tag/value "@ORIGTAG@"/"@ORIGVALUE@", would return value tagged @TAG@, SET request flag is @SETFLAG@, next flag is @NEXTFLAG@, subtree flag is @SUBTREEFLAG@
+1.3.6.1.2.1.1.3.0|2:subprocess|date +%s
+
+The first line simply packs all current macro variables contents as a
+response string my printing them to stdout with echo, second line invokes
+the UNIX date command instructing it to report elapsed UNIX epoch time.
+
+Note .snmprec tag values -- executed program's stdout will be casted into
+appropriate type depending of tag indication.
+
+Notification module
++++++++++++++++++++
+
+The notification module can send SNMP TRAP/INFORM notifications to
+distant SNMP engines by way of serving SNMP request sent to Simulator.
+In other words, SNMP message sent to Simulator can trigger sending
+TRAP/INFORM message to pre-configured targets.
+
+No new process execution is involved in the operations of this module,
+it uses Simulator's SNMP engine for notification generation.
+
+Notification parameters should be passed to this module as a comma-separated
+list of parameters through the value part of .snmprec line. Their syntax
+depend heavily on SNMP version being used.
+
+For SNMP v1 TRAPs the syntax is:
+
+1,<community>,udp/udp6,<target-address>,<port>,trap,\
+  <trap-oid>,<uptime>,<agent-address>,<enterprise-oid>\
+  [,<var-bind>[,<var-bind>]...]
+
+For SNMP v2c TRAPs/INFORMs the syntax is:
+
+2c,<community>,udp/udp6,<target-address>,<port>,trap/inform,\
+  <trap-oid>,<uptime>[,<var-bind>[,<var-bind>]...]
+
+For SNMP v3 TRAPs/INFORMs the syntax is:
+
+3,<username>,md5/sha/none,<authkey>,des/aes/none,<privkey>,udp/udp6,\
+  <target-address>,<port>,trap/inform,<trap-oid>,<uptime>\
+  [,<var-bind>[,<var-bind>]...]
+
+where <var-bind> has a syntax of:
+
+<var-bind> = <oid>,<tag>,<value>
+
+where <tag> is a single character of:
+
+  s: OctetString
+  i: Integer32
+  o: ObjectName
+  a: IpAddress
+  u: Unsigned32
+  g: Gauge32
+  t: TimeTicks
+  b: Bits
+  I: Counter64
+
+For example, the following three .snmprec lines will send SNMP v1, v2c
+and v3 notifications whenever Simulator is processing SET request for
+configured OIDs:
+
+1.3.6.1.2.1.1.1.0|4:notification|1,public,udp,127.0.0.1,162,trap,1.3.6.1.4.1.20408.4.1.1.2.0.432,12345,127.0.0.1,1.3.6.1.4.1.20408.4.1.1.2,1.3.6.1.2.1.1.1.0,s,snmpsim agent,1.3.6.1.2.1.1.3.0,i,42
+1.3.6.1.2.1.1.2.0|6:notification|2c,public,udp,127.0.0.1,162,trap,1.3.6.1.6.3.1.1.5.1,,1.3.6.1.2.1.1.1.0,s,snmpsim agent,1.3.6.1.2.1.1.3.0,i,42
+1.3.6.1.2.1.1.3.0|67:notification|3,usr-md5-des,md5,authkey1,des,privkey1,udp,127.0.0.1,162,inform,1.3.6.1.6.3.1.1.5.2,
+
+Keep in mind that delivery status of INFORM notifications is not communicated
+back to SNMP Manager working with Simulator.
+
+SQL module
+++++++++++
+
+The sql module lets you keep subtrees of OIDs and their values in a relational
+database. All SNMP operations are supported including transactional SET.
+
+Module invocation requires passing database type (sqlite3, psycopg,
+MySQL and any other compliant to Python DB-API and importable as a Python
+module) and connect string which is database dependant:
+
+$ snmpsimd.py --variation-module-options=sql:sqlite3:/tmp/sqlite.db
+
+The .snmprec value is expected to hold database table name to keep
+all OID-value pairs served within selected .snmprec line. This table
+will not be created automatically and should exist for sql module
+to work. Table layout should be as follows:
+
+  CREATE TABLE <tablename> (oid text primary key,
+                            tag text,
+                            value text,
+                            maxaccess text default "read-only")
+
+The most usual setup is to keep many OID-value pairs in a database
+table refered to by a .snmprec line serving a subtree of OIDs:
+
+  1.3.6.1.2.1.1|:sql|system
+
+In the above case all OIDs under 1.3.6.1.2.1.1 prefix will be
+handled by a sql module using 'system' table.
+
+Custom variation modules
+++++++++++++++++++++++++
+
 Whenever you consider coding your own variation module, take a look at the
 existing ones. The API is very simple - it basically takes three Python 
 functions (init, process, shutdown) where process() is expected to return
 a var-bind pair per each invocation.
 
+Alternatively, we could help you with this task. Just let us know your
+requirements.
 
 Performance improvement
 -----------------------
