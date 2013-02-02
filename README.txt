@@ -635,7 +635,7 @@ Involatile cache module
 +++++++++++++++++++++++
 
 The involatilecache module works similar to the volatilecache one, but
-the former has an ability of storing current values in a persistent
+the involatile version has an ability of storing current values in a persistent
 database.
 
 Module invocation requires passing a name of a database file to be
@@ -682,8 +682,8 @@ Here's an example subprocess module use in a .snmprec file:
 1.3.6.1.2.1.1.1.0|4:subprocess|echo SNMP Context is @DATAFILE@, received request for @ORIGOID@, matched @OID@, received tag/value "@ORIGTAG@"/"@ORIGVALUE@", would return value tagged @TAG@, SET request flag is @SETFLAG@, next flag is @NEXTFLAG@, subtree flag is @SUBTREEFLAG@
 1.3.6.1.2.1.1.3.0|2:subprocess|date +%s
 
-The first line simply packs all current macro variables contents as a
-response string my printing them to stdout with echo, second line invokes
+The first entry simply packs all current macro variables contents as a
+response string my printing them to stdout with echo, second entry invokes
 the UNIX date command instructing it to report elapsed UNIX epoch time.
 
 Note .snmprec tag values -- executed program's stdout will be casted into
@@ -771,7 +771,7 @@ to work. Table layout should be as follows:
                             maxaccess text default "read-only")
 
 The most usual setup is to keep many OID-value pairs in a database
-table refered to by a .snmprec line serving a subtree of OIDs:
+table referred to by a .snmprec line serving a subtree of OIDs:
 
   1.3.6.1.2.1.1|:sql|system
 
