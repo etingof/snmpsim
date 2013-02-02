@@ -645,6 +645,9 @@ is similar to the first one but uses delay module defaults. Finally, the last
 entry takes shape of an OCTET STRING value '0:12:79:62:f9:40' delayed by
 exactly 0.8 sec.
 
+Keep in mind that since Simulator is a single-thread application,
+any delayed response will delay all concurrent requests processing as well.
+
 Volatile Cache module
 +++++++++++++++++++++
 
