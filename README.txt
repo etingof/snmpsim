@@ -35,9 +35,11 @@ its extension (also called "variation" modules). Once a variation module
 is invoked by Simulator core, it is expected to return a well-formed
 variable-binding sequence to be put into Simulator's response message.
 
-Simulator is shipped with a collecton of factory-build variation
-modules. Users of the Simulator software are welcome to develop their
-own variation modules if stock ones appears insufficient.
+Simulator is shipped with a collecton of factory-built variation modules 
+including those suitable for external process invocation, SNMPTRAP/INFORM 
+originator and SQL database adapter. Users of the Simulator software are
+welcome to develop their own variation modules if stock ones appears
+insufficient.
 
 The Simulator software is fully free and open source. It's written from
 ground-up in an easy to learn and high-level scripting language called
@@ -468,6 +470,7 @@ Here's the current list of variation modules supplied with Simulator:
 * involatilecache - accepts and stores (in file) SNMP var-binds through
                     SNMP SET 
 * sql - reads/writes var-binds from/to a SQL database
+* delay - delays SNMP response by specified or random time
 * subprocess - executes external process and puts its stdout values into
                response
 
@@ -609,6 +612,38 @@ This module generates values by execution of the following formula:
 Here's an example gauge module use in a .snmprec file:
 
   1.3.6.1.2.1.2.2.1.21.1|66:gauge|function=sin,scale=100,deviation=0.5
+
+Delay module
+++++++++++++
+
+The delay module postpones SNMP request processing for specified number of
+milliseconds.
+
+Delay module accepts the following comma-separated key=value parameters
+in .snmprec value field:
+
+  value - holds the var-bind value to be included into SNMP response.
+          In case of a string value containing commas, use 'hexvalue'
+          instead.
+  hexvalue - holds the var-bind value as a sequence of ASCII codes in hex
+             form. Before putting it into var-bind, hexvalue contents will
+             be converted into ASCII text.
+  wait - specifies for how many milliseconds to delay SNMP response.
+         Default is 500ms.
+  deviation - random delay deviation ranges. Default is 0 which means no
+              deviation.
+
+Here's an example delay module use in a .snmprec file:
+
+1.3.6.1.2.1.2.2.1.3.1|2:delay|value=6,wait=100,deviation=200
+1.3.6.1.2.1.2.2.1.4.1|2:delay|1500
+1.3.6.1.2.1.2.2.1.6.1|4:delay|hexvalue=00127962f940,wait=800
+
+The first entry makes Simulator responding with an integer value of 6 delayed
+by 0.1sec +- 0.2 sec. Negative delays are casted into zeros. The second entry
+is similar to the first one but uses delay module defaults. Finally, the last
+entry takes shape of an OCTET STRING value '0:12:79:62:f9:40' delayed by
+exactly 0.8 sec.
 
 Volatile Cache module
 +++++++++++++++++++++
