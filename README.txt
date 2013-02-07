@@ -509,10 +509,11 @@ The value part is passed to variation module as-is. It is typically holds some
 module-specific configuration or initialization values.
 
 For example, the following .snmprec line invokes the "notification" variation
-module instructing it to send SNMP INFORM message to SNMP Manager at
+module instructing it to send SNMP INFORM message (triggered by SET message to
+the 1.3.6.1.2.1.1.3.0 OID served by Simulator) to SNMP Manager at
 127.0.01:162 over SNMPv3 with specific SNMP params:
 
-1.3.6.1.2.1.1.3.0|67:notification|3,usr-md5-des,md5,authkey1,des,privkey1,udp,127.0.0.1,162,inform,1.3.6.1.6.3.1.1.5.2,
+1.3.6.1.2.1.1.3.0|67:notification|version=3,user=usr-md5-des,authkey=authkey1,privkey=privkey1,host=127.0.0.1,ntftype=inform,trapoid=1.3.6.1.6.3.1.1.5.2,value=123456
 
 A small (but growing) collection of variation modules are shipped along with
 Simulator and normally installed into the Python site-packages directory.
@@ -738,32 +739,36 @@ TRAP/INFORM message to pre-configured targets.
 No new process execution is involved in the operations of this module,
 it uses Simulator's SNMP engine for notification generation.
 
-Notification parameters should be passed to this module as a comma-separated
-list of parameters through the value part of .snmprec line. Their syntax
-depend heavily on SNMP version being used.
+Notification module accepts the following comma-separated key=value parameters
+in .snmprec value field:
 
-For SNMP v1 TRAPs the syntax is:
+  value - holds the var-bind value to be included into SNMP response
+          message.
+  op - either 'get' or 'set' values to indicate SNMP operation that would
+       trigger notification. Here 'get' also enables GETNEXT and GETBULK
+       operations.
+  version - SNMP version to use (1,2c,3).
+  ntftype - indicates notification type. Either 'trap' or 'inform'.
+  community - SNMP community name. For v1, v2c only. Default is 'public'.
+  trapoid - SNMP TRAP PDU element. Default is coldStart.
+  uptime - SNMP TRAP PDU element. Default is local SNMP engine uptime.
+  agentaddress - SNMP TRAP PDU element. For v1 only. Default is local SNMP
+                 engine address.
+  enterprise - SNMP TRAP PDU element. For v1 only.
+  user - USM username. For v3 only.
+  authproto - USM auth protocol. For v3 only. Either 'md5' or 'sha'.
+              Default is 'md5'.
+  authkey - USM auth key. For v3 only.
+  privproto - USM encryption protocol. For v3 only. Either 'des' or 'aes'.
+              Default is 'des'.
+  privkey - USM encryption key. For v3 only.
+  proto - transport protocol. Either 'udp' or 'udp6'. Default is 'udp'.
+  varbinds - a semicolon-separated list of OID:TAG:VALUE:OID:TAG:VALUE...
+             of var-binds to add into SNMP TRAP PDU.
+  host - hostname or network address to send notification to.
+  port - UDP port to send notification to. Default is 162.
 
-1,<community>,udp/udp6,<target-address>,<port>,trap,\
-  <trap-oid>,<uptime>,<agent-address>,<enterprise-oid>\
-  [,<var-bind>[,<var-bind>]...]
-
-For SNMP v2c TRAPs/INFORMs the syntax is:
-
-2c,<community>,udp/udp6,<target-address>,<port>,trap/inform,\
-  <trap-oid>,<uptime>[,<var-bind>[,<var-bind>]...]
-
-For SNMP v3 TRAPs/INFORMs the syntax is:
-
-3,<username>,md5/sha/none,<authkey>,des/aes/none,<privkey>,udp/udp6,\
-  <target-address>,<port>,trap/inform,<trap-oid>,<uptime>\
-  [,<var-bind>[,<var-bind>]...]
-
-where <var-bind> has a syntax of:
-
-<var-bind> = <oid>,<tag>,<value>
-
-where <tag> is a single character of:
+where <TAG> is a single character of:
 
   s: OctetString
   i: Integer32
@@ -776,12 +781,12 @@ where <tag> is a single character of:
   I: Counter64
 
 For example, the following three .snmprec lines will send SNMP v1, v2c
-and v3 notifications whenever Simulator is processing SET request for
-configured OIDs:
+and v3 notifications whenever Simulator is processing GET* and/or SET request
+for configured OIDs:
 
-1.3.6.1.2.1.1.1.0|4:notification|1,public,udp,127.0.0.1,162,trap,1.3.6.1.4.1.20408.4.1.1.2.0.432,12345,127.0.0.1,1.3.6.1.4.1.20408.4.1.1.2,1.3.6.1.2.1.1.1.0,s,snmpsim agent,1.3.6.1.2.1.1.3.0,i,42
-1.3.6.1.2.1.1.2.0|6:notification|2c,public,udp,127.0.0.1,162,trap,1.3.6.1.6.3.1.1.5.1,,1.3.6.1.2.1.1.1.0,s,snmpsim agent,1.3.6.1.2.1.1.3.0,i,42
-1.3.6.1.2.1.1.3.0|67:notification|3,usr-md5-des,md5,authkey1,des,privkey1,udp,127.0.0.1,162,inform,1.3.6.1.6.3.1.1.5.2,
+1.3.6.1.2.1.1.1.0|4:notification|op=get,version=1,community=public,proto=udp,host=127.0.0.1,port=162,ntftype=trap,trapoid=1.3.6.1.4.1.20408.4.1.1.2.0.432,uptime=12345,agentaddress=127.0.0.1,enterprise=1.3.6.1.4.1.20408.4.1.1.2,varbinds=1.3.6.1.2.1.1.1.0:s:snmpsim agent:1.3.6.1.2.1.1.3.0:i:42,value=SNMPv1 trap sender
+1.3.6.1.2.1.1.2.0|6:notification|op=set,version=2c,community=public,host=127.0.0.1,ntftype=trap,trapoid=1.3.6.1.6.3.1.1.5.1,varbinds=1.3.6.1.2.1.1.1.0:s:snmpsim agent:1.3.6.1.2.1.1.3.0:i:42,value=1.3.6.1.1.1
+1.3.6.1.2.1.1.3.0|67:notification|version=3,user=usr-md5-des,authkey=authkey1,privkey=privkey1,host=127.0.0.1,ntftype=inform,trapoid=1.3.6.1.6.3.1.1.5.2,value=123456
 
 Keep in mind that delivery status of INFORM notifications is not communicated
 back to SNMP Manager working with Simulator.
