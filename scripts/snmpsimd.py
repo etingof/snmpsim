@@ -642,7 +642,7 @@ class DataFile(AbstractLayout):
 
         text, db = self.getHandles()
        
-        varsRemaining = len(varBinds)
+        varsRemaining = varsTotal = len(varBinds)
          
         for oid, val in varBinds:
             textOid = str(
@@ -693,7 +693,7 @@ class DataFile(AbstractLayout):
                     break
 
                 try:
-                    _oid, _val = self.__textParser.evaluate(line, setFlag=setFlag, origOid=oid, origValue=val, dataFile=self.getTextFile(), subtreeFlag=subtreeFlag, nextFlag=nextFlag, exactMatch=exactMatch, errorStatus=errorStatus, varsRemaining=varsRemaining)
+                    _oid, _val = self.__textParser.evaluate(line, setFlag=setFlag, origOid=oid, origValue=val, dataFile=self.getTextFile(), subtreeFlag=subtreeFlag, nextFlag=nextFlag, exactMatch=exactMatch, errorStatus=errorStatus, varsTotal=varsTotal, varsRemaining=varsRemaining)
                     if _val is exval.endOfMib:
                         exactMatch = True
                         subtreeFlag = False
