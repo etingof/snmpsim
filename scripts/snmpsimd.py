@@ -36,6 +36,7 @@ except ImportError:
     unix = None
 from pysnmp.carrier.asynsock.dispatch import AsynsockDispatcher
 from pysnmp.smi import exval, indices
+from pysnmp.smi.error import MibOperationError
 from pysnmp.proto import rfc1902, rfc1905, api
 from pysnmp import error
 from pysnmp import debug
@@ -273,7 +274,7 @@ class DumpParser:
         else:
             try:
                 oid, value = self.evaluateValue(oid, tag, value, **context)
-            except Exception:
+            except PyAsn1Error:
                 sys.stdout.write('ERROR: value evaluation for %s = %r failed: %s\r\n' % (oid, value, sys.exc_info()[1]))
                 value = context['errorStatus']
         return oid, value
@@ -428,7 +429,9 @@ class SnmprecParser:
         else:
             try:
                 oid, value = self.evaluateValue(oid, tag, value, tagMap=self.tagMap, **context)
-            except Exception:
+            except MibOperationError:
+                raise
+            except PyAsn1Error:
                 sys.stdout.write('ERROR: value evaluation for %s = %r failed: %s\r\n' % (oid, value, sys.exc_info()[1]))
                 oid = context['origOid']
                 value = context['errorStatus']
@@ -704,12 +707,13 @@ class DataFile(AbstractLayout):
                         exactMatch = True
                         subtreeFlag = False
                         continue
-                except PyAsn1Error:
+                except MibOperationError:
+                    raise
+                except Exception:
                     _oid = oid
                     _val = errorStatus
-                except Exception:
-                    raise Exception(
-                        'Data error at %s for %s: %s' % (self, textOid, sys.exc_info()[1])
+                    sys.stdout.write(
+                        'data error at %s for %s: %s\r\n' % (self, textOid, sys.exc_info()[1])
                     )
 
                 break
