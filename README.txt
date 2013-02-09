@@ -471,6 +471,7 @@ Here's the current list of variation modules supplied with Simulator:
                     SNMP SET 
 * sql - reads/writes var-binds from/to a SQL database
 * delay - delays SNMP response by specified or random time
+* error - flag errors in SNMP response PDU
 * subprocess - executes external process and puts its stdout values into
                response
 
@@ -648,6 +649,40 @@ exactly 0.8 sec.
 
 Keep in mind that since Simulator is a single-thread application,
 any delayed response will delay all concurrent requests processing as well.
+
+Error module
+++++++++++++
+
+The error module flags a configured error at SNMP response PDU.
+
+Error module accepts the following comma-separated key=value parameters
+in .snmprec value field:
+
+  op - either 'get' or 'set' values to indicate SNMP operation that would
+       trigger error response. Here 'get' also enables GETNEXT and GETBULK
+       operations.
+  value - holds the var-bind value to be included into SNMP response.
+          In case of a string value containing commas, use 'hexvalue'
+          instead.
+  hexvalue - holds the var-bind value as a sequence of ASCII codes in hex
+             form. Before putting it into var-bind, hexvalue contents will
+             be converted into ASCII text.
+  status - specifies error to be flagged. The following errors are
+           supported: 'generror', 'noaccess', 'wrongtype', 'wrongvalue',
+           'nocreation', 'inconsistentvalue', 'resourceunavailable',
+           'commitfailed', 'undofailed', 'authorizationerror',
+           'notwritable', 'inconsistentname', 'nosuchobject',
+           'nosuchinstance', 'endofmib'
+
+Here's an example error module use in a .snmprec file:
+
+1.3.6.1.2.1.2.2.1.1.1|2:error|op=get,status=authorizationError,value=1
+1.3.6.1.2.1.2.2.1.2.1|4:error|op=set,status=commitfailed,hexvalue=00127962f940
+1.3.6.1.2.1.2.2.1.6.1|4:error|status=noaccess
+
+The first entry flags 'authorizationError' on GET* and no error
+on SET. Second entry flags 'commitfailed' on SET but responds without errors
+to GET*. Finally, third entry always flags 'noaccess' error.
 
 Volatile Cache module
 +++++++++++++++++++++
