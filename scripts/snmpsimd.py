@@ -675,17 +675,23 @@ class DataFile(AbstractLayout):
                             subtreeFlag = int(subtreeFlag)
                         line = _nextLine
                 else: # search function above always rounds up to the next OID
-                    _oid, _  = self.__textParser.evaluate(line, oidOnly=True)
-                    _, _, _prevOffset = db[str(_oid)].split(',')
-                    _prevOffset = int(_prevOffset)
+                    if line:
+                        _oid, _  = self.__textParser.evaluate(
+                            line, oidOnly=True
+                        )
+                        _, _, _prevOffset = db[str(_oid)].split(',')
+                        _prevOffset = int(_prevOffset)
 
-                    if _prevOffset >= 0:  # previous line serves a subtree
-                        text.seek(_prevOffset)
-                        _prevLine = text.readline()
-                        _prevOid, _ = self.__textParser.evaluate(_prevLine, oidOnly=True)
-                        if _prevOid.isPrefixOf(oid):
-                            line = _prevLine  # use previous line to the matched one
-                            subtreeFlag = True
+                        if _prevOffset >= 0:  # previous line serves a subtree
+                            text.seek(_prevOffset)
+                            _prevLine = text.readline()
+                            _prevOid, _ = self.__textParser.evaluate(
+                                _prevLine, oidOnly=True
+                            )
+                            if _prevOid.isPrefixOf(oid):
+                                # use previous line to the matched one
+                                line = _prevLine
+                                subtreeFlag = True
 
                 if not line:
                     _oid = oid
