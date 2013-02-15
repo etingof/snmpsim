@@ -658,9 +658,9 @@ The error module flags a configured error at SNMP response PDU.
 Error module accepts the following comma-separated key=value parameters
 in .snmprec value field:
 
-  op - either 'get' or 'set' values to indicate SNMP operation that would
-       trigger error response. Here 'get' also enables GETNEXT and GETBULK
-       operations.
+  op - either of 'get', 'set' or 'any' values to indicate SNMP operation 
+       that would trigger error response. Here 'get' also enables GETNEXT 
+       and GETBULK operations. Default is 'any'.
   value - holds the var-bind value to be included into SNMP response.
           In case of a string value containing commas, use 'hexvalue'
           instead.
@@ -779,9 +779,9 @@ in .snmprec value field:
 
   value - holds the var-bind value to be included into SNMP response
           message.
-  op - either 'get' or 'set' values to indicate SNMP operation that would
-       trigger notification. Here 'get' also enables GETNEXT and GETBULK
-       operations.
+  op - either of 'get', 'set' or 'any' values to indicate SNMP operation that
+       would trigger notification. Here 'get' also enables GETNEXT and GETBULK
+       operations. Default is 'set'.
   version - SNMP version to use (1,2c,3).
   ntftype - indicates notification type. Either 'trap' or 'inform'.
   community - SNMP community name. For v1, v2c only. Default is 'public'.
