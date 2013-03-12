@@ -40,7 +40,10 @@ from pysnmp.smi.error import MibOperationError
 from pysnmp.proto import rfc1902, rfc1905, api
 from pysnmp import error
 from pysnmp import debug
-import snmpsim
+from snmpsim import __version__
+from snmpsim.error import SnmpsimError
+from snmpsim import confdir
+from snmpsim.grammar import dump, mvc, sap, walk, snmprec
 
 # Process command-line options
 
@@ -58,7 +61,7 @@ agentUDPv4Address = ('127.0.0.1', 161)
 agentUDPv4Endpoints = []
 agentUDPv6Endpoints = []
 agentUNIXEndpoints = []
-dataDirs = set()
+dataDirs = []
 variationModulesDirs = []
 variationModulesOptions = {}
 variationModules = {}
@@ -79,11 +82,11 @@ privProtocols = {
   'NONE': config.usmNoPrivProtocol
 }
  
-helpMessage = 'Usage: %s [--help] [--version ] [--debug=<category>] [--data-dir=<dir>] [--force-index-rebuild] [--validate-data] [--variation-modules-dir=<dir>] [--variation-module-options=<module[=alias][:args]>] [--agent-udpv4-endpoint=<X.X.X.X:NNNNN>] [--agent-udpv6-endpoint=<[X:X:..X]:NNNNN>] [--agent-unix-endpoint=</path/to/named/pipe>] [--v2c-arch] [--v3-only] [--v3-user=<username>] [--v3-auth-key=<key>] [--v3-auth-proto=<%s>] [--v3-priv-key=<key>] [--v3-priv-proto=<%s>]' % (sys.argv[0], '|'.join(authProtocols), '|'.join(privProtocols))
+helpMessage = 'Usage: %s [--help] [--version ] [--debug=<category>] [--data-dir=<dir>] [--cache-dir=<dir>] [--force-index-rebuild] [--validate-data] [--variation-modules-dir=<dir>] [--variation-module-options=<module[=alias][:args]>] [--agent-udpv4-endpoint=<X.X.X.X:NNNNN>] [--agent-udpv6-endpoint=<[X:X:..X]:NNNNN>] [--agent-unix-endpoint=</path/to/named/pipe>] [--v2c-arch] [--v3-only] [--v3-user=<username>] [--v3-auth-key=<key>] [--v3-auth-proto=<%s>] [--v3-priv-key=<key>] [--v3-priv-proto=<%s>]' % (sys.argv[0], '|'.join(authProtocols), '|'.join(privProtocols))
 
 try:
     opts, params = getopt.getopt(sys.argv[1:], 'h',
-        ['help', 'debug=', 'device-dir=', 'data-dir=', 'force-index-rebuild', 'validate-device-data', 'validate-data', 'variation-modules-dir=', 'variation-module-options=', 'agent-address=', 'agent-port=', 'agent-udpv4-endpoint=', 'agent-udpv6-endpoint=', 'agent-unix-endpoint=', 'v2c-arch', 'v3-only', 'v3-user=', 'v3-auth-key=', 'v3-auth-proto=', 'v3-priv-key=', 'v3-priv-proto=']
+        ['help', 'debug=', 'device-dir=', 'data-dir=', 'cache-dir=', 'force-index-rebuild', 'validate-device-data', 'validate-data', 'variation-modules-dir=', 'variation-module-options=', 'agent-address=', 'agent-port=', 'agent-udpv4-endpoint=', 'agent-udpv6-endpoint=', 'agent-unix-endpoint=', 'v2c-arch', 'v3-only', 'v3-user=', 'v3-auth-key=', 'v3-auth-proto=', 'v3-priv-key=', 'v3-priv-proto=']
         )
 except Exception:
     sys.stdout.write('%s\r\n%s\r\n' % (sys.exc_info()[1], helpMessage))
@@ -96,12 +99,14 @@ if params:
 for opt in opts:
     if opt[0] == '-h' or opt[0] == '--help' or \
        opt[0] == '-v' or opt[0] == '--version':
-        sys.stdout.write('SNMP Simulator version %s, written by Ilya Etingof <ilya@glas.net>\r\nSoftware documentation and support at http://snmpsim.sf.net\r\n%s\r\n' % (snmpsim.__version__, helpMessage))
+        sys.stdout.write('SNMP Simulator version %s, written by Ilya Etingof <ilya@glas.net>\r\nSoftware documentation and support at http://snmpsim.sf.net\r\n%s\r\n' % (__version__, helpMessage))
         sys.exit(-1)
     elif opt[0] == '--debug':
         debug.setLogger(debug.Debug(opt[1]))
     elif opt[0] in ('--device-dir', '--data-dir'):
-        dataDirs.add(opt[1])
+        dataDirs.append(opt[1])
+    elif opt[0] == '--cache-dir':
+        confdir.cache = opt[1]
     elif opt[0] == '--force-index-rebuild':
         forceIndexBuild = True
     elif opt[0] in ('--validate-device-data', '--validate-data'):
@@ -177,12 +182,18 @@ if authProtocols[v3AuthProto] == config.usmNoAuthProtocol and \
         sys.exit(-1)
 
 if not dataDirs:
-    dataDirs.add(snmpsim.root + os.path.sep + 'data')
+    [ dataDirs.append(x) for x in confdir.data ]
 
 if not variationModulesDirs:
-    variationModulesDirs.append(snmpsim.root + os.path.sep + 'variation')
+    [ variationModulesDirs.append(x) for x in confdir.variation ]
 
 for variationModulesDir in variationModulesDirs:
+    sys.stdout.write(
+        'Scanning "%s" directory for variation modules...' % variationModulesDir
+    )
+    if not os.path.exists(variationModulesDir):
+        sys.stdout.write(' no directory\r\n')
+        continue
     for dFile in os.listdir(variationModulesDir):
         if dFile[-3:] != '.py':
             continue
@@ -200,19 +211,25 @@ for variationModulesDir in variationModulesDirs:
 
         for alias, args in _toLoad:
             if alias in variationModules:
-                sys.stdout.write('variation module %s already registered\r\n' %  alias)
+                sys.stdout.write('\r\nvariation module %s already registered\r\n' %  alias)
                 sys.exit(-1)
 
             ctx = { 'path': mod,
                     'alias': alias,
                     'args': args }
+
             try:
-                execfile(mod, ctx)
+                if sys.version_info[0] > 2:
+                    exec(compile(open(mod).read(), mod, 'exec'), ctx)
+                else:
+                    execfile(mod, ctx)
             except Exception:
-                sys.stdout.write('variation module %s execution failure: %s\r\n' %  (mod, sys.exc_info()[1]))
+                sys.stdout.write('\r\nvariation module %s execution failure: %s\r\n' %  (mod, sys.exc_info()[1]))
                 sys.exit(-1)
             else:
                 variationModules[alias] = ctx
+
+    sys.stdout.write('%s more modules found\r\n' % len(variationModules))
 
 if variationModulesOptions:
     sys.stdout.write('ERROR: unused options for variation modules: %s\r\n' %  ', '.join(variationModulesOptions.keys()))
@@ -224,170 +241,52 @@ if not agentUDPv4Endpoints and \
    not agentUNIXEndpoints:
     agentUDPv4Endpoints.append(agentUDPv4Address)
 
-# Data file entry parsers
+if not os.path.exists(confdir.cache):
+    try:
+        os.mkdir(confdir.cache)
+    except OSError:
+        sys.stdout.write('ERROR: failed to create cache dir %s: %s\r\n' % (confdir.cache, sys.exc_info()[1]))
+    sys.exit(-1)
 
-class DumpParser:
-    ext = os.path.extsep + 'dump'
-    tagMap = {
-        '0': rfc1902.Counter32,
-        '1': rfc1902.Gauge32,
-        '2': rfc1902.Integer32,
-        '3': rfc1902.IpAddress,
-        '4': univ.Null,
-        '5': univ.ObjectIdentifier,
-        '6': rfc1902.OctetString,
-        '7': rfc1902.TimeTicks,
-        '8': rfc1902.Counter32,  # an alias
-        '9': rfc1902.Counter64,
-    }
+# Data records
 
-    def __nullFilter(value):
-        return '' # simply drop whatever value is there when it's a Null
-    
-    def __unhexFilter(value):
-        if value[:5].lower() == 'hex: ':
-            value = [ int(x, 16) for x in value[5:].split('.') ]
-        elif value[0] == '"' and value[-1] == '"':
-            value = value[1:-1]
-        return value
-
-    filterMap = {
-        '4': __nullFilter,
-        '6': __unhexFilter
-    }
-
-    def parse(self, line): return octs2str(line).split('|', 2)
+class DumpRecord:
+    grammar = dump.DumpGrammar()
+    ext = 'dump'
 
     def evaluateOid(self, oid):
         return univ.ObjectIdentifier(oid)
 
     def evaluateValue(self, oid, tag, value, **context):
-        return oid, tag, self.tagMap[tag](
-            self.filterMap.get(tag, lambda x: x)(value.strip())
-            )
+        return oid, tag, self.grammar.tagMap[tag](value)
     
     def evaluate(self, line, **context):
-        oid, tag, value = self.parse(line)
+        oid, tag, value = self.grammar.parse(line)
         oid = self.evaluateOid(oid)
         if context.get('oidOnly'):
             value = None
         else:
             try:
-                oid, value = self.evaluateValue(oid, tag, value, **context)
+                oid, tag, value = self.evaluateValue(oid, tag, value, **context)
             except PyAsn1Error:
-                sys.stdout.write('ERROR: value evaluation for %s = %r failed: %s\r\n' % (oid, value, sys.exc_info()[1]))
-                value = context['errorStatus']
+                raise SnmpsimError('value evaluation for %s = %r failed: %s\r\n' % (oid, value, sys.exc_info()[1]))
         return oid, value
 
-class MvcParser(DumpParser):
-    ext = os.path.extsep + 'MVC'  # just an alias
+class MvcRecord(DumpRecord):
+    grammar = mvc.MvcGrammar()
+    ext = 'MVC'  # an alias to .dump
 
-class SapParser(DumpParser):
-    ext = os.path.extsep + 'sapwalk'  # just an alias
-    tagMap = {
-        'Counter': rfc1902.Counter32,
-        'Gauge': rfc1902.Gauge32,
-        'Integer': rfc1902.Integer32,
-        'IpAddress': rfc1902.IpAddress,
-#        '<not implemented?>': univ.Null,
-        'ObjectID': univ.ObjectIdentifier,
-        'OctetString': rfc1902.OctetString,
-        'TimeTicks': rfc1902.TimeTicks,
-        'Counter64': rfc1902.Counter64
-    }
+class SapRecord(DumpRecord):
+    grammar = sap.SapGrammar()
+    ext = 'sapwalk' 
 
-    def __stringFilter(value):
-        if value[:2] == '0x':
-            value = [ int(value[x:x+2], 16) for x in range(2, len(value[2:])+2, 2) ]
-        return value
+class WalkRecord(DumpRecord):
+    grammar = walk.WalkGrammar()
+    ext = 'snmpwalk'
 
-    filterMap = {
-        'OctetString': __stringFilter
-    }
-
-    def parse(self, line):
-        return [ x.strip() for x in octs2str(line).split(',', 2) ]
-
-class WalkParser(DumpParser):
-    ext = os.path.extsep + 'snmpwalk'  # just an alias
-    # case-insensitive keys as snmpwalk output tend to vary
-    tagMap = {
-        'OID:': rfc1902.ObjectName,
-        'INTEGER:': rfc1902.Integer,
-        'STRING:': rfc1902.OctetString,
-        'BITS:': rfc1902.Bits,
-        'HEX-STRING:': rfc1902.OctetString,
-        'GAUGE32:': rfc1902.Gauge32,
-        'COUNTER32:': rfc1902.Counter32,
-        'COUNTER64:': rfc1902.Counter64,
-        'IPADDRESS:': rfc1902.IpAddress,
-        'OPAQUE:': rfc1902.Opaque,
-        'UNSIGNED32:': rfc1902.Unsigned32,  # this is not needed
-        'TIMETICKS:': rfc1902.TimeTicks     # this is made up
-    }
-
-    # possible DISPLAY-HINTs parsing should occur here
-    def __stringFilter(value):
-        if not value:
-            return value
-        elif value[0] == value[-1] == '"':
-            return value[1:-1]
-        elif value.find(':') > 0:
-            for x in value.split(':'):
-                for y in x:
-                    if y not in '0123456789ABCDEFabcdef':
-                        return value
-            return [ int(x, 16) for x in value.split(':') ]
-        else:
-            return value
-
-    def __opaqueFilter(value):
-        return [int(y, 16) for y in value.split(' ')]
-
-    def __bitsFilter(value):
-        return ''.join([int2oct(int(y, 16)) for y in value.split(' ')])
-
-    def __hexStringFilter(value):
-        return [int(y, 16) for y in value.split(' ')]
-
-    filterMap = {
-        'OPAQUE:': __opaqueFilter,
-        'STRING:': __stringFilter,
-        'BITS:': __bitsFilter,
-        'HEX-STRING:': __hexStringFilter
-    }
-
-    def parse(self, line):
-        oid, value = octs2str(line).strip().split(' = ', 1)
-        if oid and oid[0] == '.':
-            oid = oid[1:]
-        try:
-            tag, value = value.split(' ', 1)
-        except ValueError:
-            # this is implicit snmpwalk's fuzziness
-            if value == '""' or value == 'STRING:':
-                tag = 'STRING:'
-                value = ''
-            else:
-                tag = 'TimeTicks:'
-        return oid, tag.upper(), value
-
-class SnmprecParser:
-    ext = os.path.extsep + 'snmprec' 
-    tagMap = {}
-    for t in ( rfc1902.Gauge32,
-               rfc1902.Integer32,
-               rfc1902.IpAddress,
-               univ.Null,
-               univ.ObjectIdentifier,
-               rfc1902.OctetString,
-               rfc1902.TimeTicks,
-               rfc1902.Opaque,
-               rfc1902.Counter32,
-               rfc1902.Counter64 ):
-        tagMap[str(sum([ x for x in t.tagSet[0] ]))] = t
-
-    def parse(self, line): return octs2str(line).strip().split('|', 2)
+class SnmprecRecord:
+    grammar = snmprec.SnmprecGrammar()
+    ext = 'snmprec' 
 
     def evaluateOid(self, oid):
         return univ.ObjectIdentifier(oid)
@@ -403,46 +302,44 @@ class SnmprecParser:
             tag = tag[:-1]
             value = [int(value[x:x+2], 16) for x in  range(0, len(value), 2)]
         if modName:
-            if modName in variationModules:
+            if 'variationModules' in context and \
+                   modName in context['variationModules']:
                 if 'dataValidation' in context:
                     return oid, univ.Null
                 else:
-                    oid, value = variationModules[modName]['process'](oid, tag, value, **context)
+                    oid, value = context['variationModules'][modName]['process'](oid, tag, value, **context)
             else:
-                sys.stdout.write('ERROR: variation module "%s" referenced but not loaded\r\n' % modName)
-                return context['origOid'], context['errorStatus']
+                raise SnmpsimError('variation module "%s" referenced but not loaded\r\n' % modName)
         else:
             if 'dataValidation' in context:
-                return oid, self.tagMap[tag](value)
+                return oid, self.grammar.tagMap[tag](value)
             if not context['nextFlag'] and not context['exactMatch'] or \
                context['setFlag']:
                 return context['origOid'], context['errorStatus']
         if not hasattr(value, 'tagSet'):
-            value = self.tagMap[tag](value)
+            value = self.grammar.tagMap[tag](value)
         return oid, value
 
     def evaluate(self, line, **context):
-        oid, tag, value = self.parse(line)
+        oid, tag, value = self.grammar.parse(line)
         oid = self.evaluateOid(oid)
         if context.get('oidOnly'):
             value = None
         else:
             try:
-                oid, value = self.evaluateValue(oid, tag, value, tagMap=self.tagMap, **context)
+                oid, value = self.evaluateValue(oid, tag, value, **context)
             except MibOperationError:
                 raise
             except PyAsn1Error:
-                sys.stdout.write('ERROR: value evaluation for %s = %r failed: %s\r\n' % (oid, value, sys.exc_info()[1]))
-                oid = context['origOid']
-                value = context['errorStatus']
+                raise SnmpsimError('value evaluation for %s = %r failed: %s\r\n' % (oid, value, sys.exc_info()[1]))
         return oid, value
 
-parserSet = {
-    DumpParser.ext: DumpParser(),
-    MvcParser.ext: MvcParser(),
-    SapParser.ext: SapParser(),
-    WalkParser.ext: WalkParser(),
-    SnmprecParser.ext: SnmprecParser()
+recordSet = {
+    DumpRecord.ext: DumpRecord(),
+    MvcRecord.ext: MvcRecord(),
+    SapRecord.ext: SapRecord(),
+    WalkRecord.ext: WalkRecord(),
+    SnmprecRecord.ext: SnmprecRecord()
 }
 
 class AbstractLayout:
@@ -463,7 +360,9 @@ class DataFile(AbstractLayout):
             self.__dbFile = textFile
 
         self.__dbFile = self.__dbFile + os.path.extsep + 'dbm'
-    
+   
+        self.__dbFile = os.path.join(confdir.cache, os.path.splitdrive(self.__dbFile)[1].replace(os.path.sep, '_'))
+         
         self.__db = self.__text = None
         self.__dbType = '?'
         
@@ -491,7 +390,7 @@ class DataFile(AbstractLayout):
                 break
         else:
             indexNeeded = True
-            sys.stdout.write('Index does not exist for %s\r\n' % self.__textFile)
+            sys.stdout.write('Index %s does not exist for data file %s\r\n' % (self.__dbFile, self.__textFile))
             
         if indexNeeded:
             # these might speed-up indexing
@@ -508,7 +407,7 @@ class DataFile(AbstractLayout):
 
             text = open(self.__textFile, 'rb')
 
-            sys.stdout.write('Indexing data file %s (open flags \"%s\")...' % (self.__textFile, open_flags))
+            sys.stdout.write('Building index %s for data file %s (open flags \"%s\")...' % (self.__dbFile, self.__textFile, open_flags))
             sys.stdout.flush()
         
             lineNo = 0
@@ -522,7 +421,7 @@ class DataFile(AbstractLayout):
                 lineNo += 1
 
                 try:
-                    oid, tag, val = self.__textParser.parse(line)
+                    oid, tag, val = self.__textParser.grammar.parse(line)
                 except Exception:
                     db.close()
                     exc = sys.exc_info()[1]
@@ -650,10 +549,10 @@ class DataFile(AbstractLayout):
         for oid, val in varBinds:
             textOid = str(
                 univ.OctetString('.'.join([ '%s' % x for x in oid ]))
-                )
+            )
 
             try:
-                offset, subtreeFlag, prevOffset = db[textOid].split(',')
+                offset, subtreeFlag, prevOffset = db[textOid].split(str2octs(','))
                 exactMatch = True
                 subtreeFlag = int(subtreeFlag)
             except KeyError:
@@ -674,7 +573,7 @@ class DataFile(AbstractLayout):
                         _nextLine = text.readline() # next line
                         if _nextLine:
                             _nextOid, _ = self.__textParser.evaluate(_nextLine, oidOnly=True)
-                            _, subtreeFlag, _ = db[str(_nextOid)].split(',')
+                            _, subtreeFlag, _ = db[str(_nextOid)].split(str2octs(','))
                             subtreeFlag = int(subtreeFlag)
                         line = _nextLine
                 else: # search function above always rounds up to the next OID
@@ -682,7 +581,7 @@ class DataFile(AbstractLayout):
                         _oid, _  = self.__textParser.evaluate(
                             line, oidOnly=True
                         )
-                        _, _, _prevOffset = db[str(_oid)].split(',')
+                        _, _, _prevOffset = db[str(_oid)].split(str2octs(','))
                         _prevOffset = int(_prevOffset)
 
                         if _prevOffset >= 0:  # previous line serves a subtree
@@ -702,7 +601,7 @@ class DataFile(AbstractLayout):
                     break
 
                 try:
-                    _oid, _val = self.__textParser.evaluate(line, setFlag=setFlag, origOid=oid, origValue=val, dataFile=self.getTextFile(), subtreeFlag=subtreeFlag, nextFlag=nextFlag, exactMatch=exactMatch, errorStatus=errorStatus, varsTotal=varsTotal, varsRemaining=varsRemaining)
+                    _oid, _val = self.__textParser.evaluate(line, setFlag=setFlag, origOid=oid, origValue=val, dataFile=self.getTextFile(), subtreeFlag=subtreeFlag, nextFlag=nextFlag, exactMatch=exactMatch, errorStatus=errorStatus, varsTotal=varsTotal, varsRemaining=varsRemaining, variationModules=variationModules)
                     if _val is exval.endOfMib:
                         exactMatch = True
                         subtreeFlag = False
@@ -723,7 +622,7 @@ class DataFile(AbstractLayout):
         return rspVarBinds
  
     def __str__(self):
-        return 'file %s, %s-indexed, %s' % (
+        return 'Data file %s, %s-indexed, %s' % (
             self.__textFile, self.__dbType, self.__db and 'opened' or 'closed'
             )
 
@@ -749,15 +648,12 @@ def getDataFiles(tgtDir, topLen=None):
             continue            
         if not stat.S_ISREG(inode.st_mode):
             continue
-        try:
-            dExt = dFile[dFile.rindex(os.path.extsep):]
-        except ValueError:
+        dExt = os.path.splitext(dFile)[1][1:]
+        if dExt not in recordSet:
             continue
-        if dExt not in parserSet:
-            continue
-        dirContent.append(
-            (fullPath, parserSet[dExt], os.path.sep.join(relPath)[:-len(dExt)])
-            )
+        dirContent.append((fullPath,
+                           recordSet[dExt],
+                           os.path.splitext(os.path.join(*relPath))[0]))
     return dirContent
 
 # Lightweignt MIB instrumentation (API-compatible with pysnmp's)
@@ -931,8 +827,12 @@ _mibInstrums = {}
 
 for dataDir in dataDirs:
     sys.stdout.write(
-        'Scanning "%s" directory for %s data files\r\n%s\r\n' % (dataDir, ','.join([' *%s' % x.ext for x in parserSet.values()]), '='*66)
+        'Scanning "%s" directory for %s data files...' % (dataDir, ','.join([' *%s%s' % (os.path.extsep, x.ext) for x in recordSet.values()]))
     )
+    if not os.path.exists(dataDir):
+        sys.stdout.write(' no directory\r\n')
+        continue
+    sys.stdout.write('\r\n%s\r\n' % ('='*66,))
     for fullPath, textParser, communityName in getDataFiles(dataDir):
         if fullPath in _mibInstrums:
             mibInstrum = _mibInstrums[fullPath]
@@ -942,7 +842,7 @@ for dataDir in dataDirs:
             mibInstrum = mibInstrumControllerSet[dataFile.layout](dataFile)
 
             _mibInstrums[fullPath] = mibInstrum
-            sys.stdout.write('Data file  %s\r\n' % (mibInstrum,))
+            sys.stdout.write('%s\r\n' % (mibInstrum,))
 
         sys.stdout.write('SNMPv1/2c community name: %s\r\n' % (communityName,))
 
@@ -1175,4 +1075,6 @@ if variationModules:
 transportDispatcher.closeDispatcher()
 
 if exc_info:
-    raise exc_info[0], exc_info[1], exc_info[2]
+    e = exc_info[0](exc_info[1])
+    e.__traceback__ = exc_info[2]
+    raise e

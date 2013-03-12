@@ -8,7 +8,7 @@ import getopt
 import time
 import sys
 from pyasn1.type import univ
-from pysnmp.proto import rfc1902
+from pysnmp.proto import rfc1902, rfc1905
 from pysnmp.entity import engine, config
 from pysnmp.carrier.asynsock.dgram import udp
 try:
@@ -21,6 +21,8 @@ except ImportError:
     unix = None
 from pysnmp.entity.rfc3413 import cmdgen
 from pysnmp import debug
+from snmpsim import __version__
+from snmpsim.grammar import snmprec
 
 # Defaults
 quietFlag = False
@@ -56,23 +58,25 @@ privProtocols = {
   'NONE': config.usmNoPrivProtocol
 }
 
-helpMessage = 'Usage: %s [--help] [--debug=<category>] [--quiet] [--version=<1|2c|3>] [--community=<string>] [--v3-user=<username>] [--v3-auth-key=<key>] [--v3-priv-key=<key>] [--v3-auth-proto=<%s>] [--v3-priv-proto=<%s>] [--context=<string>] [--agent-udpv4-endpoint=<X.X.X.X:NNNNN>] [--agent-udpv6-endpoint=<[X:X:..X]:NNNNN>] [--agent-unix-endpoint=</path/to/named/pipe>] [--start-oid=<OID>] [--stop-oid=<OID>] [--output-file=<filename>]\r\n' % (sys.argv[0], '|'.join([ x for x in authProtocols if x != 'NONE' ]), '|'.join([ x for x in privProtocols if x != 'NONE' ]))
+helpMessage = 'Usage: %s [--help] [--debug=<category>] [--quiet] [--version=<1|2c|3>] [--community=<string>] [--v3-user=<username>] [--v3-auth-key=<key>] [--v3-priv-key=<key>] [--v3-auth-proto=<%s>] [--v3-priv-proto=<%s>] [--context=<string>] [--agent-udpv4-endpoint=<X.X.X.X:NNNNN>] [--agent-udpv6-endpoint=<[X:X:..X]:NNNNN>] [--agent-unix-endpoint=</path/to/named/pipe>] [--start-oid=<OID>] [--stop-oid=<OID>] [--output-file=<filename>]' % (sys.argv[0], '|'.join([ x for x in authProtocols if x != 'NONE' ]), '|'.join([ x for x in privProtocols if x != 'NONE' ]))
 
 try:
     opts, params = getopt.getopt(sys.argv[1:], 'h',
         ['help', 'debug=', 'quiet', 'v1', 'v2c', 'v3', 'version=', 'community=', 'v3-user=', 'v3-auth-key=', 'v3-priv-key=', 'v3-auth-proto=', 'v3-priv-proto=', 'context=', 'agent-address=', 'agent-port=', 'agent-udpv4-endpoint=', 'agent-udpv6-endpoint=', 'agent-unix-endpoint=', 'start-oid=', 'stop-oid=', 'output-file=']
         )
 except Exception:
-    sys.stdout.write('%s\r\n%s\r\n' % (sys.exc_info()[1], helpMessage))
+    sys.stdout.write('getopt error: %s\r\n' % sys.exc_info()[1])
+    sys.stdout.write(helpMessage + '\r\n')
     sys.exit(-1)
 
 if params:
-    sys.stdout.write('extra arguments supplied %s\r\n' % params + helpMessage)
+    sys.stdout.write('extra arguments supplied %s\r\n' % params)
+    sys.stdout.write(helpMessage + '\r\n')
     sys.exit(-1)
 
 for opt in opts:
     if opt[0] == '-h' or opt[0] == '--help':
-        sys.stdout.write(helpMessage)
+        sys.stdout.write('SNMP Simulator version %s, written by Ilya Etingof <ilya@glas.net>\r\nSoftware documentation and support at http://snmpsim.sf.net\r\n%s\r\n' % (__version__, helpMessage))
         sys.exit(-1)
     elif opt[0] == '--debug':
         debug.setLogger(debug.Debug(opt[1]))
@@ -156,31 +160,31 @@ for opt in opts:
 
 if not agentUDPv4Endpoint and not agentUDPv6Endpoint and not agentUNIXEndpoint:
     if agentUDPv4Address[0] is None:
-        sys.stdout.write('ERROR: agent address endpoint not given\r\n%s' % helpMessage)
+        sys.stdout.write('ERROR: agent address endpoint not given\r\n%s\r\n' % helpMessage)
         sys.exit(-1)
     else:
         agentUDPv4Endpoint = agentUDPv4Address
 
 if snmpVersion == 3:
     if v3User is None:
-        sys.stdout.write('--v3-user is missing\r\n%s' % helpMessage)
+        sys.stdout.write('--v3-user is missing\r\n%s\r\n' % helpMessage)
         sys.exit(-1)
     if v3PrivKey and not v3AuthKey:
-        sys.stdout.write('--v3-auth-key is missing\r\n%s' % helpMessage)
+        sys.stdout.write('--v3-auth-key is missing\r\n%s\r\n' % helpMessage)
         sys.exit(-1)
     if authProtocols[v3AuthProto] == config.usmNoAuthProtocol:
         if v3AuthKey is not None:
             v3AuthProto = 'MD5'
     else:
         if v3AuthKey is None:
-            sys.stdout.write('--v3-auth-key is missing\r\n%s' % helpMessage)
+            sys.stdout.write('--v3-auth-key is missing\r\n%s\r\n' % helpMessage)
             sys.exit(-1)
     if privProtocols[v3PrivProto] == config.usmNoPrivProtocol:
         if v3PrivKey is not None:
             v3PrivProto = 'DES'
     else:
         if v3PrivKey is None:
-            sys.stdout.write('--v3-priv-key is missing\r\n%s' % helpMessage)
+            sys.stdout.write('--v3-priv-key is missing\r\n%s\r\n' % helpMessage)
             sys.exit(-1)
         
 # SNMP configuration
@@ -246,23 +250,9 @@ elif agentUDPv4Endpoint:
     if not quietFlag:
         sys.stdout.write('Querying UDP/IPv4 agent at %s:%s\r\n' % agentUDPv4Endpoint)
 
-# Data file writer
+# Data file builder
 
-def dataFileOutput(oid, val):
-    outputFile.write('%s|%s' % (
-        oid.prettyPrint(), sum([ x for x in val.tagSet[0] ])
-        ) )
-    if val.tagSet in (univ.OctetString.tagSet,
-                      rfc1902.Opaque.tagSet,
-                      rfc1902.IpAddress.tagSet):
-        nval = val.asNumbers()
-        if nval and nval[-1] == 32 or [ x for x in nval if x < 32 or x > 126 ]:
-            outputFile.write('x')
-            val = ''.join([ '%.2x' % x for x in nval ])
-    else:
-        val = val.prettyPrint()
-
-    outputFile.write('|%s\n' % val)
+dataFileHandler = snmprec.SnmprecGrammar()
 
 # SNMP worker
 
@@ -278,9 +268,11 @@ def cbFun(sendRequestHandle, errorIndication, errorStatus, errorIndex,
         return
     for varBindRow in varBindTable:
         for oid, val in varBindRow:
-            if val is None:
+            if val is None or val.tagSet in (rfc1905.NoSuchObject.tagSet,
+                                             rfc1905.NoSuchInstance.tagSet,
+                                             rfc1905.EndOfMibView.tagSet):
                 continue
-            dataFileOutput(oid, val)
+            outputFile.write(dataFileHandler.build(oid, val))
             cbCtx['count'] = cbCtx['count'] + 1
             if not quietFlag:
                 sys.stdout.write('OIDs dumped: %s\r' % cbCtx['count']),
@@ -329,4 +321,6 @@ if not quietFlag:
         )
 
 if exc_info:
-    raise exc_info[1]
+    e = exc_info[0](exc_info[1])
+    e.__traceback__ = exc_info[2]
+    raise e

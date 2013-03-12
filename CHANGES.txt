@@ -15,8 +15,15 @@
     on SNMP requests to Simulator
 - SNMP snapshots now being called 'data files' rather than 'device files'
   which is a legacy term.
-- Data files and variation modules are now installed into Python package
-  directory to ease package distribution across platforms.
+- Data files and variation modules are now installed into platform-specific
+  directories.
+- Data files and variation modules are now looked up at several, 
+  platform-specific, locations including $HOME/.snmpsim
+- Simulator data files indices are now created and kept in a dedicated
+  temporary directory which is also configurable though snmpsimd command-line.
+- Example data files simplified, more native and foreign snapshots added.
+- Fix to snmprec.py not to record end-of-mib.
+- Fix to py2exe settings of setup.py
 
 0.1.6
 -----

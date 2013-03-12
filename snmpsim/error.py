@@ -1,0 +1,1 @@
+class SnmpsimError(Exception): pass

@@ -1,3 +1,3 @@
 include *.txt
-recursive-include snmpsim/data *.snmprec *.txt
-recursive-include snmpsim/variation *.py
+recursive-include data *.snmprec *.snmpwalk *.sapwalk *.txt
+recursive-include variation *.py

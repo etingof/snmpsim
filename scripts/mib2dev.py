@@ -11,6 +11,8 @@ from pyasn1.error import PyAsn1Error
 from pysnmp.smi import builder, view, error
 from pysnmp.proto import rfc1902
 from pysnmp import debug
+from snmpsim import __version__
+from snmpsim.grammar import snmprec
 
 # Defaults
 verboseFlag = True
@@ -22,27 +24,25 @@ automaticValues = True
 modNames = []
 mibDirs = []
 
-helpMessage = 'Usage: %s [--help] [--debug=<category>] [--quiet] [--pysnmp-mib-dir=<path>] [--mib-module=<name>] [--start-oid=<OID>] [--stop-oid=<OID>] [--manual-values] [--output-file=<filename>] [--string-pool=<words>] [--integer32-range=<min,max>]\r\n' % sys.argv[0]
+helpMessage = 'Usage: %s [--help] [--debug=<category>] [--quiet] [--pysnmp-mib-dir=<path>] [--mib-module=<name>] [--start-oid=<OID>] [--stop-oid=<OID>] [--manual-values] [--output-file=<filename>] [--string-pool=<words>] [--integer32-range=<min,max>]' % sys.argv[0]
 
 try:
     opts, params = getopt.getopt(sys.argv[1:], 'h',
         ['help', 'debug=', 'quiet', 'pysnmp-mib-dir=', 'mib-module=', 'start-oid=', 'stop-oid=', 'manual-values', 'output-file=', 'string-pool=', 'integer32-range=']
         )
 except Exception:
-    sys.stdout.write('%s\r\n%s\r\n' % (sys.exc_info()[1], helpMessage))
-    sys.exit(-1)
-
-if not opts:
-    sys.stdout.write(helpMessage)
+    sys.stdout.write('getopt error: %s\r\n' % sys.exc_info()[1])
+    sys.stdout.write(helpMessage + '\r\n')
     sys.exit(-1)
 
 if params:
-    sys.stdout.write('extra arguments supplied %s\r\n' % params + helpMessage)
+    sys.stdout.write('extra arguments supplied %s\r\n' % params)
+    sys.stdout.write(helpMessage + '\r\n')
     sys.exit(-1)    
 
 for opt in opts:
     if opt[0] == '-h' or opt[0] == '--help':
-        outputFile.write(helpMessage)
+        sys.stdout.write('SNMP Simulator version %s, written by Ilya Etingof <ilya@glas.net>\r\nSoftware documentation and support at http://snmpsim.sf.net\r\n%s\r\n' % (__version__, helpMessage))
         sys.exit(-1)
     if opt[0] == '--debug':
         debug.setLogger(debug.Debug(opt[1]))
@@ -64,7 +64,13 @@ for opt in opts:
         stringPool = opt[1].split()
     if opt[0] == '--integer32-range':
         int32Range = [int(x) for x in opt[1].split(',')]
-        
+
+# Catch missing params
+if not modNames:
+    sys.stdout.write('ERROR: MIB modules not specified\r\n')
+    sys.stdout.write(helpMessage + '\r\n')
+    sys.exit(-1)    
+
 def getValue(syntax, hint=''):
     # Pick a value
     if isinstance(syntax, rfc1902.IpAddress):
@@ -104,6 +110,10 @@ def getValue(syntax, hint=''):
         if line:
             val = line
         makeGuess = True
+
+# Data file builder
+
+dataFileHandler = snmprec.SnmprecGrammar()
 
 mibBuilder = builder.MibBuilder()
 
@@ -173,25 +183,11 @@ for modName in modNames:
         if stopOID and oid > stopOID:
             break  # stop on out of range condition
 
-        tag = '%s' % sum([ x for x in val.tagSet[0] ])
-    
-        # Encode non-printable content
-        
-        if isinstance(val, univ.OctetString):
-            nval = val.asNumbers()
-            if nval and nval[-1] == 32 or [ x for x in nval if x < 32 or x > 126 ]:
-                tag += 'x'
-                val = ''.join([ '%.2x' % x for x in nval ])
-        elif isinstance(val, univ.ObjectIdentifier):
-            val = val.prettyPrint()
-    
-        oidCount += 1
-        
         outputFile.write(
-            '%s.%s|%s|%s\r\n' % ('.'.join(['%d' % x for x in oid]),
-                                 '.'.join(['%d' % x for x in suffix]),
-                                 tag, val)
-            )
+            dataFileHandler.build(univ.ObjectIdentifier(oid + suffix), val)
+        )
+
+        oidCount += 1
 
     if verboseFlag:
         sys.stdout.write(
