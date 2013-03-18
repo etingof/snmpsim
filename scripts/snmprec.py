@@ -272,7 +272,32 @@ def cbFun(sendRequestHandle, errorIndication, errorStatus, errorIndex,
                                              rfc1905.NoSuchInstance.tagSet,
                                              rfc1905.EndOfMibView.tagSet):
                 continue
-            outputFile.write(dataFileHandler.build(oid, val))
+
+            # Build .snmprec record
+
+            oid = oid.prettyPrint()
+
+            for tag, typ in dataFileHandler.tagMap.items():
+                if typ.tagSet[0] == val.tagSet[0]:
+                    break
+            else:
+                sys.stdout.write('error: unknown type of %s\r\n' % oid)
+                continue
+
+            # hexify non-printables
+            if val.tagSet in (univ.OctetString.tagSet,
+                              rfc1902.Opaque.tagSet,
+                              rfc1902.IpAddress.tagSet):
+                nval = val.asNumbers()
+                if nval and nval[-1] == 32 or \
+                         [ x for x in nval if x < 32 or x > 126 ]:
+                    tag += 'x'
+                    val = ''.join([ '%.2x' % x for x in nval ])
+            else:
+                val = val.prettyPrint()
+
+            outputFile.write(dataFileHandler.build(oid, tag, val))
+
             cbCtx['count'] = cbCtx['count'] + 1
             if not quietFlag:
                 sys.stdout.write('OIDs dumped: %s\r' % cbCtx['count']),

@@ -1,3 +1,11 @@
+0.2.1
+-----
+
+- Minor redesign of grammar objects -- the new concept is that they
+  are only responsible for basic record layout, fields normalization.
+  and SNMP types resolution. However complex field formatting (such
+  as grammar-specific tag modifiers) is now up to upper levels.
+
 0.2.0
 -----
 

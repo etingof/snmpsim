@@ -17,21 +17,6 @@ class SnmprecGrammar(AbstractGrammar):
                rfc1902.Counter64 ):
         tagMap[str(sum([ x for x in t.tagSet[0] ]))] = t
 
-    def build(self, oid, val):
-        output = '%s|%s' % (
-            oid.prettyPrint(), sum([ x for x in val.tagSet[0] ])
-        )
-        if val.tagSet in (univ.OctetString.tagSet,
-                          rfc1902.Opaque.tagSet,
-                          rfc1902.IpAddress.tagSet):
-            nval = val.asNumbers()
-            if nval and nval[-1] == 32 or \
-                     [ x for x in nval if x < 32 or x > 126 ]:
-                output += 'x'
-                val = ''.join([ '%.2x' % x for x in nval ])
-        else:
-            val = val.prettyPrint()
+    def build(self, oid, tag, val): return '%s|%s|%s\n' % (oid, tag, val)
 
-        return output + '|%s\n' % val
- 
     def parse(self, line): return octs2str(line).strip().split('|', 2)
