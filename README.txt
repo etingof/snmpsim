@@ -182,7 +182,6 @@ Simulating SNMP Agents
 Your collection of data files should look like this:
 
 $ find snmpsim/data
-devices
 snmpsim/data/linux
 snmpsim/data/linux/1.3.6.1.2.1
 snmpsim/data/linux/1.3.6.1.2.1/127.0.0.1@public.snmprec
@@ -887,30 +886,58 @@ configuration at SNMPv3 engine with --v3-only command-line flag.
 Installation
 ------------
 
-The easiest way to download and install Simulator and its dependencies
-is to use easy install:
-
-$ easy_install snmpsim
-
-Alternatively, you can download Simulator from SourceForge download servers:
+To use Simulator on a Windows machine, simply download and run supplied
+executable to install pre-compiled binaries and demo data files.
 
 https://sourceforge.net/projects/snmpsim
 
-Then you can either install the scripts with standard 
+On other platforms, installation from source code is advised. The
+installation procedure for SNMP Simulator is as follows:
 
-$ python setup.py install
+$ tar zxf snmpsim-X.X.X.tar.gz
+$ cd snmpsim-X.X.X
+# python setup.py install
+# cd ..
+# rm -rf package-X.X.X
 
-or simply run them off your home directory.
+Required packages will be automatically downloaded and installed.
 
-To run Simulator you need to have pysnmp-4 and pyasn1 packages
-available on your system.
+In case you are installing Simulator on an off-line system, the following
+packages need to be downloaded and installed for Simulator to become
+operational:
 
-http://sourceforge.net/projects/pyasn1/
-http://sourceforge.net/projects/pysnmp/
+* PyASN1, used for handling SNMP/ASN.1 objects:
 
-For secure SNMPv3 communication,PyCrypto should also be installed:
+  http://sourceforge.net/projects/pyasn1/
 
-http://www.pycrypto.org
+* PySNMP, SNMP engine implementation:
+
+  http://sourceforge.net/projects/pysnmp/
+
+* The SNMP Simulator package
+
+Optional, but recommended:
+
+* PyCrypto, used by SNMPv3 crypto features (Windows users installing from
+  source need precompiled version):
+
+  http://www.pycrypto.org
+
+MIBs collection as PySNMP modules, if you are planning a MIB-based simulation
+
+The installation procedure for all the above packages is as follows (on 
+UNIX-based systems):
+
+$ tar zxf package-X.X.X.tar.gz
+$ cd package-X.X.X
+# python setup.py install
+# cd ..
+# rm -rf package-X.X.X
+
+Demo data files and stock variation modules will be installed in a
+platform-dependent location. Watch installation log for exact location.
+You could also put your own SNMP snapshots into your home directory for
+Simulator to find them there. Watch Simulator output for hints.
 
 Getting help
 ------------
