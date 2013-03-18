@@ -6,7 +6,7 @@ import subprocess
 
 def init(snmpEngine, *args): pass
 
-def process(oid, tag, value, **context):
+def variate(oid, tag, value, **context):
     try:
         return oid, subprocess.check_output(
             [ x\

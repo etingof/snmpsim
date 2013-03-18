@@ -27,7 +27,7 @@ settingsCache = {}
 
 def init(snmpEngine, *args): pass
 
-def process(oid, tag, value, **context):
+def variate(oid, tag, value, **context):
     if oid not in settingsCache:
         settingsCache[oid] = dict([x.split('=') for x in value.split(',')])
 

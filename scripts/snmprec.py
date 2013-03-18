@@ -7,6 +7,7 @@
 import getopt
 import time
 import sys
+import os
 from pyasn1.type import univ
 from pysnmp.proto import rfc1902, rfc1905
 from pysnmp.entity import engine, config
@@ -23,6 +24,7 @@ from pysnmp.entity.rfc3413 import cmdgen
 from pysnmp import debug
 from snmpsim import __version__
 from snmpsim.grammar import snmprec
+from snmpsim import confdir
 
 # Defaults
 quietFlag = False
@@ -41,6 +43,9 @@ agentUNIXEndpoint = None
 startOID = univ.ObjectIdentifier('1.3.6')
 stopOID = None
 outputFile = sys.stderr
+variationModulesDirs = []
+variationModuleOptions = {}
+variationModuleName = variationModule = None
 
 authProtocols = {
   'MD5': config.usmHMACMD5AuthProtocol,
@@ -58,11 +63,11 @@ privProtocols = {
   'NONE': config.usmNoPrivProtocol
 }
 
-helpMessage = 'Usage: %s [--help] [--debug=<category>] [--quiet] [--version=<1|2c|3>] [--community=<string>] [--v3-user=<username>] [--v3-auth-key=<key>] [--v3-priv-key=<key>] [--v3-auth-proto=<%s>] [--v3-priv-proto=<%s>] [--context=<string>] [--agent-udpv4-endpoint=<X.X.X.X:NNNNN>] [--agent-udpv6-endpoint=<[X:X:..X]:NNNNN>] [--agent-unix-endpoint=</path/to/named/pipe>] [--start-oid=<OID>] [--stop-oid=<OID>] [--output-file=<filename>]' % (sys.argv[0], '|'.join([ x for x in authProtocols if x != 'NONE' ]), '|'.join([ x for x in privProtocols if x != 'NONE' ]))
+helpMessage = 'Usage: %s [--help] [--debug=<category>] [--quiet] [--version=<1|2c|3>] [--community=<string>] [--v3-user=<username>] [--v3-auth-key=<key>] [--v3-priv-key=<key>] [--v3-auth-proto=<%s>] [--v3-priv-proto=<%s>] [--context=<string>] [--agent-udpv4-endpoint=<X.X.X.X:NNNNN>] [--agent-udpv6-endpoint=<[X:X:..X]:NNNNN>] [--agent-unix-endpoint=</path/to/named/pipe>] [--start-oid=<OID>] [--stop-oid=<OID>] [--output-file=<filename>] [--variation-modules-dir=<dir>] [--variation-module=<module>] [--variation-module-options=<args]>]' % (sys.argv[0], '|'.join([ x for x in authProtocols if x != 'NONE' ]), '|'.join([ x for x in privProtocols if x != 'NONE' ]))
 
 try:
     opts, params = getopt.getopt(sys.argv[1:], 'h',
-        ['help', 'debug=', 'quiet', 'v1', 'v2c', 'v3', 'version=', 'community=', 'v3-user=', 'v3-auth-key=', 'v3-priv-key=', 'v3-auth-proto=', 'v3-priv-proto=', 'context=', 'agent-address=', 'agent-port=', 'agent-udpv4-endpoint=', 'agent-udpv6-endpoint=', 'agent-unix-endpoint=', 'start-oid=', 'stop-oid=', 'output-file=']
+        ['help', 'debug=', 'quiet', 'v1', 'v2c', 'v3', 'version=', 'community=', 'v3-user=', 'v3-auth-key=', 'v3-priv-key=', 'v3-auth-proto=', 'v3-priv-proto=', 'context=', 'agent-address=', 'agent-port=', 'agent-udpv4-endpoint=', 'agent-udpv6-endpoint=', 'agent-unix-endpoint=', 'start-oid=', 'stop-oid=', 'output-file=', 'variation-modules-dir=', 'variation-module=', 'variation-module-options=']
         )
 except Exception:
     sys.stdout.write('getopt error: %s\r\n' % sys.exc_info()[1])
@@ -155,7 +160,13 @@ for opt in opts:
         stopOID = univ.ObjectIdentifier(opt[1])
     elif opt[0] == '--output-file':
         outputFile = open(opt[1], 'w')
-
+    elif opt[0] == '--variation-modules-dir':
+        variationModulesDirs.append(opt[1])
+    elif opt[0] == '--variation-module':
+        variationModuleName = opt[1]
+    elif opt[0] == '--variation-module-options':
+        variationModuleOptions = opt[1]
+ 
 # Catch missing params
 
 if not agentUDPv4Endpoint and not agentUDPv6Endpoint and not agentUNIXEndpoint:
@@ -164,6 +175,36 @@ if not agentUDPv4Endpoint and not agentUDPv6Endpoint and not agentUNIXEndpoint:
         sys.exit(-1)
     else:
         agentUDPv4Endpoint = agentUDPv4Address
+
+# Load variation module
+
+if variationModuleName and not variationModulesDirs:
+    [ variationModulesDirs.append(x) for x in confdir.variation ]
+
+for variationModulesDir in variationModulesDirs:
+    sys.stdout.write(
+        'Scanning "%s" directory for variation modules...' % variationModulesDir
+    )
+    if not os.path.exists(variationModulesDir):
+        sys.stdout.write(' no directory\r\n')
+        continue
+
+    mod = os.path.join(variationModulesDir, variationModuleName + '.py')
+
+    ctx = { 'path': mod, 'args': variationModuleOptions }
+
+    try:
+        if sys.version_info[0] > 2:
+            exec(compile(open(mod).read(), mod, 'exec'), ctx)
+        else:
+            execfile(mod, ctx)
+    except Exception:
+        sys.stdout.write('\r\nvariation module %s execution failure: %s\r\n' %  (mod, sys.exc_info()[1]))
+        sys.exit(-1)
+    else:
+        variationModule = ctx
+
+    sys.stdout.write('%s module loaded\r\n' % variationModuleName)
 
 if snmpVersion == 3:
     if v3User is None:
@@ -250,6 +291,21 @@ elif agentUDPv4Endpoint:
     if not quietFlag:
         sys.stdout.write('Querying UDP/IPv4 agent at %s:%s\r\n' % agentUDPv4Endpoint)
 
+# Variation module initialization
+
+if variationModule:
+    sys.stdout.write('Initializing variation module:\r\n    %s...' % variationModuleName)
+    for x in ('init', 'record', 'shutdown'):
+        if x not in variationModule:
+            sys.stdout.write('error: missing %s handler!\r\n' % x)
+            sys.exit(-1)
+    try:
+        variationModule['init'](snmpEngine, *variationModule['args'])
+    except Exception:
+        sys.stdout.write('FAILED: %s\r\n' % sys.exc_info()[1])
+    else:
+        sys.stdout.write('OK\r\n')
+
 # Data file builder
 
 dataFileHandler = snmprec.SnmprecGrammar()
@@ -275,28 +331,54 @@ def cbFun(sendRequestHandle, errorIndication, errorStatus, errorIndex,
 
             # Build .snmprec record
 
-            oid = oid.prettyPrint()
+            textOid = oid.prettyPrint()
 
-            for tag, typ in dataFileHandler.tagMap.items():
+            for textTag, typ in dataFileHandler.tagMap.items():
                 if typ.tagSet[0] == val.tagSet[0]:
                     break
             else:
                 sys.stdout.write('error: unknown type of %s\r\n' % oid)
                 continue
 
+            textValue = val.prettyPrint()
+
             # hexify non-printables
+
+            hexvalue = None
+
             if val.tagSet in (univ.OctetString.tagSet,
                               rfc1902.Opaque.tagSet,
                               rfc1902.IpAddress.tagSet):
                 nval = val.asNumbers()
                 if nval and nval[-1] == 32 or \
                          [ x for x in nval if x < 32 or x > 126 ]:
-                    tag += 'x'
-                    val = ''.join([ '%.2x' % x for x in nval ])
-            else:
-                val = val.prettyPrint()
+                    textValue = hexvalue = ''.join([ '%.2x' % x for x in nval ])
 
-            outputFile.write(dataFileHandler.build(oid, tag, val))
+            # invoke variation module
+            if variationModule:
+                context = {
+                    'origOid': oid,
+                    'origValue': val,
+                    'reqTime': cbCtx['reqTime']
+                }
+
+                if hexvalue is not None:
+                    context['hexvalue'] = hexvalue
+                    context['hextag'] = textTag + 'x'
+
+                if variationModuleOptions:
+                    context['options'] = variationModuleOptions
+
+                textOid, textTag, textValue = variationModule['record'](
+                    textOid, textTag, textValue, **context
+                )
+            else:
+                if hexvalue is not None:
+                    textTag += 'x'
+ 
+            outputFile.write(
+                dataFileHandler.build(textOid, textTag, textValue)
+            )
 
             cbCtx['count'] = cbCtx['count'] + 1
             if not quietFlag:
@@ -306,6 +388,7 @@ def cbFun(sendRequestHandle, errorIndication, errorStatus, errorIndex,
         if stopOID and oid >= stopOID:
             return # stop on out of range condition
         if val is not None:
+            cbCtx['reqTime'] = time.time()
             break
     else:
         return # stop on end-of-table
@@ -314,8 +397,9 @@ def cbFun(sendRequestHandle, errorIndication, errorStatus, errorIndex,
 cmdGen = cmdgen.NextCommandGenerator()
 
 cbCtx = {
-    'count': 0
-    }
+    'count': 0,
+    'reqTime': time.time()
+}
 
 cmdGen.sendReq(
     snmpEngine, 'tgt', ((startOID, None),), cbFun, cbCtx, contextName=v3Context
@@ -334,6 +418,15 @@ except KeyboardInterrupt:
         sys.stdout.write('Process terminated\r\n')
 except Exception:
     exc_info = sys.exc_info()
+
+if variationModule:
+    sys.stdout.write('Shutting down variation modules:\r\n    %s...' % variationModuleName)
+    try:
+        variationModule['shutdown'](snmpEngine, *variationModule['args'])
+    except Exception:
+        sys.stdout.write('FAILED: %s\r\n' % sys.exc_info()[1])
+    else:
+        sys.stdout.write('OK\r\n')
 
 snmpEngine.transportDispatcher.closeDispatcher()
 

@@ -22,7 +22,7 @@ def init(snmpEngine, *args):
     db = __import__(args[0])
     dbConn = db.connect(args[1])
 
-def process(oid, tag, value, **context):
+def variate(oid, tag, value, **context):
     if dbConn is None:
         raise Exception('variation module not initialized')
 

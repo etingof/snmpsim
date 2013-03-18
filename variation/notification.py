@@ -36,7 +36,7 @@ def _cbFun(sendRequestHandle,
         oid, value = cbCtx
         sys.stdout.write('notification: for %s=%r failed with errorIndication %s, errorStatus %s\r\n' % (oid, value, errorIndication, errorStatus))
 
-def process(oid, tag, value, **context):
+def variate(oid, tag, value, **context):
     if ntfOrg is None:
         raise Exception('variation module not initialized')
     if not context['exactMatch']:

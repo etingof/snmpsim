@@ -307,7 +307,7 @@ class SnmprecRecord:
                 if 'dataValidation' in context:
                     return oid, univ.Null
                 else:
-                    oid, value = context['variationModules'][modName]['process'](oid, tag, value, **context)
+                    oid, value = context['variationModules'][modName]['variate'](oid, tag, value, **context)
             else:
                 raise SnmpsimError('variation module "%s" referenced but not loaded\r\n' % modName)
         else:
@@ -810,7 +810,7 @@ if variationModules:
     sys.stdout.write('Initializing variation modules:\r\n')
     for name, body in variationModules.items():
         sys.stdout.write('    %s...  ' % name)
-        for x in ('init', 'process', 'shutdown'):
+        for x in ('init', 'variate', 'shutdown'):
             if x not in body:
                 sys.stdout.write('error: missing %s handler!\r\n' % x)
                 sys.exit(-1)

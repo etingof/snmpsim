@@ -10,7 +10,7 @@ settingsCache = {}
 def init(snmpEngine, *args):
     random.seed()
 
-def process(oid, tag, value, **context):
+def variate(oid, tag, value, **context):
     if not context['nextFlag'] and not context['exactMatch']:
         return context['origOid'], context['errorStatus']  # serve exact OIDs
     if context['setFlag']:
@@ -38,8 +38,19 @@ def process(oid, tag, value, **context):
     if delay < 0:
         delay = 0
 
-    time.sleep(delay/1000)
+    time.sleep(delay/1000)  # ms
 
     return oid, settingsCache[oid]['value']
+
+def record(oid, tag, value, **context):
+    tag += ':delay'
+    if 'hexvalue' in context:
+        textValue = 'hexvalue=' + context['hexvalue']
+    else:
+        textValue = 'value=' + value
+    textValue += ',wait=%d' % int((time.time()-context['reqTime']) * 1000)  # ms
+    if 'options' in context:
+        textValue += ',' + context['options']
+    return oid, tag, textValue
 
 def shutdown(snmpEngine, *args): pass 

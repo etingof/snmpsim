@@ -1,6 +1,15 @@
 0.2.1
 -----
 
+- Variation modules can now participate in .snmprec production what
+  can be used for capturing additional information about SNMP Agent
+  being snapshotted in .snmprec files.
+  The following chanhged have been made to the system:
+  * the snmprec.py tool can be passed variation module name.
+  * variation modules can now define the 'record' callable which
+    will be given a chance to influence snmprec record being written.
+  * existing 'process' callable in variation modules renamed into
+    'variate' for clarity.
 - Minor redesign of grammar objects -- the new concept is that they
   are only responsible for basic record layout, fields normalization.
   and SNMP types resolution. However complex field formatting (such
