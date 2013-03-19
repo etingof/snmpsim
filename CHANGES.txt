@@ -1,6 +1,8 @@
 0.2.1
 -----
 
+- License updated to vanilla BSD 2-Clause
+  (http://opensource.org/licenses/BSD-2-Clause).
 - Variation modules can now participate in .snmprec production what
   can be used for capturing additional information about SNMP Agent
   being snapshotted in .snmprec files.
