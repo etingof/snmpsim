@@ -178,7 +178,7 @@ if not agentUDPv4Endpoint and not agentUDPv6Endpoint and not agentUNIXEndpoint:
 
 # Load variation module
 
-if variationModuleName and not variationModulesDirs:
+if not variationModulesDirs:
     [ variationModulesDirs.append(x) for x in confdir.variation ]
 
 for variationModulesDir in variationModulesDirs:
@@ -188,6 +188,10 @@ for variationModulesDir in variationModulesDirs:
     if not os.path.exists(variationModulesDir):
         sys.stdout.write(' no directory\r\n')
         continue
+
+    if not variationModuleName:
+        sys.stdout.write(' none requested\r\n')
+        break
 
     mod = os.path.join(variationModulesDir, variationModuleName + '.py')
 
