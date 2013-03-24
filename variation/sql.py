@@ -15,7 +15,7 @@ from snmpsim.grammar.snmprec import SnmprecGrammar
 
 dbConn = None
 
-def init(snmpEngine, *args):
+def init(snmpEngine, *args, **context):
     global dbConn
     if len(args) < 2:
         raise Exception('database type and name not specified')
@@ -63,6 +63,6 @@ def variate(oid, tag, value, **context):
         else:
             return origOid, context['errorStatus']
 
-def shutdown(snmpEngine, *args):
+def shutdown(snmpEngine, *args, **context):
     if dbConn is not None:
         dbConn.close()

@@ -4,7 +4,7 @@
 import sys
 import subprocess
 
-def init(snmpEngine, *args): pass
+def init(snmpEngine, *args, **context): pass
 
 def variate(oid, tag, value, **context):
     try:
@@ -24,4 +24,4 @@ def variate(oid, tag, value, **context):
     except subprocess.CalledProcessError:
         return context['origOid'], context['errorStatus']
 
-def shutdown(snmpEngine, *args): pass 
+def shutdown(snmpEngine, *args, **context): pass 

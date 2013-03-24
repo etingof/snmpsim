@@ -7,7 +7,7 @@ import random
 
 settingsCache = {}
 
-def init(snmpEngine, *args):
+def init(snmpEngine, *args, **context):
     random.seed()
 
 def variate(oid, tag, value, **context):
@@ -53,4 +53,4 @@ def record(oid, tag, value, **context):
         textValue += ',' + context['options']
     return oid, tag, textValue
 
-def shutdown(snmpEngine, *args): pass 
+def shutdown(snmpEngine, *args, **context): pass 

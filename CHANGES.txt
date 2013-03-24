@@ -6,12 +6,14 @@
 - Variation modules can now participate in .snmprec production what
   can be used for capturing additional information about SNMP Agent
   being snapshotted in .snmprec files.
-  The following chanhged have been made to the system:
+  The following changes have been made to the system:
   * the snmprec.py tool can be passed variation module name.
   * variation modules can now define the 'record' callable which
     will be given a chance to influence snmprec record being written.
   * existing 'process' callable in variation modules renamed into
     'variate' for clarity.
+  * variation modules' init() and shutdown() methods now accept **context,
+    'mode' parameter being passed indicating current operation mode.
 - The counter.py and gauge.py variation modules merged into a single
   numeric.py module which also support INTEGER&TIMETICKS values as
   well as recording feature.

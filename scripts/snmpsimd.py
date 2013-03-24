@@ -815,7 +815,8 @@ if variationModules:
                 sys.stdout.write('error: missing %s handler!\r\n' % x)
                 sys.exit(-1)
         try:
-            body['init'](not v2cArch and snmpEngine or None, *body['args'])
+            body['init'](not v2cArch and snmpEngine or None,
+                         *body['args'], mode='variation')
         except Exception:
             sys.stdout.write('FAILED: %s\r\n' % sys.exc_info()[1])
         else:
@@ -1066,7 +1067,8 @@ if variationModules:
     for name, body in variationModules.items():
         sys.stdout.write('    %s...  ' % name)
         try:
-            body['shutdown'](not v2cArch and snmpEngine or None, *body['args'])
+            body['shutdown'](not v2cArch and snmpEngine or None,
+                             *body['args'], mode='variation')
         except Exception:
             sys.stdout.write('FAILED: %s\r\n' % sys.exc_info()[1])
         else:

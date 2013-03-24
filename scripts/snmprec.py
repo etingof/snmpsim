@@ -304,7 +304,8 @@ if variationModule:
             sys.stdout.write('error: missing %s handler!\r\n' % x)
             sys.exit(-1)
     try:
-        variationModule['init'](snmpEngine, *variationModule['args'])
+        variationModule['init'](snmpEngine, *variationModule['args'],
+                                mode='recording')
     except Exception:
         sys.stdout.write('FAILED: %s\r\n' % sys.exc_info()[1])
     else:
@@ -426,7 +427,8 @@ except Exception:
 if variationModule:
     sys.stdout.write('Shutting down variation modules:\r\n    %s...' % variationModuleName)
     try:
-        variationModule['shutdown'](snmpEngine, *variationModule['args'])
+        variationModule['shutdown'](snmpEngine, *variationModule['args'],
+                                    mode='recording')
     except Exception:
         sys.stdout.write('FAILED: %s\r\n' % sys.exc_info()[1])
     else:

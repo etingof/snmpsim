@@ -8,7 +8,7 @@ from pysnmp.proto import rfc1902
 
 settingsCache = {}
 
-def init(snmpEngine, *args):
+def init(snmpEngine, *args, **context):
     global ntfOrg
     if snmpEngine:
         ntfOrg = ntforg.AsynNotificationOriginator(snmpEngine)
@@ -145,4 +145,4 @@ def variate(oid, tag, value, **context):
     else:
         return oid, context['origValue']
 
-def shutdown(snmpEngine, *args): pass 
+def shutdown(snmpEngine, *args, **context): pass 

@@ -17,7 +17,7 @@ valuesCache = {}
 
 booted = time.time()
 
-def init(snmpEngine, *args):
+def init(snmpEngine, *args, **context):
     random.seed()
 
 def variate(oid, tag, value, **context):
@@ -102,4 +102,4 @@ def record(oid, tag, value, **context):
 
     return oid, 'hextag' in context and context['hextag'] or tag, value
 
-def shutdown(snmpEngine, *args): pass 
+def shutdown(snmpEngine, *args, **context): pass 

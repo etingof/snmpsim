@@ -25,7 +25,7 @@ errorTypes = {
 
 settingsCache = {}
 
-def init(snmpEngine, *args): pass
+def init(snmpEngine, *args, **context): pass
 
 def variate(oid, tag, value, **context):
     if oid not in settingsCache:
@@ -57,4 +57,4 @@ def variate(oid, tag, value, **context):
     else:
         return oid, settingsCache[oid].get('value', context['errorStatus'])
 
-def shutdown(snmpEngine, *args): pass 
+def shutdown(snmpEngine, *args, **context): pass 
