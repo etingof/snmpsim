@@ -1,30 +1,45 @@
 # SNMP Simulator, http://snmpsim.sourceforge.net
 # Managed value variation module
 # Simulate a numeric value
-# Valid values in taglist are:
-#   Integer     - 2
-#   Counter32   - 65
-#   Gauge32     - 66
-#   TimeTicks   - 67
-#   Counter64   - 70
+# Valid values in module options are:
+#   2  - Integer
+#   65 - Counter32
+#   66 - Gauge32
+#   67 - TimeTicks
+#   70 - Counter64
+import sys
 import math
 import time
 import random
 from pysnmp.proto import rfc1902
+from snmpsim import error
 
 settingsCache = {}
 valuesCache = {}
+moduleOptions = {}
+moduleContext = {}
 
 booted = time.time()
 
-def init(snmpEngine, *args, **context):
+def init(snmpEngine, **context):
+    if context['options']:
+        moduleOptions.update(
+            dict([x.split(':') for x in context['options'].split(',')])
+        )
+    if context['mode'] == 'recording':
+        if 'iterations' in moduleOptions:
+            moduleOptions['iterations'] = int(moduleOptions['iterations'])
+        if 'period' in moduleOptions:
+            moduleOptions['period'] = float(moduleOptions['period'])
+        else:
+            moduleOptions['period'] = 10.0
     random.seed()
 
 def variate(oid, tag, value, **context):
     if not context['nextFlag'] and not context['exactMatch']:
-        return context['origOid'], context['errorStatus']  # serve exact OIDs
+        return context['origOid'], tag, context['errorStatus']
     if context['setFlag']:
-        return context['origOid'], context['errorStatus']  # read-only mode
+        return context['origOid'], tag, context['errorStatus']
 
     if oid not in settingsCache:
         settingsCache[oid] = dict([ x.split('=') for x in value.split(',') ])
@@ -71,35 +86,80 @@ def variate(oid, tag, value, **context):
     if 'increasing' in settingsCache[oid]:
         valuesCache[oid] = v, time.time()
 
-    return oid, v
+    return oid, tag, v
 
 def record(oid, tag, value, **context):
-    if 'options' in context:
-        options = dict([ x.split('=') for x in context['options'].split(',') ])
-        if 'taglist' in options and tag in options['taglist']:
-            del options['taglist']
-            if context['origValue'].tagSet in (rfc1902.Counter32.tagSet,
-                                               rfc1902.Counter64.tagSet,
-                                               rfc1902.TimeTicks.tagSet,
-                                               rfc1902.Gauge32.tagSet,
-                                               rfc1902.Integer.tagSet):
-                tag += ':numeric'
-                value = 'initial=' + value
-                if options:
-                    value += ',' + \
-                        ','.join(['%s=%s' % (k,v) for k,v in options.items()])
-                if context['origValue'].tagSet not in (rfc1902.Gauge32.tagSet,
-                                                       rfc1902.Integer.tagSet):
-                    if 'increasing' not in context:
-                        value += ',increasing=1' 
-                if context['origValue'].tagSet == rfc1902.TimeTicks.tagSet:
-                    if 'rate' not in context:
-                        value += ',rate=100'
-                if context['origValue'].tagSet == rfc1902.Integer.tagSet:
-                    if 'rate' not in context:
-                        value += ',rate=0'
-                return oid, tag, value
+    if 'started' not in moduleContext:
+        moduleContext['started'] = time.time()
+    if 'taglist' in moduleOptions and tag in moduleOptions['taglist']:
+        if context['origValue'].tagSet in (rfc1902.Counter32.tagSet,
+                                           rfc1902.Counter64.tagSet,
+                                           rfc1902.TimeTicks.tagSet,
+                                           rfc1902.Gauge32.tagSet,
+                                           rfc1902.Integer.tagSet):
+            tag += ':numeric'
+            settings = { 'initial': value }
+            if context['origValue'].tagSet not in (rfc1902.Gauge32.tagSet,
+                                                   rfc1902.Integer.tagSet):
+                settings['increasing'] = 1
+            if context['origValue'].tagSet == rfc1902.TimeTicks.tagSet:
+                settings['rate'] = 100
+            if context['origValue'].tagSet == rfc1902.Integer.tagSet:
+                settings['rate'] = 0
+            if 'addon' in moduleOptions:
+                settings['addon'] = moduleOptions['addon']
 
-    return oid, 'hextag' in context and context['hextag'] or tag, value
+            value = ','.join([ '%s=%s' % (k,v) for k,v in settings.items() ])
 
-def shutdown(snmpEngine, *args, **context): pass 
+            if 'hextag' in context:
+                del context['hextag']
+            if 'hexvalue' in context:
+                del context['hexvalue']
+
+            if 'iterations' in moduleOptions and oid not in moduleContext:
+                settings['values'] = []
+                settings['times'] = []
+                moduleContext[oid] = settings
+
+    if 'hextag' in context and context['hextag']:
+        tag = context['hextag']
+    if 'hexvalue' in context and context['hexvalue']:
+        value = context['hexvalue']
+
+    if 'iterations' in moduleOptions:
+        if moduleOptions['iterations']:
+            if context['stopFlag']:
+                wait = max(0, float(moduleOptions['period']) - (time.time() - moduleContext['started']))
+                while wait > 0:
+                    sys.stdout.write('numeric: waiting %.2f sec(s), %s OIDs dumped, %s iterations remaining...\r\n' % (wait, context['total']+context['count'], moduleOptions['iterations']))
+                    sys.stdout.flush()
+                    time.sleep(1)
+                    wait -= 1
+                moduleOptions['iterations'] -= 1
+                moduleContext['started'] = time.time()
+                raise error.MoreDataNotification()
+            else:
+                if oid in moduleContext:
+                    moduleContext[oid]['times'].append(time.time())
+                    moduleContext[oid]['values'].append(context['origValue'])
+                raise error.NoDataNotification()
+        else:
+            if oid in moduleContext:
+                moduleContext[oid]['rate'] = \
+                    (moduleContext[oid]['values'][-1] - \
+                     moduleContext[oid]['values'][0]) / \
+                    (moduleContext[oid]['times'][-1] - \
+                     moduleContext[oid]['times'][0])
+
+                del moduleContext[oid]['values'];
+                del moduleContext[oid]['times'];
+
+                value = ','.join(
+                    [ '%s=%s' % (k,v) for k,v in moduleContext[oid].items() ]
+                )
+
+            return oid, tag, value
+    else:
+        return oid, tag, value
+
+def shutdown(snmpEngine, **context): pass 

@@ -4,17 +4,18 @@
 import sys
 import time
 import random
+from snmpsim import error
 
 settingsCache = {}
 
-def init(snmpEngine, *args, **context):
+def init(snmpEngine, **context):
     random.seed()
 
 def variate(oid, tag, value, **context):
     if not context['nextFlag'] and not context['exactMatch']:
-        return context['origOid'], context['errorStatus']  # serve exact OIDs
+        return context['origOid'], tag, context['errorStatus']
     if context['setFlag']:
-        return context['origOid'], context['errorStatus']  # read-only mode
+        return context['origOid'], tag, context['errorStatus']
 
     if oid not in settingsCache:
         if '=' not in value:
@@ -27,7 +28,7 @@ def variate(oid, tag, value, **context):
 
     if 'value' not in settingsCache[oid]:
         sys.stdout.write('delay: missing value part for oid %s\r\n' % (oid,))
-        return oid, context['errorStatus']
+        return oid, tag, context['errorStatus']
 
     delay = float(settingsCache[oid].get('wait', 500))
 
@@ -40,9 +41,12 @@ def variate(oid, tag, value, **context):
 
     time.sleep(delay/1000)  # ms
 
-    return oid, settingsCache[oid]['value']
+    return oid, tag, settingsCache[oid]['value']
 
 def record(oid, tag, value, **context):
+    if context['stopFlag']:
+        raise error.NoDataNotification()
+
     tag += ':delay'
     if 'hexvalue' in context:
         textValue = 'hexvalue=' + context['hexvalue']
@@ -53,4 +57,4 @@ def record(oid, tag, value, **context):
         textValue += ',' + context['options']
     return oid, tag, textValue
 
-def shutdown(snmpEngine, *args, **context): pass 
+def shutdown(snmpEngine, **context): pass 

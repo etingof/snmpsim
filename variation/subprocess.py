@@ -4,11 +4,21 @@
 import sys
 import subprocess
 
-def init(snmpEngine, *args, **context): pass
+moduleOptions = {}
 
+def init(snmpEngine, **context):
+    if context['options']:
+        moduleOptions.update(
+            dict([x.split(':') for x in context['options'].split(',')])
+        )
+    if 'shell' not in moduleOptions:
+        moduleOptions['shell'] = sys.platform=='win'
+    else:
+        moduleOptions['shell'] = int(moduleOptions['shell'])
+ 
 def variate(oid, tag, value, **context):
     try:
-        return oid, subprocess.check_output(
+        return oid, tag, subprocess.check_output(
             [ x\
               .replace('@DATAFILE@', context['dataFile'])\
               .replace('@OID@', str(oid))\
@@ -19,9 +29,9 @@ def variate(oid, tag, value, **context):
               .replace('@SETFLAG@', str(int(context['setFlag'])))\
               .replace('@NEXTFLAG@', str(int(context['nextFlag'])))\
               .replace('@SUBTREEFLAG@', str(int(context['subtreeFlag'])))\
-              for x in value.split(' ') ], shell=sys.platform=='win'
+              for x in value.split(' ') ], shell=moduleOptions['shell']
         )
     except subprocess.CalledProcessError:
-        return context['origOid'], context['errorStatus']
+        return context['origOid'], tag, context['errorStatus']
 
-def shutdown(snmpEngine, *args, **context): pass 
+def shutdown(snmpEngine, **context): pass 

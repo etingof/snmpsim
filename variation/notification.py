@@ -8,7 +8,7 @@ from pysnmp.proto import rfc1902
 
 settingsCache = {}
 
-def init(snmpEngine, *args, **context):
+def init(snmpEngine, **context):
     global ntfOrg
     if snmpEngine:
         ntfOrg = ntforg.AsynNotificationOriginator(snmpEngine)
@@ -40,7 +40,7 @@ def variate(oid, tag, value, **context):
     if ntfOrg is None:
         raise Exception('variation module not initialized')
     if not context['exactMatch']:
-        return context['origOid'], context['errorStatus']  # serve exact OIDs
+        return context['origOid'], tag, context['errorStatus']
 
     if oid not in settingsCache:
         settingsCache[oid] = dict([ x.split('=') for x in value.split(',') ])
@@ -63,7 +63,7 @@ def variate(oid, tag, value, **context):
     
     if args['op'] not in ('get', 'set', 'any', '*'):
         sys.stdout.write('notification: unknown SNMP request type configured: %s\r\n' % args['op'])
-        return context['origOid'], context['errorStatus']
+        return context['origOid'], tag, context['errorStatus']
 
     if args['op'] == 'get' and not context['setFlag'] or \
        args['op'] == 'set' and context['setFlag'] or \
@@ -79,7 +79,7 @@ def variate(oid, tag, value, **context):
                 authProtocol = ntforg.usmNoAuthProtocol
             else:
                 sys.stdout.write('notification: unknown auth proto %s\r\n' % args['authproto'])
-                return context['origOid'], context['errorStatus']
+                return context['origOid'], tag, context['errorStatus']
             if args['privproto'] == 'des':
                 privProtocol = ntforg.usmDESPrivProtocol
             elif args['privproto'] == 'aes':
@@ -88,15 +88,15 @@ def variate(oid, tag, value, **context):
                 privProtocol = ntforg.usmNoPrivProtocol
             else:
                 sys.stdout.write('notification: unknown privacy proto %s\r\n' % args['privproto'])
-                return context['origOid'], context['errorStatus']
+                return context['origOid'], tag, context['errorStatus']
             authData = ntforg.UsmUserData(args['user'], args['authkey'], args['privkey'], authProtocol=authProtocol, privProtocol=privProtocol)
         else:
             sys.stdout.write('notification: unknown SNMP version %s\r\n' % args['version'])
-            return context['origOid'], context['errorStatus']
+            return context['origOid'], tag, context['errorStatus']
 
         if 'host' not in args:
             sys.stdout.write('notification: target hostname not configured for OID\r\n' % (oid,))
-            return context['origOid'], context['errorStatus']
+            return context['origOid'], tag, context['errorStatus']
 
         if args['proto'] == 'udp':
             target = ntforg.UdpTransportTarget((args['host'], int(args['port'])))
@@ -104,7 +104,7 @@ def variate(oid, tag, value, **context):
             target = ntforg.Udp6TransportTarget((args['host'], int(args['port'])))
         else:
             sys.stdout.write('notification: unknown transport %s\r\n' % args['proto'])
-            return context['origOid'], context['errorStatus']
+            return context['origOid'], tag, context['errorStatus']
 
         varBinds = []
 
@@ -141,8 +141,8 @@ def variate(oid, tag, value, **context):
         )
 
     if 'value' in args:
-        return oid, args['value']
+        return oid, tag, args['value']
     else:
-        return oid, context['origValue']
+        return oid, tag, context['origValue']
 
-def shutdown(snmpEngine, *args, **context): pass 
+def shutdown(snmpEngine, **context): pass 

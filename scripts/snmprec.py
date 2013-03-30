@@ -23,8 +23,8 @@ except ImportError:
 from pysnmp.entity.rfc3413 import cmdgen
 from pysnmp import debug
 from snmpsim import __version__
-from snmpsim.grammar import snmprec
-from snmpsim import confdir
+from snmpsim.record import snmprec
+from snmpsim import confdir, error
 
 # Defaults
 quietFlag = False
@@ -44,7 +44,7 @@ startOID = univ.ObjectIdentifier('1.3.6')
 stopOID = None
 outputFile = sys.stderr
 variationModulesDirs = []
-variationModuleOptions = {}
+variationModuleOptions = ""
 variationModuleName = variationModule = None
 
 authProtocols = {
@@ -195,7 +195,7 @@ for variationModulesDir in variationModulesDirs:
 
     mod = os.path.join(variationModulesDir, variationModuleName + '.py')
 
-    ctx = { 'path': mod, 'args': variationModuleOptions }
+    ctx = { 'path': mod }
 
     try:
         if sys.version_info[0] > 2:
@@ -304,8 +304,11 @@ if variationModule:
             sys.stdout.write('error: missing %s handler!\r\n' % x)
             sys.exit(-1)
     try:
-        variationModule['init'](snmpEngine, *variationModule['args'],
-                                mode='recording')
+        variationModule['init'](snmpEngine,
+                                options=variationModuleOptions,
+                                mode='recording',
+                                startOID=startOID,
+                                stopOID=stopOID)
     except Exception:
         sys.stdout.write('FAILED: %s\r\n' % sys.exc_info()[1])
     else:
@@ -313,7 +316,32 @@ if variationModule:
 
 # Data file builder
 
-dataFileHandler = snmprec.SnmprecGrammar()
+class SnmprecRecord(snmprec.SnmprecRecord):
+    def formatValue(self, oid, value, **context):
+        textOid, textTag, textValue = snmprec.SnmprecRecord.formatValue(
+            self, oid, value
+        )
+
+        # invoke variation module
+        if context['variationModule']:
+            plainOid, plainTag, plainValue = snmprec.SnmprecRecord.formatValue(
+                self, oid, value, nohex=True
+            )
+            if plainTag != textTag:
+                context['hextag'], context['hexvalue'] = textTag, textValue
+            else:
+                textTag, textValue = plainTag, plainValue
+
+            textOid, textTag, textValue = context['variationModule']['record'](
+                textOid, textTag, textValue, **context
+            )
+
+        elif 'stopFlag' in context and context['stopFlag']:
+            raise error.NoDataNotification()
+
+        return textOid, textTag, textValue
+
+dataFileHandler = SnmprecRecord()
 
 # SNMP worker
 
@@ -327,88 +355,76 @@ def cbFun(sendRequestHandle, errorIndication, errorStatus, errorIndex,
     if errorStatus and errorStatus != 2:
         sys.stdout.write('%s\r\n' % errorStatus.prettyPrint())
         return
+
+    stopFlag = False
+
+    # Walk var-binds
     for varBindRow in varBindTable:
         for oid, val in varBindRow:
-            if val is None or val.tagSet in (rfc1905.NoSuchObject.tagSet,
-                                             rfc1905.NoSuchInstance.tagSet,
-                                             rfc1905.EndOfMibView.tagSet):
-                continue
+            # EOM
+            if stopOID and oid >= stopOID:
+                stopFlag = True # stop on out of range condition
+            elif val is None or \
+                val.tagSet in (rfc1905.NoSuchObject.tagSet,
+                               rfc1905.NoSuchInstance.tagSet,
+                               rfc1905.EndOfMibView.tagSet):
+                stopFlag = True
 
             # Build .snmprec record
 
-            textOid = oid.prettyPrint()
+            context = {
+                'origOid': oid,
+                'origValue': val,
+                'count': cbCtx['count'],
+                'total': cbCtx['total'],
+                'iteration': cbCtx['iteration'],
+                'reqTime': cbCtx['reqTime'],
+                'startOID': startOID,
+                'stopOID': stopOID,
+                'stopFlag': stopFlag,
+                'variationModule': variationModule
+            }
 
-            for textTag, typ in dataFileHandler.tagMap.items():
-                if typ.tagSet[0] == val.tagSet[0]:
-                    break
-            else:
-                sys.stdout.write('error: unknown type of %s\r\n' % oid)
-                continue
-
-            textValue = val.prettyPrint()
-
-            # hexify non-printables
-
-            hexvalue = None
-
-            if val.tagSet in (univ.OctetString.tagSet,
-                              rfc1902.Opaque.tagSet,
-                              rfc1902.IpAddress.tagSet):
-                nval = val.asNumbers()
-                if nval and nval[-1] == 32 or \
-                         [ x for x in nval if x < 32 or x > 126 ]:
-                    textValue = hexvalue = ''.join([ '%.2x' % x for x in nval ])
-
-            # invoke variation module
-            if variationModule:
-                context = {
-                    'origOid': oid,
-                    'origValue': val,
-                    'reqTime': cbCtx['reqTime']
-                }
-
-                if hexvalue is not None:
-                    context['hexvalue'] = hexvalue
-                    context['hextag'] = textTag + 'x'
-
-                if variationModuleOptions:
-                    context['options'] = variationModuleOptions
-
-                textOid, textTag, textValue = variationModule['record'](
-                    textOid, textTag, textValue, **context
+            try:
+                line = dataFileHandler.format(oid, val, **context)
+            except error.MoreDataNotification:
+                cbCtx['total'] += cbCtx['count']
+                cbCtx['count'] = 0
+                cbCtx['iteration'] += 1
+                # initiate another SNMP walk iteration
+                cmdGen.sendReq(
+                    snmpEngine, 'tgt', ((startOID, None),), cbFun, cbCtx,
+                    contextName=v3Context
                 )
+            except error.NoDataNotification:
+                pass
             else:
-                if hexvalue is not None:
-                    textTag += 'x'
- 
-            outputFile.write(
-                dataFileHandler.build(textOid, textTag, textValue)
-            )
+                outputFile.write(line)
 
-            cbCtx['count'] = cbCtx['count'] + 1
+            cbCtx['count'] += 1
+
             if not quietFlag:
-                sys.stdout.write('OIDs dumped: %s\r' % cbCtx['count']),
+                sys.stdout.write('OIDs dumped: %s/%s\r' % (cbCtx['iteration'], cbCtx['count']))
                 sys.stdout.flush()
-    for oid, val in varBindTable[-1]:
-        if stopOID and oid >= stopOID:
-            return # stop on out of range condition
-        if val is not None:
-            cbCtx['reqTime'] = time.time()
-            break
-    else:
-        return # stop on end-of-table
-    return 1 # continue walking
+
+    # Next request time
+    cbCtx['reqTime'] = time.time()
+
+    # Continue walking
+    return not stopFlag
 
 cmdGen = cmdgen.NextCommandGenerator()
 
 cbCtx = {
+    'total': 0,
     'count': 0,
+    'iteration': 0,
     'reqTime': time.time()
 }
 
 cmdGen.sendReq(
     snmpEngine, 'tgt', ((startOID, None),), cbFun, cbCtx, contextName=v3Context
-    )
+)
 
 t = time.time()
 
@@ -427,7 +443,8 @@ except Exception:
 if variationModule:
     sys.stdout.write('Shutting down variation modules:\r\n    %s...' % variationModuleName)
     try:
-        variationModule['shutdown'](snmpEngine, *variationModule['args'],
+        variationModule['shutdown'](snmpEngine,
+                                    options=variationModuleOptions,
                                     mode='recording')
     except Exception:
         sys.stdout.write('FAILED: %s\r\n' % sys.exc_info()[1])
@@ -438,10 +455,11 @@ snmpEngine.transportDispatcher.closeDispatcher()
 
 t = time.time() - t
 
+cbCtx['total'] += cbCtx['count']
+
 if not quietFlag:
     sys.stdout.write(
-        'OIDs dumped: %s, elapsed: %.2f sec, rate: %.2f OIDs/sec\r\n' % \
-        (cbCtx['count'], t, t and cbCtx['count']//t or 0)
+        'OIDs dumped: %s, elapsed: %.2f sec, rate: %.2f OIDs/sec\r\n' % (cbCtx['total'], t, t and cbCtx['count']//t or 0)
         )
 
 if exc_info:

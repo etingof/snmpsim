@@ -11,14 +11,6 @@ if sys.version_info[0] < 3 and sys.version_info[1] < 5:
     from md5 import md5
 else:
     from hashlib import md5
-import time
-if sys.version_info[0] < 3:
-    import anydbm as dbm
-    from whichdb import whichdb
-else:
-    import dbm
-    whichdb = dbm.whichdb
-import bisect
 from pyasn1.type import univ
 from pyasn1.codec.ber import encoder, decoder
 from pyasn1.compat.octets import octs2str, str2octs, int2oct
@@ -43,7 +35,9 @@ from pysnmp import debug
 from snmpsim import __version__
 from snmpsim.error import SnmpsimError
 from snmpsim import confdir
-from snmpsim.grammar import dump, mvc, sap, walk, snmprec
+from snmpsim.record import dump, mvc, sap, walk, snmprec
+from snmpsim.record.search.file import searchRecordByOid
+from snmpsim.record.search.database import RecordIndex
 
 # Process command-line options
 
@@ -61,8 +55,6 @@ agentUDPv4Address = ('127.0.0.1', 161)
 agentUDPv4Endpoints = []
 agentUDPv6Endpoints = []
 agentUNIXEndpoints = []
-dataDirs = []
-variationModulesDirs = []
 variationModulesOptions = {}
 variationModules = {}
 
@@ -104,7 +96,7 @@ for opt in opts:
     elif opt[0] == '--debug':
         debug.setLogger(debug.Debug(opt[1]))
     elif opt[0] in ('--device-dir', '--data-dir'):
-        dataDirs.append(opt[1])
+        confdir.data.insert(0, opt[1])
     elif opt[0] == '--cache-dir':
         confdir.cache = opt[1]
     elif opt[0] == '--force-index-rebuild':
@@ -112,10 +104,10 @@ for opt in opts:
     elif opt[0] in ('--validate-device-data', '--validate-data'):
         validateData = True
     elif opt[0] == '--variation-modules-dir':
-        variationModulesDirs.append(opt[1])
+        confdir.variation.insert(0, opt[1])
     elif opt[0] == '--variation-module-options':
-        args = opt[1].split(':')
-        modName, args = args[0], args[1:]
+        args = opt[1].split(':', 1)
+        modName, args = args[0], args[1]
         if '=' in modName:
             modName, alias = modName.split('=', 1)
         else:
@@ -181,13 +173,7 @@ if authProtocols[v3AuthProto] == config.usmNoAuthProtocol and \
         sys.stdout.write('privacy impossible without authentication\r\n')
         sys.exit(-1)
 
-if not dataDirs:
-    [ dataDirs.append(x) for x in confdir.data ]
-
-if not variationModulesDirs:
-    [ variationModulesDirs.append(x) for x in confdir.variation ]
-
-for variationModulesDir in variationModulesDirs:
+for variationModulesDir in confdir.variation:
     sys.stdout.write(
         'Scanning "%s" directory for variation modules...' % variationModulesDir
     )
@@ -205,7 +191,7 @@ for variationModulesDir in variationModulesDirs:
                 _toLoad.append((alias, args))
             del variationModulesOptions[modName]
         else:
-            _toLoad.append((modName, ()))
+            _toLoad.append((modName, ''))
 
         mod = variationModulesDir + os.path.sep + dFile
 
@@ -248,18 +234,49 @@ if not os.path.exists(confdir.cache):
         sys.stdout.write('ERROR: failed to create cache dir %s: %s\r\n' % (confdir.cache, sys.exc_info()[1]))
     sys.exit(-1)
 
-# Data records
+# Extended snmprec record handler
 
-class DumpRecord:
-    grammar = dump.DumpGrammar()
-    ext = 'dump'
-
-    def evaluateOid(self, oid):
-        return univ.ObjectIdentifier(oid)
-
+class SnmprecRecord(snmprec.SnmprecRecord):
     def evaluateValue(self, oid, tag, value, **context):
-        return oid, tag, self.grammar.tagMap[tag](value)
-    
+        # Interpolation module reference
+        if ':' in tag:
+            modName, tag = tag[tag.index(':')+1:], tag[:tag.index(':')]
+        else:
+            modName = None
+
+        if modName:
+            if 'variationModules' in context and \
+                   modName in context['variationModules']:
+                if 'dataValidation' in context:
+                    return oid, tag, univ.Null
+                else:
+                    if context['setFlag']:
+                        hexvalue = self.grammar.hexifyValue(context['origValue'])
+                        if hexvalue is not None:
+                            context['hexvalue'] = hexvalue
+                            context['hextag'] = self.grammar.getTagByType(context['origValue']) + 'x'
+                    # invoke variation module
+                    oid, tag, value = context['variationModules'][modName]['variate'](oid, tag, value, **context)
+            else:
+                raise SnmpsimError('variation module "%s" referenced but not loaded\r\n' % modName)
+
+        if not modName:
+            if 'dataValidation' in context:
+                    snmprec.SnmprecRecord.evaluateValue(
+                        self, oid, tag, value, **context
+                    )
+
+            if not context['nextFlag'] and not context['exactMatch'] or \
+               context['setFlag']:
+                return context['origOid'], tag, context['errorStatus']
+
+        if not hasattr(value, 'tagSet'):  # not already a pyasn1 object
+            return snmprec.SnmprecRecord.evaluateValue(
+                       self, oid, tag, value, **context
+                   )
+
+        return oid, tag, value
+
     def evaluate(self, line, **context):
         oid, tag, value = self.grammar.parse(line)
         oid = self.evaluateOid(oid)
@@ -268,66 +285,6 @@ class DumpRecord:
         else:
             try:
                 oid, tag, value = self.evaluateValue(oid, tag, value, **context)
-            except PyAsn1Error:
-                raise SnmpsimError('value evaluation for %s = %r failed: %s\r\n' % (oid, value, sys.exc_info()[1]))
-        return oid, value
-
-class MvcRecord(DumpRecord):
-    grammar = mvc.MvcGrammar()
-    ext = 'MVC'  # an alias to .dump
-
-class SapRecord(DumpRecord):
-    grammar = sap.SapGrammar()
-    ext = 'sapwalk' 
-
-class WalkRecord(DumpRecord):
-    grammar = walk.WalkGrammar()
-    ext = 'snmpwalk'
-
-class SnmprecRecord:
-    grammar = snmprec.SnmprecGrammar()
-    ext = 'snmprec' 
-
-    def evaluateOid(self, oid):
-        return univ.ObjectIdentifier(oid)
-    
-    def evaluateValue(self, oid, tag, value, **context):
-        # Interpolation module reference
-        if ':' in tag:
-            modName, tag = tag[tag.index(':')+1:], tag[:tag.index(':')]
-        else:
-            modName = None
-        # Unhexify
-        if tag and tag[-1] == 'x':
-            tag = tag[:-1]
-            value = [int(value[x:x+2], 16) for x in  range(0, len(value), 2)]
-        if modName:
-            if 'variationModules' in context and \
-                   modName in context['variationModules']:
-                if 'dataValidation' in context:
-                    return oid, univ.Null
-                else:
-                    oid, value = context['variationModules'][modName]['variate'](oid, tag, value, **context)
-            else:
-                raise SnmpsimError('variation module "%s" referenced but not loaded\r\n' % modName)
-        else:
-            if 'dataValidation' in context:
-                return oid, self.grammar.tagMap[tag](value)
-            if not context['nextFlag'] and not context['exactMatch'] or \
-               context['setFlag']:
-                return context['origOid'], context['errorStatus']
-        if not hasattr(value, 'tagSet'):
-            value = self.grammar.tagMap[tag](value)
-        return oid, value
-
-    def evaluate(self, line, **context):
-        oid, tag, value = self.grammar.parse(line)
-        oid = self.evaluateOid(oid)
-        if context.get('oidOnly'):
-            value = None
-        else:
-            try:
-                oid, value = self.evaluateValue(oid, tag, value, **context)
             except MibOperationError:
                 raise
             except PyAsn1Error:
@@ -335,10 +292,10 @@ class SnmprecRecord:
         return oid, value
 
 recordSet = {
-    DumpRecord.ext: DumpRecord(),
-    MvcRecord.ext: MvcRecord(),
-    SapRecord.ext: SapRecord(),
-    WalkRecord.ext: WalkRecord(),
+    dump.DumpRecord.ext: dump.DumpRecord(),
+    mvc.MvcRecord.ext: mvc.MvcRecord(),
+    sap.SapRecord.ext: sap.SapRecord(),
+    walk.WalkRecord.ext: walk.WalkRecord(),
     SnmprecRecord.ext: SnmprecRecord()
 }
 
@@ -352,187 +309,28 @@ class DataFile(AbstractLayout):
     openedQueue = []
     maxQueueEntries = 31  # max number of open text and index files
     def __init__(self, textFile, textParser):
-        self.__textFile = textFile
+        self.__recordIndex = RecordIndex(textFile, textParser)
         self.__textParser = textParser
-        try:
-            self.__dbFile = textFile[:textFile.rindex(os.path.extsep)]
-        except ValueError:
-            self.__dbFile = textFile
-
-        self.__dbFile = self.__dbFile + os.path.extsep + 'dbm'
-   
-        self.__dbFile = os.path.join(confdir.cache, os.path.splitdrive(self.__dbFile)[1].replace(os.path.sep, '_'))
-         
-        self.__db = self.__text = None
-        self.__dbType = '?'
+        self.__textFile = textFile
         
     def indexText(self, forceIndexBuild=False):
-        textFileStamp = os.stat(self.__textFile)[8]
-
-        # gdbm on OS X seems to voluntarily append .db, trying to catch that
-        
-        indexNeeded = forceIndexBuild
-        
-        for dbFile in (
-            self.__dbFile + os.path.extsep + 'db',
-            self.__dbFile
-            ):
-            if os.path.exists(dbFile):
-                if textFileStamp < os.stat(dbFile)[8]:
-                    if indexNeeded:
-                        sys.stdout.write('Forced index rebuild %s\r\n' % dbFile)
-                    elif not whichdb(dbFile):
-                        indexNeeded = True
-                        sys.stdout.write('Unsupported index format, rebuilding index %s\r\n' % dbFile)
-                else:
-                    indexNeeded = True
-                    sys.stdout.write('Index %s out of date\r\n' % dbFile)
-                break
-        else:
-            indexNeeded = True
-            sys.stdout.write('Index %s does not exist for data file %s\r\n' % (self.__dbFile, self.__textFile))
-            
-        if indexNeeded:
-            # these might speed-up indexing
-            open_flags = 'nfu' 
-            while open_flags:
-                try:
-                    db = dbm.open(self.__dbFile, open_flags)
-                except Exception:
-                    open_flags = open_flags[:-1]
-                    if not open_flags:
-                        raise
-                else:
-                    break
-
-            text = open(self.__textFile, 'rb')
-
-            sys.stdout.write('Building index %s for data file %s (open flags \"%s\")...' % (self.__dbFile, self.__textFile, open_flags))
-            sys.stdout.flush()
-        
-            lineNo = 0
-            offset = 0
-            prevOffset = -1
-            while 1:
-                line = text.readline()
-                if not line:
-                    break
-            
-                lineNo += 1
-
-                try:
-                    oid, tag, val = self.__textParser.grammar.parse(line)
-                except Exception:
-                    db.close()
-                    exc = sys.exc_info()[1]
-                    try:
-                        os.remove(self.__dbFile)
-                    except OSError:
-                        pass
-                    raise Exception(
-                        'Data error at %s:%d: %s' % (
-                            self.__textFile, lineNo, exc
-                            )
-                        )
-
-                if validateData:
-                    try:
-                        self.__textParser.evaluateOid(oid)
-                    except Exception:
-                        db.close()
-                        exc = sys.exc_info()[1]
-                        try:
-                            os.remove(self.__dbFile)
-                        except OSError:
-                            pass
-                        raise Exception(
-                            'OID error at %s:%d: %s' % (
-                                self.__textFile, lineNo, exc
-                                )
-                            )
-                    try:
-                        self.__textParser.evaluateValue(
-                            oid, tag, val, dataValidation=True
-                        )
-                    except Exception:
-                        sys.stdout.write(
-                            '\r\n*** Error at line %s, value %r: %s\r\n' % \
-                            (lineNo, val, sys.exc_info()[1])
-                            )
-
-                # for lines serving subtrees, type is empty in tag field
-                db[oid] = '%d,%d,%d' % (offset, tag[0] == ':', prevOffset)
-
-                if tag[0] == ':':
-                    prevOffset = offset
-                else:
-                    prevOffset = -1   # not a subtree - no backreference
-
-                offset += len(line)
-
-            text.close()
-            db.close()
-        
-            sys.stdout.write('...%d entries indexed\r\n' % (lineNo - 1,))
-
-        self.__dbType = whichdb(self.__dbFile)
-
+        self.__recordIndex.create(forceIndexBuild, validateData)
         return self
 
     def close(self):
-        self.__text.close()
-        self.__db.close()
-        self.__db = self.__text = None
+        self.__recordIndex.close()
     
     def getHandles(self):
-        if self.__db is None:
+        if not self.__recordIndex.isOpen():
             if len(DataFile.openedQueue) > self.maxQueueEntries:
                 DataFile.openedQueue[0].close()
                 del DataFile.openedQueue[0]
 
             DataFile.openedQueue.append(self)
 
-            self.__text = open(self.__textFile, 'rb')
-            
-            self.__db = dbm.open(self.__dbFile)
+            self.__recordIndex.open()
 
-        return self.__text, self.__db
-
-    def getTextFile(self): return self.__textFile
-
-    # In-place, by-OID binary search
-
-    def __searchOid(self, oid, eol=str2octs('\n')):
-        lo = mid = 0; prev_mid = -1;
-        self.__text.seek(0, 2)
-        hi = sz = self.__text.tell()
-        while lo < hi:
-            mid = (lo+hi)//2
-            self.__text.seek(mid)
-            while mid:
-                c = self.__text.read(1)
-                if c == eol:
-                    mid = mid + 1
-                    break
-                mid = mid - 1    # pivot stepping back in search for full line
-                self.__text.seek(mid)
-            if mid == prev_mid:  # loop condition due to stepping back pivot
-                break
-            if mid >= sz:
-                return sz
-            line = self.__text.readline()
-            midval, _ = self.__textParser.evaluate(line, oidOnly=True)
-            if midval < oid:
-                lo = mid + len(line)
-            elif midval > oid:
-                hi = mid
-            else:
-                return mid
-            prev_mid = mid
-        if lo == mid:
-            return lo
-        else:
-            return hi
+        return self.__recordIndex.getHandles()
 
     def processVarBinds(self, varBinds, nextFlag=False, setFlag=False):
         rspVarBinds = []
@@ -552,12 +350,15 @@ class DataFile(AbstractLayout):
             )
 
             try:
-                offset, subtreeFlag, prevOffset = db[textOid].split(str2octs(','))
-                exactMatch = True
-                subtreeFlag = int(subtreeFlag)
+                line = self.__recordIndex.lookup(
+                    str(univ.OctetString('.'.join([ '%s' % x for x in oid ])))
+                )
             except KeyError:
-                offset = self.__searchOid(oid)
+                offset = searchRecordByOid(oid, text, self.__textParser)
                 subtreeFlag = exactMatch = False
+            else:
+                offset, subtreeFlag, prevOffset = line.split(str2octs(','))
+                subtreeFlag, exactMatch = int(subtreeFlag), True
 
             offset = int(offset)
 
@@ -573,7 +374,7 @@ class DataFile(AbstractLayout):
                         _nextLine = text.readline() # next line
                         if _nextLine:
                             _nextOid, _ = self.__textParser.evaluate(_nextLine, oidOnly=True)
-                            _, subtreeFlag, _ = db[str(_nextOid)].split(str2octs(','))
+                            _, subtreeFlag, _ = self.__recordIndex.lookup(str(_nextOid)).split(str2octs(','))
                             subtreeFlag = int(subtreeFlag)
                         line = _nextLine
                 else: # search function above always rounds up to the next OID
@@ -581,7 +382,7 @@ class DataFile(AbstractLayout):
                         _oid, _  = self.__textParser.evaluate(
                             line, oidOnly=True
                         )
-                        _, _, _prevOffset = db[str(_oid)].split(str2octs(','))
+                        _, _, _prevOffset = self.__recordIndex.lookup(str(_oid)).split(str2octs(','))
                         _prevOffset = int(_prevOffset)
 
                         if _prevOffset >= 0:  # previous line serves a subtree
@@ -601,7 +402,7 @@ class DataFile(AbstractLayout):
                     break
 
                 try:
-                    _oid, _val = self.__textParser.evaluate(line, setFlag=setFlag, origOid=oid, origValue=val, dataFile=self.getTextFile(), subtreeFlag=subtreeFlag, nextFlag=nextFlag, exactMatch=exactMatch, errorStatus=errorStatus, varsTotal=varsTotal, varsRemaining=varsRemaining, variationModules=variationModules)
+                    _oid, _val = self.__textParser.evaluate(line, setFlag=setFlag, origOid=oid, origValue=val, dataFile=self.__textFile, subtreeFlag=subtreeFlag, nextFlag=nextFlag, exactMatch=exactMatch, errorStatus=errorStatus, varsTotal=varsTotal, varsRemaining=varsRemaining, variationModules=variationModules)
                     if _val is exval.endOfMib:
                         exactMatch = True
                         subtreeFlag = False
@@ -621,10 +422,7 @@ class DataFile(AbstractLayout):
 
         return rspVarBinds
  
-    def __str__(self):
-        return 'Data file %s, %s-indexed, %s' % (
-            self.__textFile, self.__dbType, self.__db and 'opened' or 'closed'
-            )
+    def __str__(self): return str(self.__recordIndex)
 
 # Collect data files
 
@@ -816,7 +614,8 @@ if variationModules:
                 sys.exit(-1)
         try:
             body['init'](not v2cArch and snmpEngine or None,
-                         *body['args'], mode='variation')
+                         options=body['args'],
+                         mode='variating')
         except Exception:
             sys.stdout.write('FAILED: %s\r\n' % sys.exc_info()[1])
         else:
@@ -826,7 +625,7 @@ if variationModules:
 
 _mibInstrums = {}
 
-for dataDir in dataDirs:
+for dataDir in confdir.data:
     sys.stdout.write(
         'Scanning "%s" directory for %s data files...' % (dataDir, ','.join([' *%s%s' % (os.path.extsep, x.ext) for x in recordSet.values()]))
     )
@@ -1068,7 +867,7 @@ if variationModules:
         sys.stdout.write('    %s...  ' % name)
         try:
             body['shutdown'](not v2cArch and snmpEngine or None,
-                             *body['args'], mode='variation')
+                             options=body['args'], mode='variation')
         except Exception:
             sys.stdout.write('FAILED: %s\r\n' % sys.exc_info()[1])
         else:

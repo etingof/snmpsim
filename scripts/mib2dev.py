@@ -12,7 +12,7 @@ from pysnmp.smi import builder, view, error
 from pysnmp.proto import rfc1902
 from pysnmp import debug
 from snmpsim import __version__
-from snmpsim.grammar import snmprec
+from snmpsim.record import snmprec
 
 # Defaults
 verboseFlag = True
@@ -113,7 +113,7 @@ def getValue(syntax, hint=''):
 
 # Data file builder
 
-dataFileHandler = snmprec.SnmprecGrammar()
+dataFileHandler = snmprec.SnmprecRecord()
 
 mibBuilder = builder.MibBuilder()
 
@@ -184,7 +184,7 @@ for modName in modNames:
             break  # stop on out of range condition
 
         outputFile.write(
-            dataFileHandler.build(univ.ObjectIdentifier(oid + suffix), val)
+            dataFileHandler.format(oid + suffix, val)
         )
 
         oidCount += 1

@@ -12,16 +12,22 @@
     will be given a chance to influence snmprec record being written.
   * existing 'process' callable in variation modules renamed into
     'variate' for clarity.
-  * variation modules' init() and shutdown() methods now accept **context,
+  * variation modules' init() and shutdown() methods accept **context,
     'mode' parameter being passed indicating current operation mode.
+  * variation modules running in recording mode can communicate to
+    the upper levels that they either won't produce any data on the
+    current invocation or request another round of SNMP Agent walk.
+- Variation modules options now take shape of a key-value pairs. This
+  might break backward compatibility with 0.2.0!
 - The counter.py and gauge.py variation modules merged into a single
   numeric.py module which also support INTEGER&TIMETICKS values as
   well as recording feature.
 - Recording functionality added to the delay.py and numeric.py modules.
-- Minor redesign of grammar objects -- the new concept is that they
+- Redesign of grammar objects -- the new concept is that they
   are only responsible for basic record layout, fields normalization.
   and SNMP types resolution. However complex field formatting (such
-  as grammar-specific tag modifiers) is now up to upper levels.
+  as grammar-specific tag modifiers) is now up to higher-level
+  'Record' objects.
 
 0.2.0
 -----

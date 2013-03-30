@@ -25,7 +25,7 @@ errorTypes = {
 
 settingsCache = {}
 
-def init(snmpEngine, *args, **context): pass
+def init(snmpEngine, **context): pass
 
 def variate(oid, tag, value, **context):
     if oid not in settingsCache:
@@ -39,14 +39,14 @@ def variate(oid, tag, value, **context):
 
     if settingsCache[oid]['status'] not in errorTypes:
         sys.stdout.write('error: wrong/missing error status for oid %s\r\n' % (oid,))
-        return oid, context['errorStatus']
+        return oid, tag, context['errorStatus']
  
     if 'op' not in settingsCache[oid]:
          settingsCache[oid]['op'] = 'any'
 
     if settingsCache[oid]['op'] not in ('get', 'set', 'any', '*'):
         sys.stdout.write('notification: unknown SNMP request type configured: %s\r\n' % settingsCache[oid]['op'])
-        return context['origOid'], context['errorStatus']
+        return context['origOid'], tag, context['errorStatus']
  
     if settingsCache[oid]['op'] == 'get' and not context['setFlag'] or \
        settingsCache[oid]['op'] == 'set' and context['setFlag'] or \
@@ -55,6 +55,6 @@ def variate(oid, tag, value, **context):
             name=oid, idx=context['varsTotal']-context['varsRemaining']
         )
     else:
-        return oid, settingsCache[oid].get('value', context['errorStatus'])
+        return oid, tag, settingsCache[oid].get('value', context['errorStatus'])
 
-def shutdown(snmpEngine, *args, **context): pass 
+def shutdown(snmpEngine, **context): pass 

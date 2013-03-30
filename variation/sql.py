@@ -2,25 +2,42 @@
 # SNMP Simulator, http://snmpsim.sourceforge.net
 #
 # Managed value variation module: simulate a writable Agent using
-# SQL backend
+# SQL backend for storing Managed Objects
 #
-# Module initialization parameters hold dbms-type,database-name
-# parameters, while data file value should refer to a database table name
+# Module initialization parameters are dbtype:<dbms>,dboptions:<options>
 #
 # Expects to work a table of the following layout:
 # CREATE TABLE <tablename> (oid text primary key, tag text, value text,
 #                           maxaccess text default "read-only")
 #
 from snmpsim.grammar.snmprec import SnmprecGrammar
+from snmpsim import error
 
 dbConn = None
+dbTable = 'snmprec'
+moduleOptions = {}
 
-def init(snmpEngine, *args, **context):
-    global dbConn
-    if len(args) < 2:
-        raise Exception('database type and name not specified')
-    db = __import__(args[0])
-    dbConn = db.connect(args[1])
+def init(snmpEngine, **context):
+    global dbConn, dbTable
+    if context['options']:
+        moduleOptions.update(
+            dict([x.split(':') for x in context['options'].split(',')])
+        )
+    if 'dbtype' not in moduleOptions:
+        raise error.SnmpsimError('database type not specified')
+    db = __import__(moduleOptions['dbtype'])
+    if 'dboptions' not in moduleOptions:
+        raise error.SnmpsimError('database connect options not specified')
+    dbConn = db.connect(*moduleOptions['dboptions'].split('@'))
+    if 'dbtable' in moduleOptions:
+        dbTable = moduleOptions['dbtable']
+    if 'mode' in context and context['mode'] == 'recording':
+        cursor = dbConn.cursor()
+        try:
+            cursor.execute('select * from %s' % dbTable)
+        except:
+            cursor.execute('CREATE TABLE %s (oid text primary key, tag text, value text, maxaccess text default "read-only")' % dbTable)
+        cursor.close()
 
 def variate(oid, tag, value, **context):
     if dbConn is None:
@@ -31,38 +48,89 @@ def variate(oid, tag, value, **context):
     dbTable, = value.split(',')
 
     origOid = context['origOid']
+    sqlOid = '.'.join(['%20s' % x for x in str(origOid).split('.')])
 
     if context['setFlag']:
-        cursor.execute('select maxaccess,tag from %s where oid=?' % dbTable, (str(origOid),))
+        if 'hexvalue' in context:
+            textTag = context['hextag']
+            textValue = context['hexvalue']
+        else:
+            textTag = SnmprecGrammar().getTagByType(context['origValue'])
+            textValue = str(context['origValue'])
+        cursor.execute(
+            'select maxaccess,tag from %s where oid=?' % dbTable, (sqlOid,)
+        )
         resultset = cursor.fetchone()
         if resultset:
             maxaccess = resultset[0]
             if maxaccess != 'read-write':
-                return origOid, context['errorStatus']
-            origTag = resultset[1]
-            cursor.execute('update %s set value=? where oid=?' % dbTable, (str(SnmprecGrammar.tagMap[origTag](value)), str(origOid)))
+                return origOid, tag, context['errorStatus']
+            cursor.execute(
+                'update %s set tag=?,value=? where oid=?' % dbTable, (textTag, textValue, sqlOid)
+            )
         else:
-            origTag = str(sum([ x for x in context['origValue'].tagSet[0]]))
-            cursor.execute('insert into %s values (?, ?, ?, "read-write")' % dbTable, (str(origOid), origTag, str(context['origValue'])))
-        if context['varsRemaining'] == 0:
+            cursor.execute(
+                'insert into %s values (?, ?, ?, "read-write")' % dbTable, (sqlOid, textTag, textValue)
+            )
+        if context['varsRemaining'] == 0:  # last OID in PDU
             dbConn.commit()
-        return origOid, context['origValue']
+        cursor.close()
+        return origOid, textTag, context['origValue']
     else:
         if context['nextFlag']:
-            cursor.execute('select oid from %s where oid>? order by oid limit 1' % dbTable, (str(origOid),))
+            cursor.execute('select oid from %s where oid>? order by oid limit 1' % dbTable, (sqlOid,))
             resultset = cursor.fetchone()
             if resultset:
-                origOid = origOid.clone(str(resultset[0]))
+                origOid = origOid.clone(
+                  '.'.join([x.strip() for x in str(resultset[0]).split('.')])
+                )
+                sqlOid = '.'.join(['%20s' % x for x in str(origOid).split('.')])
             else:
-                return origOid, context['errorStatus']
+                cursor.close()
+                return origOid, tag, context['errorStatus']
 
-        cursor.execute('select tag, value from %s where oid=?' % dbTable, (str(origOid),))
+        cursor.execute('select tag, value from %s where oid=?' % dbTable, (sqlOid,))
         resultset = cursor.fetchone()
-        if resultset:
-            return origOid, SnmprecGrammar.tagMap[resultset[0]](str(resultset[1]))
-        else:
-            return origOid, context['errorStatus']
+        cursor.close()
 
-def shutdown(snmpEngine, *args, **context):
+        if resultset:
+            return origOid, str(resultset[0]), str(resultset[1])
+        else:
+            return origOid, tag, context['errorStatus']
+
+def record(oid, tag, value, **context):
+    if context['stopFlag']:
+        raise error.NoDataNotification()
+
+    sqlOid = '.'.join(['%20s' % x for x in oid.split('.')])
+    if 'hexvalue' in context:
+        textTag = context['hextag']
+        textValue = context['hexvalue']
+    else:
+        textTag = SnmprecGrammar().getTagByType(context['origValue'])
+        textValue = str(context['origValue'])
+ 
+    cursor = dbConn.cursor()
+
+    cursor.execute(
+        'select oid from %s where oid=? limit 1' % dbTable, (sqlOid,)
+    )
+    if cursor.fetchone():
+        cursor.execute(
+            'update %s set tag=?,value=? where oid=?' % dbTable, (textTag, textValue, sqlOid)
+        )
+    else:
+        cursor.execute(
+            'insert into %s values (?, ?, ?, "read-write")' % dbTable, (sqlOid, textTag, textValue)
+        )
+    cursor.close()
+
+    if not context['count']:
+        return str(context['startOID']), ':sql', dbTable
+    else:
+        raise error.NoDataNotification()
+
+def shutdown(snmpEngine, **context):
     if dbConn is not None:
+        dbConn.commit()
         dbConn.close()
