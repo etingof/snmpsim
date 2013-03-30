@@ -79,7 +79,9 @@ No other information or comments is allowed in the data file.
 Device file recording would look like this:
 
 $ snmprec.py  -h
-Usage: snmprec.py [--help] [--debug=<category>] [--quiet] [--version=<1|2c|3>] [--community=<string>] [--v3-user=<username>] [--v3-auth-key=<key>] [--v3-priv-key=<key>] [--v3-auth-proto=<SHA|MD5>] [--v3-priv-proto=<3DES|AES256|DES|AES|AES128|AES192>] [--context=<string>] [--agent-udpv4-endpoint=<X.X.X.X:NNNNN>] [--agent-udpv6-endpoint=<[X:X:..X]:NNNNN>] [--agent-unix-endpoint=</path/to/named/pipe>] [--start-oid=<OID>] [--stop-oid=<OID>] [--output-file=<filename>]
+SNMP Simulator version 0.2.1, written by Ilya Etingof <ilya@glas.net>
+Software documentation and support at http://snmpsim.sf.net
+Usage: snmprec.py [--help] [--debug=<category>] [--quiet] [--version=<1|2c|3>] [--community=<string>] [--v3-user=<username>] [--v3-auth-key=<key>] [--v3-priv-key=<key>] [--v3-auth-proto=<SHA|MD5>] [--v3-priv-proto=<3DES|AES256|DES|AES|AES128|AES192>] [--context=<string>] [--agent-udpv4-endpoint=<X.X.X.X:NNNNN>] [--agent-udpv6-endpoint=<[X:X:..X]:NNNNN>] [--agent-unix-endpoint=</path/to/named/pipe>] [--start-oid=<OID>] [--stop-oid=<OID>] [--output-file=<filename>] [--variation-modules-dir=<dir>] [--variation-module=<module>] [--variation-module-options=<args]>]
 $
 $ snmprec.py --agent-udpv4-endpoint=127.0.0.1 --start-oid=1.3.6.1.2.1.2.1.0 --stop-oid=1.3.6.1.2.1.5  --output-file=snmpsim/data/linux/1.3.6.1.2.1/127.0.0.1\@public.snmprec
 SNMP version 1
@@ -134,8 +136,10 @@ tables.
 
 Device file generation from a MIB file would look like this:
 
-$ mib2dev.py 
-Usage: mib2dev.py [--help] [--debug=<category>] [--quiet] [--pysnmp-mib-dir=<path>] [--mib-module=<name>] [--start-oid=<OID>] [--stop-oid=<OID>] [--manual-values] [--output-file=<filename>] [--string-pool=<words>] [--integer32-range=<min,max>]
+$ mib2dev.py
+SNMP Simulator version 0.2.1, written by Ilya Etingof <ilya@glas.net>
+Software documentation and support at http://snmpsim.sf.net
+Usage: scripts/mib2dev.py [--help] [--debug=<category>] [--quiet] [--pysnmp-mib-dir=<path>] [--mib-module=<name>] [--start-oid=<OID>] [--stop-oid=<OID>] [--manual-values] [--output-file=<filename>] [--string-pool=<words>] [--integer32-range=<min,max>]
 
 Please note that to run mib2dev.py you would first have to convert an ASN.1
 (e.g. text) MIB into a pysnmp module (with the libsmi2pysnmp tool shipped
@@ -185,22 +189,22 @@ $ find snmpsim/data
 snmpsim/data/linux
 snmpsim/data/linux/1.3.6.1.2.1
 snmpsim/data/linux/1.3.6.1.2.1/127.0.0.1@public.snmprec
-snmpsim/data/linux/1.3.6.1.2.1/127.0.0.1@public.dbm
 snmpsim/data/3com
 snmpsim/data/3com/switch8800
 snmpsim/data/3com/switch8800/1.3.6.1.4.1
 snmpsim/data/3com/switch8800/1.3.6.1.4.1/172.17.1.22@public.snmprec
-snmpsim/data/3com/switch8800/1.3.6.1.4.1/172.17.1.22@public.dbm
 ...
 
-Notice those .dbm files -- they are by-OID indices of data files used
-for fast lookup. These indices are created and updated automatically by
-Simulator.
+There're also a bunch of .dbm files created and maintained automatically
+in a temporary directory. These .dbm files are used by the Simulator
+for fast OID lookup in a data file.
 
 Getting help:
 
 $ snmpsimd.py -h
-Usage: snmpsimd.py [--help] [--version ] [--debug=<category>] [--data-dir=<dir>] [--force-index-rebuild] [--validate-data] [--variation-modules-dir=<dir>] [--variation-module-options=<module[=alias][:args]>] [--agent-udpv4-endpoint=<X.X.X.X:NNNNN>] [--agent-udpv6-endpoint=<[X:X:..X]:NNNNN>] [--agent-unix-endpoint=</path/to/named/pipe>] [--v2c-arch] [--v3-only] [--v3-user=<username>] [--v3-auth-key=<key>] [--v3-auth-proto=<SHA|NONE|MD5>] [--v3-priv-key=<key>] [--v3-priv-proto=<3DES|AES256|NONE|DES|AES|AES128|AES192>]
+SNMP Simulator version 0.2.1, written by Ilya Etingof <ilya@glas.net>
+Software documentation and support at http://snmpsim.sf.net
+Usage: scripts/snmpsimd.py [--help] [--version ] [--debug=<category>] [--data-dir=<dir>] [--cache-dir=<dir>] [--force-index-rebuild] [--validate-data] [--variation-modules-dir=<dir>] [--variation-module-options=<module[=alias][:args]>] [--agent-udpv4-endpoint=<X.X.X.X:NNNNN>] [--agent-udpv6-endpoint=<[X:X:..X]:NNNNN>] [--agent-unix-endpoint=</path/to/named/pipe>] [--v2c-arch] [--v3-only] [--v3-user=<username>] [--v3-auth-key=<key>] [--v3-auth-proto=<SHA|NONE|MD5>] [--v3-priv-key=<key>] [--v3-priv-proto=<3DES|AES256|NONE|DES|AES|AES128|AES192>]
 
 Running Simulator:
 
@@ -436,8 +440,8 @@ into text files having .sapwalk suffix and let Simulator find and index
 them. Once completed, Simulator will report access information for them
 just as it does for its native .snmprec files.
 
-Using variation modules
------------------------
+Simulation with variation modules
+---------------------------------
 
 Without variation modules, simulated SNMP Agents are always static
 in terms of data returned to SNMP Managers. They are also read-only.
@@ -462,8 +466,7 @@ Simulator.
 
 Here's the current list of variation modules supplied with Simulator:
 
-* counter - produces a non-decreasing sequence of integers over time
-* gauge - produces a random number in specified range
+* numeric - produces a non-decreasing sequence of integers over time
 * notification - sends SNMP TRAP/INFORM messages to disitant SNMP entity
 * volatilecache - accepts and stores (in memory) SNMP var-binds through SNMP SET
 * involatilecache - accepts and stores (in file) SNMP var-binds through
@@ -471,6 +474,7 @@ Here's the current list of variation modules supplied with Simulator:
 * sql - reads/writes var-binds from/to a SQL database
 * delay - delays SNMP response by specified or random time
 * error - flag errors in SNMP response PDU
+* multiplex - use a collection of .snmprec files picking one at a time.
 * subprocess - executes external process and puts its stdout values into
                response
 
@@ -529,7 +533,7 @@ For example, the following Simulator invocation will configure its
 "sql" variation module to use sqlite database (sqlite3 Python module)
 and /var/tmp/system.db database file:
 
-$ snmpsimd.py --variation-module-options=sql:sqlite3:/var/tmp/system.db
+$ snmpsimd.py --variation-module-options=sql:dbtype:sqlite3,dboptions:/var/tmp/system.db
 
 In case you are using multiple database connections or database types
 all through the sql variation module, you could refer to each module instance
@@ -539,12 +543,12 @@ The following command-line runs Simulator with two instances of the
 "involatilecache" variation module (dbA & dbB) each instance using 
 distinct database file for storing their persistent values:
 
-$ snmpsimd.py --variation-module-options=involatilecache=dbA:/var/tmp/fileA.db --variation-module-options=involatilecache=dbB:/var/tmp/fileB.db
+$ snmpsimd.py --variation-module-options=involatilecache=dbA:file:/var/tmp/fileA.db --variation-module-options=involatilecache=dbB:file:/var/tmp/fileB.db
 
 What follows is a brief description of some of the variation modules
 included into the distribution.
 
-Counter module
+Numeric module
 ++++++++++++++
 
 The counter module maintains and returns a never decreasing integer value
@@ -719,6 +723,9 @@ $ snmpsimd.py --variation-module-options=involatilecache:/tmp/shelves.db
 All modifed values will be kept and then subsequently used on a per-OID
 basis in the specified file.
 
+Multiplex module
+++++++++++++++++
+
 Subprocess module
 +++++++++++++++++
 
@@ -865,6 +872,11 @@ a var-bind pair per each invocation.
 
 Alternatively, we could help you with this task. Just let us know your
 requirements.
+
+Recording with variation modules
+--------------------------------
+
+
 
 Performance improvement
 -----------------------
