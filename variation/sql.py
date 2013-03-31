@@ -48,7 +48,7 @@ def variate(oid, tag, value, **context):
     dbTable, = value.split(',')
 
     origOid = context['origOid']
-    sqlOid = '.'.join(['%20s' % x for x in str(origOid).split('.')])
+    sqlOid = '.'.join(['%10s' % x for x in str(origOid).split('.')])
 
     if context['setFlag']:
         if 'hexvalue' in context:
@@ -84,7 +84,7 @@ def variate(oid, tag, value, **context):
                 origOid = origOid.clone(
                   '.'.join([x.strip() for x in str(resultset[0]).split('.')])
                 )
-                sqlOid = '.'.join(['%20s' % x for x in str(origOid).split('.')])
+                sqlOid = '.'.join(['%10s' % x for x in str(origOid).split('.')])
             else:
                 cursor.close()
                 return origOid, tag, context['errorStatus']
@@ -102,7 +102,7 @@ def record(oid, tag, value, **context):
     if context['stopFlag']:
         raise error.NoDataNotification()
 
-    sqlOid = '.'.join(['%20s' % x for x in oid.split('.')])
+    sqlOid = '.'.join(['%10s' % x for x in oid.split('.')])
     if 'hexvalue' in context:
         textTag = context['hextag']
         textValue = context['hexvalue']
