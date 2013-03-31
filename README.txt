@@ -551,17 +551,18 @@ included into the distribution.
 Numeric module
 ++++++++++++++
 
-The counter module maintains and returns a never decreasing integer value
-(except for the case of overflow) changing in time in accordance with 
-user-defined rules. This module is per-OID stateful and configurable.
+The numeric module maintains and returns a changing in time integer value.
+The law and rate of changing is configurable. This module is per-OID
+stateful and configurable.
 
-The counter module accepts the following comma-separated key=value parameters
+The numeric module accepts the following comma-separated key=value parameters
 in .snmprec value field:
 
   min - the minimum value ever stored and returned by this module.
         Default is 0.
   max - the maximum value ever stored and returned by this module.
-        Default is 2**32 (0xFFFFFFFF).
+        Default is 2**32 or 2**64 (Counter64 type).
+  initial - initial value. Default is min.
   wrap - if zero, generated value will freeze when reaching 'max'. Otherwise
          generated value is reset to 'min'.
   function - defines elapsed-time-to-generated-value relationship. Can be
@@ -575,48 +576,26 @@ in .snmprec value field:
            invocation. Default is 0.
   deviation - random deviation maximum. Default is 0 which means no
               deviation.
+  increasing - if non-zero, assures the produced value is never decreasing
+               (with possible exception of value wrapping on overflow).
+               This is important when simulating COUNTER values.
 
 This module generates values by execution of the following formula:
 
-  v = abs(function(UPTIME * rate) * scale + offset + RAND(0, deviation)
+  v = function(UPTIME * rate) * scale + offset + RAND(increasing ? 0 : -deviation, deviation)
 
-Here's an example counter module use in a .snmprec file:
+  v = increasing ? abs(v) : v
 
-  1.3.6.1.2.1.2.2.1.13.1|65:counter|max=100,scale=0.6,deviation=1,function=cos
+Here's an example numeric module use for various types in a .snmprec file:
 
-Gauge module
-++++++++++++
+  # COUNTER object
+  1.3.6.1.2.1.2.2.1.13.1|65:numeric|initial=45,max=90,scale=0.6,deviation=1,function=cos,increasing=1,wrap=1
 
-The gauge module maintains and returns an integer value changing in time
-in accordance with user-defined rules. This module is per-OID stateful and
-configurable.
+  # GAUGE object
+  1.3.6.1.2.1.2.2.1.14.1|66:numeric|min=5,max=50,initial=25
 
-The gauge module accepts the following comma-separated key=value parameters
-in .snmprec value field:
-
-  min - the minimum value ever stored and returned by this module.
-        Default is 0.
-  max - the maximum value ever stored and returned by this module.
-        Default is 2**32 (0xFFFFFFFF).
-  function - defines elapsed-time-to-generated-value relationship. Can be
-             any of reasonably suitable mathematical function from the
-             math module such as sin, log, pow etc. The only requirement
-             is that used function accepts a single integer argument. 
-             Default is x = f(x).
-  rate - elapsed time scaler. Default is 1.
-  scale - function value scaler. Default is 1.
-  offset - constant value by which the return value increases on each
-           invocation. Default is 0.
-  deviation - random deviation minimum and maximum. Default is 0 which means no
-              deviation.
-
-This module generates values by execution of the following formula:
-
-  v = function(UPTIME * rate) * scale + offset + RAND(-deviation, deviation)
-
-Here's an example gauge module use in a .snmprec file:
-
-  1.3.6.1.2.1.2.2.1.21.1|66:gauge|function=sin,scale=100,deviation=0.5
+The numeric module can be used for simulating INTEGER, Counter32, Counter64,
+Gauge32, TimeTicks objects.
 
 Delay module
 ++++++++++++
@@ -718,7 +697,7 @@ database.
 Module invocation requires passing a name of a database file to be
 created if not already exists:
 
-$ snmpsimd.py --variation-module-options=involatilecache:/tmp/shelves.db
+$ snmpsimd.py --variation-module-options=involatilecache:file:/tmp/shelves.db
 
 All modifed values will be kept and then subsequently used on a per-OID
 basis in the specified file.
@@ -726,11 +705,46 @@ basis in the specified file.
 Multiplex module
 ++++++++++++++++
 
+The multiplex module allows you to serve many snapshots for a single Agent
+picking just one snapshot at a time for answering SNMP request. That
+simulates a more natural Agent behaviour including the set of OIDs changing
+in time.
+
+This module is usually configured to serve an OID subtree in an .snmprec
+file entry.
+
+The multiplex module accepts the following comma-separated key=value 
+parameters in .snmprec value field:
+
+  dir - path to .snmprec files directory. If path is not absolute, it
+        is interpreted relative to Simulator's "data" directory. The
+        .snmprec files names here must have numerical names ordered
+        by time.
+  period - specifies for how long to use each .snmprec snapshot before
+           switching to the next one. Default is 60 seconds.
+  wrap - if true, instructs the module to cycle through all available
+         .snmprec files. If faulse, the system stops switching .snmprec
+         files as it reaches the last one. Default is false.
+
+Here's an example of multiplex module use:
+ 
+1.3.6.1.2.1.2|:multiplex|dir=variation/snapshots,period=10.0
+1.3.6.1.3.1.1|4|system
+
+The .snmprec files served by the multiplex module can not include references
+to variation modules.
+
 Subprocess module
 +++++++++++++++++
 
 The subprocess module can be used to execute an external program
 passing it request data and using its stdout output as a response value.
+
+Module invocation supports passing a 'shell' option which (if true) makes
+Simulator using shell for subprocess invocation. Default is True on
+Windows platform and False on all others.
+
+$ snmpsimd.py --variation-module-options=subprocess:shell:1
 
 Value part of .snmprec line should contain space-separated path
 to external program executable followed by optional command-line
@@ -840,14 +854,16 @@ database. All SNMP operations are supported including transactional SET.
 
 Module invocation requires passing database type (sqlite3, psycopg,
 MySQL and any other compliant to Python DB-API and importable as a Python
-module) and connect string which is database dependant:
+module) and connect string which is database dependant. For example,
+sqlite backend can be configured this way:
 
 $ snmpsimd.py --variation-module-options=sql:sqlite3:/tmp/sqlite.db
 
 The .snmprec value is expected to hold database table name to keep
 all OID-value pairs served within selected .snmprec line. This table
-will not be created automatically and should exist for sql module
-to work. Table layout should be as follows:
+can either be created automatically whenever sql module is invoked in
+recording mode or can be created and populated by hand. In the latter case
+table layout should be as follows:
 
   CREATE TABLE <tablename> (oid text primary key,
                             tag text,
@@ -861,6 +877,11 @@ table referred to by a .snmprec line serving a subtree of OIDs:
 
 In the above case all OIDs under 1.3.6.1.2.1.1 prefix will be
 handled by a sql module using 'system' table.
+
+Please, note, that to make SQL's ORDER BY clause working with OIDs,
+each sub-OID stored in the database (in case of manual database population) 
+must be left-padded with a good bunch of spaces (each sub-OID width
+is 10 characters).
 
 Custom variation modules
 ++++++++++++++++++++++++
