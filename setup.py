@@ -89,7 +89,8 @@ params.update( {
     'scripts': [ 'scripts/snmpsimd.py',
                  'scripts/snmprec.py',
                  'scripts/mib2dev.py' ],
-    'packages': [ 'snmpsim', 'snmpsim.grammar', 'snmpsim.record' ]
+    'packages': [ 'snmpsim', 'snmpsim.grammar', 'snmpsim.record',
+                  'snmpsim.record.search' ]
 } )
 
 # data files installation prefix is platform-dependent
