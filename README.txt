@@ -468,9 +468,8 @@ Here's the current list of variation modules supplied with Simulator:
 
 * numeric - produces a non-decreasing sequence of integers over time
 * notification - sends SNMP TRAP/INFORM messages to distant SNMP entity
-* volatilecache - accepts and stores (in memory) SNMP var-binds through SNMP SET
-* involatilecache - accepts and stores (in file) SNMP var-binds through
-                    SNMP SET 
+* writecache - accepts and stores (in memory/file) SNMP var-binds modified
+               through SNMP SET 
 * sql - reads/writes var-binds from/to a SQL database
 * delay - delays SNMP response by specified or random time
 * error - flag errors in SNMP response PDU
@@ -492,10 +491,9 @@ whereas TAG field complies to its own format:
 TAG-ID[:MODULE-ID]
 
 For example, the following .snmprec file contents will invoke the
-"volatilecache" module:
+"writecache" module:
 
-1.3.6.1.2.1.1.1.0|4:volatilecache|I'm a string, please modify me
-1.3.6.1.2.1.1.3.0|2:volatilecache|42
+1.3.6.1.2.1.1.3.0|2:writecache|value=42
 
 and cast its returned values into ASN.1 OCTET STRING (4) and INTEGER (2)
 respectively.
@@ -540,10 +538,10 @@ all through the sql variation module, you could refer to each module instance
 in .snmprec files through a so-called variation module alias.
 
 The following command-line runs Simulator with two instances of the
-"involatilecache" variation module (dbA & dbB) each instance using 
+"writecache" variation module (dbA & dbB) each instance using 
 distinct database file for storing their persistent values:
 
-$ snmpsimd.py --variation-module-options=involatilecache=dbA:file:/var/tmp/fileA.db --variation-module-options=involatilecache=dbB:file:/var/tmp/fileB.db
+$ snmpsimd.py --variation-module-options=writecache=dbA:file:/var/tmp/fileA.db --variation-module-options=writecache=dbB:file:/var/tmp/fileB.db
 
 What follows is a brief description of some of the variation modules
 included into the distribution.
@@ -619,8 +617,10 @@ in .snmprec value field:
               deviation.
   vlist - a list of triples (comparation:constant:delay) to use on SET 
           operation for choosing delay based on value supplied in request.
+          The following comparations are supported: 'eq', 'lt', 'gt'.
   tlist - a list of triples (comparation:time:delay) to use for choosing
           request delay based on time of day (seconds, UNIX time).
+          The following comparations are supported: 'eq', 'lt', 'gt'.
 
 Here's an example delay module use in a .snmprec file.
 
@@ -692,20 +692,44 @@ The first entry flags 'authorizationError' on GET* and no error
 on SET. Second entry flags 'commitfailed' on SET but responds without errors
 to GET*. Finally, third entry always flags 'noaccess' error.
 
-Volatile Cache module
-+++++++++++++++++++++
+Write Cache module
+++++++++++++++++++
 
-The volatile cache module lets you make particular OID at a .snmprec file
+The writecache module lets you make particular OID at a .snmprec file
 writable via SNMP SET operation. The new value will be stored in Simulator
-process's memory and communicated back on SNMP GET/GETNEXT/GETBULK 
-operations. Stored data will be lost upon Simulator restart.
+process's memory or disk-based datastore and communicated back on SNMP 
+GET/GETNEXT/GETBULK operations.
+Data saved in disk-based datastore will NOT be lost upon Simulator restart.
 
-The .snmprec value will be used as an initial value by the volatilecache
-module.
+Module initialization allows for passing a name of a database file to be
+used as a disk-based datastore:
 
-Here's an example volatilecache module use in a .snmprec file:
+$ snmpsimd.py --variation-module-options=writecache:file:/tmp/shelves.db
 
-1.3.6.1.2.1.1.3.0|2:volatilecache|42
+All modifed values will be kept and then subsequently used on a per-OID
+basis in the specified file. If datastore file is not specified, the
+writecache.py module will keep all its data in [volatile] memory.
+
+The writecache module accepts the following comma-separated key=value
+parameters in .snmprec value field:
+
+  value - holds the var-bind value to be included into SNMP response.
+          In case of a string value containing commas, use 'hexvalue'
+          instead.
+  hexvalue - holds the var-bind value as a sequence of ASCII codes in hex
+             form. Before putting it into var-bind, hexvalue contents will
+             be converted into ASCII text.
+  vlist - a list of triples (comparation:constant:error) to use as an access 
+          list for SET values. The following comparations are supported:
+          'eq', 'lt', 'gt'. The following SNMP errors are supported:
+          'generror', 'noaccess', 'wrongtype', 'wrongvalue', 'nocreation',
+          'inconsistentvalue', 'resourceunavailable', 'commitfailed',
+          'undofailed', 'authorizationerror', 'notwritable', 
+          'inconsistentname', 'nosuchobject', 'nosuchinstance', 'endofmib'
+
+Here's an example writecache module use in a .snmprec file:
+
+1.3.6.1.2.1.1.3.0|2:writecache|value=42
 
 In the above configuration, the initial value is 42 and can be modified by:
 
@@ -713,20 +737,12 @@ snmpset -v2c -c <commiunity> localhost 1.3.6.1.2.1.1.3.0 i 24
 
 command (assuming correct community name and Simulator is running locally).
 
-Involatile cache module
-+++++++++++++++++++++++
+A more complex example involves using an access list. The following example
+allows only values of 1 and 2 to be SET:
 
-The involatilecache module works similar to the volatilecache one, but
-the involatile version has an ability of storing current values in a persistent
-database.
+1.3.6.1.2.1.1.3.0|2:writecache|value=42,vlist=lt:1:wrongvalue:gt:2:wrongvalue
 
-Module invocation requires passing a name of a database file to be
-created if not already exists:
-
-$ snmpsimd.py --variation-module-options=involatilecache:file:/tmp/shelves.db
-
-All modifed values will be kept and then subsequently used on a per-OID
-basis in the specified file.
+Any other SET values will result in SNNP WrongValue error in response.
 
 Multiplex module
 ++++++++++++++++
