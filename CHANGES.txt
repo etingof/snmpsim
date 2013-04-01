@@ -20,9 +20,12 @@
 - Variation modules options now take shape of a key-value pairs. This
   might break backward compatibility with 0.2.0!
 - The counter.py and gauge.py variation modules merged into a single
-  numeric.py module which also support INTEGER&TIMETICKS values as
+  numeric.py module which also supports INTEGER&TIMETICKS values as
   well as recording feature.
-- The "delay" variation module extended to support variation based on
+- The involatilecache.py and volatilecache.py modules merged into a
+  single writecache.py module which also supports SET value verification
+  against per-OID access list.
+- The delay.py variation module extended to support variation based on
   SET value and time of date.
 - Recording functionality added to the delay.py and numeric.py modules.
 - The new "multiplex" variation module added to be able to record
