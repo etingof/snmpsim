@@ -33,7 +33,7 @@ from pysnmp.proto import rfc1902, rfc1905, api
 from pysnmp import error
 from pysnmp import debug
 from snmpsim import __version__
-from snmpsim.error import SnmpsimError
+from snmpsim.error import SnmpsimError, NoDataNotification
 from snmpsim import confdir
 from snmpsim.record import dump, mvc, sap, walk, snmprec
 from snmpsim.record.search.file import searchRecordByOid
@@ -285,6 +285,8 @@ class SnmprecRecord(snmprec.SnmprecRecord):
         else:
             try:
                 oid, tag, value = self.evaluateValue(oid, tag, value, **context)
+            except NoDataNotification:
+                raise
             except MibOperationError:
                 raise
             except PyAsn1Error:
@@ -407,6 +409,8 @@ class DataFile(AbstractLayout):
                         exactMatch = True
                         subtreeFlag = False
                         continue
+                except NoDataNotification:
+                    raise error.PySnmpError()
                 except MibOperationError:
                     raise
                 except Exception:

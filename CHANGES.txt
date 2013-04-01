@@ -22,6 +22,8 @@
 - The counter.py and gauge.py variation modules merged into a single
   numeric.py module which also support INTEGER&TIMETICKS values as
   well as recording feature.
+- The "delay" variation module extended to support variation based on
+  SET value and time of date.
 - Recording functionality added to the delay.py and numeric.py modules.
 - The new "multiplex" variation module added to be able to record
   and replay a sequence of .snmprec files ordered by time.

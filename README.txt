@@ -467,7 +467,7 @@ Simulator.
 Here's the current list of variation modules supplied with Simulator:
 
 * numeric - produces a non-decreasing sequence of integers over time
-* notification - sends SNMP TRAP/INFORM messages to disitant SNMP entity
+* notification - sends SNMP TRAP/INFORM messages to distant SNMP entity
 * volatilecache - accepts and stores (in memory) SNMP var-binds through SNMP SET
 * involatilecache - accepts and stores (in file) SNMP var-binds through
                     SNMP SET 
@@ -613,21 +613,47 @@ in .snmprec value field:
              form. Before putting it into var-bind, hexvalue contents will
              be converted into ASCII text.
   wait - specifies for how many milliseconds to delay SNMP response.
-         Default is 500ms.
-  deviation - random delay deviation ranges. Default is 0 which means no
+         Default is 500ms. If the value exceeds 999999, request will never
+         be answered (PDU will be dropped right away).
+  deviation - random delay deviation ranges (ms). Default is 0 which means no
               deviation.
+  vlist - a list of triples (comparation:constant:delay) to use on SET 
+          operation for choosing delay based on value supplied in request.
+  tlist - a list of triples (comparation:time:delay) to use for choosing
+          request delay based on time of day (seconds, UNIX time).
 
-Here's an example delay module use in a .snmprec file:
+Here's an example delay module use in a .snmprec file.
+
+The following entry makes Simulator responding with an integer value of 
+6 delayed by 0.1sec +- 0.2 sec (negative delays are casted into zeros):
 
 1.3.6.1.2.1.2.2.1.3.1|2:delay|value=6,wait=100,deviation=200
-1.3.6.1.2.1.2.2.1.4.1|2:delay|1500
+
+Here the hexvalue takes shape of an OCTET STRING value '0:12:79:62:f9:40'
+delayed by exactly 0.8 sec:
+
 1.3.6.1.2.1.2.2.1.6.1|4:delay|hexvalue=00127962f940,wait=800
 
-The first entry makes Simulator responding with an integer value of 6 delayed
-by 0.1sec +- 0.2 sec. Negative delays are casted into zeros. The second entry
-is similar to the first one but uses delay module defaults. Finally, the last
-entry takes shape of an OCTET STRING value '0:12:79:62:f9:40' delayed by
-exactly 0.8 sec.
+This entry drops PDU right away so the Manager will timed out:
+
+1.3.6.1.2.1.2.2.1.7.1|2:delay|wait=1000000
+
+This entry uses module default on GET/GETNEXT/GETBULK operations, however
+delays response on 0.1 sec if request value is exactly 0 and delays
+response for 1 sec on value equal to 1.
+
+1.3.6.1.2.1.2.2.1.8.1|2:delay|vlist=eq:0:100:eq:1:1000,value=1
+
+The following entry uses module default on GET/GETNEXT/GETBULK operations,
+however delays response on 0.001 sec if request value is exactly 100,
+uses module default on values >= 100 but <= 300 (0.5 sec), and drops request
+on values > 300:
+
+1.3.6.1.2.1.2.2.1.9.1|67:delay|vlist=lt:100:1:gt:300:1000000,value=150
+
+The next example will simulate an unavailable Agent past 01.04.2013
+
+1.3.6.1.2.1.2.2.1.10.1|67:delay|tlist=gt:1364860800:1000000,value=150
 
 Keep in mind that since Simulator is a single-thread application,
 any delayed response will delay all concurrent requests processing as well.
