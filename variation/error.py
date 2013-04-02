@@ -31,18 +31,18 @@ def variate(oid, tag, value, **context):
     if oid not in settingsCache:
         settingsCache[oid] = dict([x.split('=') for x in value.split(',')])
 
-    if 'hexvalue' in settingsCache[oid]:
-        settingsCache[oid]['value'] = [int(settingsCache[oid]['hexvalue'][x:x+2], 16) for x in range(0, len(settingsCache[oid]['hexvalue']), 2)]
+        if 'hexvalue' in settingsCache[oid]:
+            settingsCache[oid]['value'] = [int(settingsCache[oid]['hexvalue'][x:x+2], 16) for x in range(0, len(settingsCache[oid]['hexvalue']), 2)]
 
-    if 'status' in settingsCache[oid]:
-        settingsCache[oid]['status'] = settingsCache[oid]['status'].lower()
+        if 'status' in settingsCache[oid]:
+            settingsCache[oid]['status'] = settingsCache[oid]['status'].lower()
 
-    if settingsCache[oid]['status'] not in errorTypes:
-        sys.stdout.write('error: wrong/missing error status for oid %s\r\n' % (oid,))
-        return oid, tag, context['errorStatus']
+        if settingsCache[oid]['status'] not in errorTypes:
+            sys.stdout.write('error: wrong/missing error status for oid %s\r\n' % (oid,))
+            return oid, tag, context['errorStatus']
  
-    if 'op' not in settingsCache[oid]:
-         settingsCache[oid]['op'] = 'any'
+        if 'op' not in settingsCache[oid]:
+            settingsCache[oid]['op'] = 'any'
 
     if settingsCache[oid]['op'] not in ('get', 'set', 'any', '*'):
         sys.stdout.write('notification: unknown SNMP request type configured: %s\r\n' % settingsCache[oid]['op'])
