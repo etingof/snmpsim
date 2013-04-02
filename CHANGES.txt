@@ -25,6 +25,8 @@
 - The involatilecache.py and volatilecache.py modules merged into a
   single writecache.py module which also supports SET value verification
   against per-OID access list.
+- The error.py variation module extended to support variation based on
+  SET value.
 - The delay.py variation module extended to support variation based on
   SET value and time of date.
 - Recording functionality added to the delay.py and numeric.py modules.

@@ -37,24 +37,56 @@ def variate(oid, tag, value, **context):
         if 'status' in settingsCache[oid]:
             settingsCache[oid]['status'] = settingsCache[oid]['status'].lower()
 
-        if settingsCache[oid]['status'] not in errorTypes:
-            sys.stdout.write('error: wrong/missing error status for oid %s\r\n' % (oid,))
-            return oid, tag, context['errorStatus']
- 
         if 'op' not in settingsCache[oid]:
             settingsCache[oid]['op'] = 'any'
 
-    if settingsCache[oid]['op'] not in ('get', 'set', 'any', '*'):
-        sys.stdout.write('notification: unknown SNMP request type configured: %s\r\n' % settingsCache[oid]['op'])
-        return context['origOid'], tag, context['errorStatus']
- 
-    if settingsCache[oid]['op'] == 'get' and not context['setFlag'] or \
-       settingsCache[oid]['op'] == 'set' and context['setFlag'] or \
-       settingsCache[oid]['op'] in ('any', '*'):
-        raise errorTypes[settingsCache[oid]['status']](
+        if 'vlist' in settingsCache[oid]:
+            vlist = {}
+            settingsCache[oid]['vlist'] = settingsCache[oid]['vlist'].split(':')
+            while settingsCache[oid]['vlist']:
+                o,v,e = settingsCache[oid]['vlist'][:3]
+                settingsCache[oid]['vlist'] = settingsCache[oid]['vlist'][3:]
+                if tag in ('2', '65', '66', '67', '70'):
+                    v = int(v)
+                if o not in vlist:
+                    vlist[o] = {}
+                if o == 'eq':
+                    vlist[o][v] = e
+                elif o in ('lt', 'gt'):
+                    vlist[o] = v, e
+                else:
+                    sys.stdout.write('delay: bad vlist syntax: %s\r\n' % settingsCache[oid]['vlist'])
+            settingsCache[oid]['vlist'] = vlist
+
+    e = None
+
+    if context['setFlag']:
+        if 'vlist' in settingsCache[oid]:
+            if 'eq' in settingsCache[oid]['vlist'] and  \
+                  context['origValue'] in settingsCache[oid]['vlist']['eq']:
+                e = settingsCache[oid]['vlist']['eq'][context['origValue']]
+            elif 'lt' in settingsCache[oid]['vlist'] and  \
+                  context['origValue'] < settingsCache[oid]['vlist']['lt'][0]:
+                e = settingsCache[oid]['vlist']['lt'][1]
+            elif 'gt' in settingsCache[oid]['vlist'] and  \
+                  context['origValue'] > settingsCache[oid]['vlist']['gt'][0]:
+                e = settingsCache[oid]['vlist']['gt'][1]
+        elif settingsCache[oid]['op'] in ('set', 'any'):
+            if 'status' in settingsCache[oid]:
+                e = settingsCache[oid]['status']
+    else:        
+        if settingsCache[oid]['op'] in ('get', 'any'):
+            if 'status' in settingsCache[oid]:
+                e = settingsCache[oid]['status']
+
+    if e and e in errorTypes:
+        raise errorTypes[e](
             name=oid, idx=context['varsTotal']-context['varsRemaining']
         )
-    else:
-        return oid, tag, settingsCache[oid].get('value', context['errorStatus'])
+
+    if context['setFlag']:
+        settingsCache[oid]['value'] = context['origValue']
+
+    return oid, tag, settingsCache[oid].get('value', context['errorStatus'])
 
 def shutdown(snmpEngine, **context): pass 
