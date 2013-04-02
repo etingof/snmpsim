@@ -681,16 +681,25 @@ in .snmprec value field:
            'commitfailed', 'undofailed', 'authorizationerror',
            'notwritable', 'inconsistentname', 'nosuchobject',
            'nosuchinstance', 'endofmib'
+  vlist - a list of triples (comparation:constant:error) to use as an access 
+          list for SET values. The following comparations are supported:
+          'eq', 'lt', 'gt'. The following SNMP errors are supported:
+          'generror', 'noaccess', 'wrongtype', 'wrongvalue', 'nocreation',
+          'inconsistentvalue', 'resourceunavailable', 'commitfailed',
+          'undofailed', 'authorizationerror', 'notwritable', 
+          'inconsistentname', 'nosuchobject', 'nosuchinstance', 'endofmib'
 
 Here's an example error module use in a .snmprec file:
 
 1.3.6.1.2.1.2.2.1.1.1|2:error|op=get,status=authorizationError,value=1
 1.3.6.1.2.1.2.2.1.2.1|4:error|op=set,status=commitfailed,hexvalue=00127962f940
+1.3.6.1.2.1.2.2.1.3.1|2:error|vlist=gt:2:wrongvalue,value=1
 1.3.6.1.2.1.2.2.1.6.1|4:error|status=noaccess
 
 The first entry flags 'authorizationError' on GET* and no error
 on SET. Second entry flags 'commitfailed' on SET but responds without errors
-to GET*. Finally, third entry always flags 'noaccess' error.
+to GET*. Third entry fails with 'wrongvalue' only on SET with values > 2.
+Finally, forth entry always flags 'noaccess' error.
 
 Write Cache module
 ++++++++++++++++++
@@ -929,15 +938,62 @@ Custom variation modules
 ++++++++++++++++++++++++
 
 Whenever you consider coding your own variation module, take a look at the
-existing ones. The API is very simple - it basically takes three Python 
-functions (init, process, shutdown) where process() is expected to return
-a var-bind pair per each invocation.
+existing ones. The API is not too complex - it basically takes four Python 
+functions (init, variate, record and shutdown) where variate() accepts
+the oid-tag-value triplet from matching snmprec record as well as execution
+context. Its return value is expected to be an oid-tag-value triplet to be
+used for building response.
 
 Alternatively, we could help you with this task. Just let us know your
 requirements.
 
 Recording with variation modules
 --------------------------------
+
+Some valuable simulation information may also be collected in the process 
+of recording snapshots off live SNMP Agent. Examples include changes in the
+set of OIDs in time, changes in numeric values, request processing times
+and so on. To facilitate capturing such information, some of the stock
+variation modules support snapshots recording mode.
+
+To invoke a variation module while snapshotting a SNMP Agent with 
+snmprec.py tool, pass its name via the --variation-module command-line 
+parameter. Additional variation module parameters could also be passed
+through the --variation-module-options switch.
+
+In the following sections we will outline the use of recording facilities
+in stock variation modules:
+
+Numeric module
+++++++++++++++
+
+The numeric module can be used for capturing initial values of
+Managed Objects and calculating a coefficient to a linear function
+in attempt to approximate live values changes in time. In case value
+change law is not linear, custom approximation function should be used
+instead.
+
+The numeric module supports the following comma-separated key:value
+options whilst running in recording mode:
+
+  taglist - a dash-separated list of .snmprec tags indicating SNMP
+            value types to apply numeric module to. Valid tags are:
+            Integer - 2, 65 - Counter32, 66 - Gauge32, 67 - TimeTicks,
+            70 - Counter64. Default is empty list.
+  iterations - number of times snmprec.py will walk the specified 
+               [portion] of Agent's MIB tree. There's no point in values
+               beyond 2 for purposes of modelling approximation function.
+               Default is 1.
+  period - Agent walk period in seconds. Default is 10 seconds.
+  addon - any numeric module, snmprec record scope parameters to be used
+          whilst running in variation mode. Default is empty list.
+
+Example use of numeric module for recording follows:
+
+
+ 
+
+
 
 
 
