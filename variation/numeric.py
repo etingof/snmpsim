@@ -30,7 +30,7 @@ def init(snmpEngine, **context):
         if 'iterations' in moduleOptions:
             moduleOptions['iterations'] = int(moduleOptions['iterations'])
             if moduleOptions['iterations']:
-                moduleOptions['iterations'] = 2  # no reason for more
+                moduleOptions['iterations'] = 1  # no reason for more
         if 'period' in moduleOptions:
             moduleOptions['period'] = float(moduleOptions['period'])
         else:
@@ -119,8 +119,6 @@ def record(oid, tag, value, **context):
                 del context['hexvalue']
 
             if 'iterations' in moduleOptions and oid not in moduleContext:
-                settings['values'] = []
-                settings['times'] = []
                 moduleContext[oid] = settings
 
     if 'hextag' in context and context['hextag']:
@@ -133,28 +131,27 @@ def record(oid, tag, value, **context):
             if context['stopFlag']:
                 wait = max(0, float(moduleOptions['period']) - (time.time() - moduleContext['started']))
                 while wait > 0:
-                    sys.stdout.write('numeric: waiting %.2f sec(s), %s OIDs dumped, %s iterations remaining...\r\n' % (wait, context['total']+context['count'], moduleOptions['iterations']))
+                    sys.stdout.write('numeric: waiting %.2f sec(s), %s OIDs dumped, %s iterations remaining...\r' % (wait, context['total']+context['count'], moduleOptions['iterations']))
                     sys.stdout.flush()
                     time.sleep(1)
                     wait -= 1
+                sys.stdout.write(' ' * 70)
                 moduleOptions['iterations'] -= 1
                 moduleContext['started'] = time.time()
                 raise error.MoreDataNotification()
             else:
                 if oid in moduleContext:
-                    moduleContext[oid]['times'].append(time.time())
-                    moduleContext[oid]['values'].append(context['origValue'])
+                    moduleContext[oid]['time'] = time.time()
+                    moduleContext[oid]['value'] = context['origValue']
                 raise error.NoDataNotification()
         else:
             if oid in moduleContext:
                 moduleContext[oid]['rate'] = \
-                    (moduleContext[oid]['values'][-1] - \
-                     moduleContext[oid]['values'][0]) / \
-                    (moduleContext[oid]['times'][-1] - \
-                     moduleContext[oid]['times'][0])
+                    (context['origValue'] - moduleContext[oid]['value'])/\
+                    (time.time() - moduleContext[oid]['time'])
 
-                del moduleContext[oid]['values'];
-                del moduleContext[oid]['times'];
+                del moduleContext[oid]['value'];
+                del moduleContext[oid]['time'];
 
                 value = ','.join(
                     [ '%s=%s' % (k,v) for k,v in moduleContext[oid].items() ]
