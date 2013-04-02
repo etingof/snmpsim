@@ -29,6 +29,8 @@ def init(snmpEngine, **context):
     if context['mode'] == 'recording':
         if 'iterations' in moduleOptions:
             moduleOptions['iterations'] = int(moduleOptions['iterations'])
+            if moduleOptions['iterations']:
+                moduleOptions['iterations'] = 2  # no reason for more
         if 'period' in moduleOptions:
             moduleOptions['period'] = float(moduleOptions['period'])
         else:
