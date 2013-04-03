@@ -141,7 +141,7 @@ def record(oid, tag, value, **context):
                     sys.stdout.flush()
                     time.sleep(1)
                     wait -= 1
-                sys.stdout.write(' ' * 70)
+                sys.stdout.write(' ' * 77 + '\r')
                 moduleOptions['iterations'] -= 1
                 moduleContext['started'] = time.time()
                 raise error.MoreDataNotification()

@@ -34,7 +34,7 @@ def init(snmpEngine, **context):
             raise error.SnmpsimError('SNMP snapshots directory not specified')
         if not os.path.exists(moduleOptions['dir']):
             sys.stdout.write('\r\nmultiplex: creating %s...\r\n' % moduleOptions['dir'])
-            os.mkdir(moduleOptions['dir'])
+            os.makedirs(moduleOptions['dir'])
         if 'iterations' in moduleOptions:
             moduleOptions['iterations'] = int(moduleOptions['iterations'])
         if 'period' in moduleOptions:
@@ -152,10 +152,11 @@ def record(oid, tag, value, **context):
         if 'iterations' in moduleOptions and moduleOptions['iterations']:
             wait = max(0, moduleOptions['period'] - (time.time() - moduleContext['started']))
             while wait > 0:
-                sys.stdout.write('multiplex: waiting %.2f sec(s), %s OIDs dumped, %s iterations remaining...\r\n' % (wait, context['total']+context['count'], moduleOptions['iterations']))
+                sys.stdout.write('multiplex: waiting %.2f sec(s), %s OIDs dumped, %s iterations remaining...\r' % (wait, context['total']+context['count'], moduleOptions['iterations']))
                 sys.stdout.flush()
                 time.sleep(1)
                 wait -= 1
+            sys.stdout.write(' ' * 77 + '\r')
             moduleContext['started'] = time.time()
             moduleOptions['iterations'] -= 1
             moduleContext['filenum'] += 1
