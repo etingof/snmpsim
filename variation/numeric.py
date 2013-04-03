@@ -22,10 +22,14 @@ moduleContext = {}
 booted = time.time()
 
 def init(snmpEngine, **context):
-    if context['options']:
-        moduleOptions.update(
-            dict([x.split(':') for x in context['options'].split(',')])
-        )
+    for k,v in [x.split(':') for x in context['options'].split(',')]:
+        if k == 'addon':
+            if k in moduleOptions:
+                moduleOptions[k].append(v)
+            else:
+                moduleOptions[k] = [v]
+        else:
+            moduleOptions[k] = v
     if context['mode'] == 'recording':
         if 'iterations' in moduleOptions:
             moduleOptions['iterations'] = int(moduleOptions['iterations'])
@@ -109,7 +113,9 @@ def record(oid, tag, value, **context):
             if context['origValue'].tagSet == rfc1902.Integer.tagSet:
                 settings['rate'] = 0
             if 'addon' in moduleOptions:
-                settings['addon'] = moduleOptions['addon']
+                settings.update(
+                    dict([x.split('=') for x in moduleOptions['addon']])
+                )
 
             value = ','.join([ '%s=%s' % (k,v) for k,v in settings.items() ])
 

@@ -19,9 +19,14 @@ moduleContext = { 'ready': False }
 
 def init(snmpEngine, **context):
     if context['options']:
-        moduleOptions.update(
-            dict([x.split(':') for x in context['options'].split(',')])
-        )
+        for k,v in [x.split(':') for x in context['options'].split(',')]:
+            if k == 'addon':
+                if k in moduleOptions:
+                    moduleOptions[k].append(v)
+                else:
+                    moduleOptions[k] = [v]
+            else:
+                moduleOptions[k] = v
     if context['mode'] == 'variating':
         moduleContext['booted'] = time.time()
     elif context['mode'] == 'recording':
@@ -171,9 +176,16 @@ def record(oid, tag, value, **context):
     )
 
     if not context['count']:
-        value = 'dir=%s' % moduleOptions['dir']
+        settings = {
+            'dir': moduleOptions['dir']
+        }
         if 'period' in moduleOptions:
-            value += ',period=%.2f' % float(moduleOptions['period'])
+            settings['period'] = '%.2f' % float(moduleOptions['period'])
+        if 'addon' in moduleOptions:
+            settings.update(
+                dict([x.split('=') for x in moduleOptions['addon']])
+            )
+        value = ','.join([ '%s=%s' % (k,v) for k,v in settings.items() ])
         return str(context['startOID']), ':multiplex', value
     else:
         raise error.NoDataNotification()
