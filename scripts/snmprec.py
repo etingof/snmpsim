@@ -207,8 +207,11 @@ for variationModulesDir in variationModulesDirs:
         sys.exit(-1)
     else:
         variationModule = ctx
-
-    sys.stdout.write('%s module loaded\r\n' % variationModuleName)
+        sys.stdout.write('%s module loaded\r\n' % variationModuleName)
+        break
+else:
+    sys.stdout.write('ERROR: variation module %s not found\r\n%s\r\n' % (variationModuleName, helpMessage))
+    sys.exit(-1)
 
 if snmpVersion == 3:
     if v3User is None:
