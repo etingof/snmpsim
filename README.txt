@@ -985,8 +985,9 @@ options whilst running in recording mode:
                beyond 2 for purposes of modelling approximation function.
                Default is 1.
   period - Agent walk period in seconds. Default is 10 seconds.
-  addon - any snmprec record scope parameters to numeric module be used
-          whilst running in variation mode. Default is empty list.
+  addon - a single snmprec record scope key=value parameter for the
+          multiplex module to be used whilst running in variation mode.
+          Multiple addon parameters can be used. Default is empty.
 
 Example use of numeric module for recording follows:
 
@@ -1064,13 +1065,15 @@ options whilst running in recording mode:
   iterations - number of times snmprec.py will walk the specified 
                [portion] of Agent's MIB tree.  Default is 1.
   period - Agent walk period in seconds. Default is 10 seconds.
-  addon - any snmprec record scope parameters for the multiplex module
-          to be used whilst running in variation mode. Default is empty list.
+  addon - a single snmprec record scope key=value parameter for the
+          multiplex module to be used whilst running in variation mode.
+          Multiple addon parameters can be used. Default is empty.
 
 Example use of numeric module for recording follows:
 
 $ snmprec.py --agent-udpv4-endpoint=127.0.0.1 
   --start-oid=1.3.6.1.2.1.2 --stop-oid=1.3.6.1.2.1.3 
+  --output-file=data/multiplex.snmprec
   --variation-module=multiplex
   --variation-module-options=dir:data/multiplex:,iterations:5,period:15
 Scanning "variation" directory for variation modules...multiplex module loaded
@@ -1079,9 +1082,70 @@ Community name: public
 Querying UDP/IPv4 agent at 127.0.0.1:161
 Initializing variation module:
     multiplex...OK
-numeric: waiting 0.77 sec(s), 111 OIDs dumped, 1 iterations remaining...
+multiplex: writing into data/multiplex/00000.snmprec file...
+multiplex: waiting 14.78 sec(s), 45 OIDs dumped, 5 iterations remaining...
+...
+multiplex: writing into data/multiplex/00005.snmprec file...            
+Shutting down variation modules:
+    multiplex...OK
+OIDs dumped: 276, elapsed: 75.76 sec, rate: 3.64 OIDs/sec
 
+Besides individual snmprec snapshots the "main" .snmprec file will also
+be written:
 
+$ cat data/multiplex.snmprec
+1.3.6.1.2.1.2|:multiplex|period=15.00,dir=data/multiplex
+$
+
+where the multiplex module is configured for specific OID subtree (actually,
+specified in --start-oid).
+
+Although multiplex-generated .snmprec files can also be addressed directly
+by Simulator, it's more conventional to access them through "main" .snmprec
+file and multiplex module.
+
+SQL module
+++++++++++
+
+The sql module can record a snapshot of Agent's set of Managed Objects
+and store it in a SQL database. Recorded snapshots could then be used
+for simulation by sql module running in varition mode.
+
+The sql module supports the following comma-separated key:value
+options whilst running in recording mode:
+
+  dbtype - SQL DBMS type in form of Python DPI API-compliant module.
+           It will be imported into Python as specified.
+  dboptions - DBMS module connect string in form of arg1@arg2@arg3...
+  dbtable - SQL table name to use for storing recorded snapshot.
+
+Example use of sql module for recording follows:
+
+$ snmprec.py --agent-udpv4-endpoint=127.0.0.1 
+  --start-oid=1.3.6.1.2.1.2 --stop-oid=1.3.6.1.2.1.3 
+  --output-file=data/sql.snmprec
+  --variation-module=sql
+  --variation-module-options=dbtype:sqlite3,dboptions:/tmp/snmpsim.db,dbtable:system
+Scanning "variation" directory for variation modules... sql module loaded
+SNMP version 2c
+Community name: public
+Querying UDP/IPv4 agent at 127.0.0.1:161
+Initializing variation module:
+    sql...OK
+
+Shutting down variation modules:
+    sql...OK
+OIDs dumped: 276, elapsed: 75.76 sec, rate: 3.64 OIDs/sec
+
+Besides individual snmprec snapshots the "main" .snmprec file will also
+be written:
+
+$ cat data/sql.snmprec
+1.3.6.1.2.1.2|:sql|system
+$
+
+where the sql module is configured for specific OID subtree (actually,
+specified in --start-oid).
 
 Performance improvement
 -----------------------
