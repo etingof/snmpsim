@@ -985,15 +985,101 @@ options whilst running in recording mode:
                beyond 2 for purposes of modelling approximation function.
                Default is 1.
   period - Agent walk period in seconds. Default is 10 seconds.
-  addon - any numeric module, snmprec record scope parameters to be used
+  addon - any snmprec record scope parameters to numeric module be used
           whilst running in variation mode. Default is empty list.
 
 Example use of numeric module for recording follows:
 
+$ snmprec.py --agent-udpv4-endpoint=127.0.0.1 
+  --start-oid=1.3.6.1.2.1.2 --stop-oid=1.3.6.1.2.1.3 
+  --variation-module=numeric 
+  --variation-module-options=taglist:65,iterations:2,period:15
+Scanning "variation" directory for variation modules...numeric module loaded
+SNMP version 2c
+Community name: public
+Querying UDP/IPv4 agent at 127.0.0.1:161
+Initializing variation module:
+    numeric...OK
+numeric: waiting 0.77 sec(s), 111 OIDs dumped, 1 iterations remaining...
+...
+1.3.6.1.2.1.2.2.1.6.4|4x|008d120f4fa4
+1.3.6.1.2.1.2.2.1.7.1|2|1
+1.3.6.1.2.1.2.2.1.9.2|67|0
+1.3.6.1.2.1.2.2.1.10.1|65:numeric|rate=3374,initial=641734,increasing=1
+1.3.6.1.2.1.2.2.1.10.2|65:numeric|rate=0,initial=0,increasing=1
+1.3.6.1.2.1.2.2.1.10.4|65:numeric|rate=1159,initial=32954879,increasing=1
+1.3.6.1.2.1.2.2.1.11.1|65:numeric|rate=86,initial=12238,increasing=1
+1.3.6.1.2.1.2.2.1.21.1|66|0
+...
+Shutting down variation modules:
+    numeric...OK
+OIDs dumped: 224, elapsed: 15.53 sec, rate: 20.00 OIDs/sec
 
- 
+In the above example we have run two iterations against a subset of
+Managed Objects at an Agent requesting numeric module to configure
+itself into generated .snmprec data for Counter32-typed objects (ID 65).
 
+Produced snmprec could be used for simulation as-is or edited by
+hand to change variation module behaviour on on a per-OID basis..
 
+Delay module
+++++++++++++
+
+The delay module can be used for capturing request processing time
+when snapshotting an Agent.
+
+Example use of delay module for recording follows:
+
+$ snmprec.py --agent-udpv4-endpoint=127.0.0.1 
+  --start-oid=1.3.6.1.2.1.2 --stop-oid=1.3.6.1.2.1.3 
+  --variation-module=delay
+Scanning "variation" directory for variation modules...delay module loaded
+SNMP version 2c
+Community name: public
+Querying UDP/IPv4 agent at 127.0.0.1:161
+Initializing variation module:
+    delay...OK
+1.3.6.1.2.1.2.1.0|2:delay|value=5,wait=8
+1.3.6.1.2.1.2.2.1.1.1|2:delay|value=1,wait=32
+1.3.6.1.2.1.2.2.1.6.4|4x:delay|hexvalue=008d120f4fa4,wait=20
+...
+Shutting down variation modules:
+    delay...OK
+OIDs dumped: 224, elapsed: 15.53 sec, rate: 20.00 OIDs/sec
+
+Produced snmprec could be used for Simulation as-is or edited by
+hand to change delay variation.
+
+Multiplex module
+++++++++++++++++
+
+The multiplex module can record a series of snapshots at specified period
+of time. Recorded .snmprec snapshots could then be used for simulation
+by multiplex module.
+
+The multiplex module supports the following comma-separated key:value
+options whilst running in recording mode:
+
+  dir - directory for produced .snmprec files.
+  iterations - number of times snmprec.py will walk the specified 
+               [portion] of Agent's MIB tree.  Default is 1.
+  period - Agent walk period in seconds. Default is 10 seconds.
+  addon - any snmprec record scope parameters for the multiplex module
+          to be used whilst running in variation mode. Default is empty list.
+
+Example use of numeric module for recording follows:
+
+$ snmprec.py --agent-udpv4-endpoint=127.0.0.1 
+  --start-oid=1.3.6.1.2.1.2 --stop-oid=1.3.6.1.2.1.3 
+  --variation-module=multiplex
+  --variation-module-options=dir:data/multiplex:,iterations:5,period:15
+Scanning "variation" directory for variation modules...multiplex module loaded
+SNMP version 2c
+Community name: public
+Querying UDP/IPv4 agent at 127.0.0.1:161
+Initializing variation module:
+    multiplex...OK
+numeric: waiting 0.77 sec(s), 111 OIDs dumped, 1 iterations remaining...
 
 
 
