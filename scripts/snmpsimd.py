@@ -229,7 +229,7 @@ if not agentUDPv4Endpoints and \
 
 if not os.path.exists(confdir.cache):
     try:
-        os.mkdir(confdir.cache)
+        os.makedirs(confdir.cache)
     except OSError:
         sys.stdout.write('ERROR: failed to create cache dir %s: %s\r\n' % (confdir.cache, sys.exc_info()[1]))
     sys.exit(-1)
