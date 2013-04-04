@@ -3,6 +3,7 @@
 # Simulate SNMP error response
 
 import sys
+from snmpsim.grammar.snmprec import SnmprecGrammar
 from pysnmp.smi import error
 
 errorTypes = {
@@ -28,6 +29,9 @@ settingsCache = {}
 def init(snmpEngine, **context): pass
 
 def variate(oid, tag, value, **context):
+    if not context['nextFlag'] and not context['exactMatch']:
+        return context['origOid'], tag, context['errorStatus']
+
     if oid not in settingsCache:
         settingsCache[oid] = dict([x.split('=') for x in value.split(',')])
 
@@ -46,8 +50,7 @@ def variate(oid, tag, value, **context):
             while settingsCache[oid]['vlist']:
                 o,v,e = settingsCache[oid]['vlist'][:3]
                 settingsCache[oid]['vlist'] = settingsCache[oid]['vlist'][3:]
-                if tag in ('2', '65', '66', '67', '70'):
-                    v = int(v)
+                v = SnmprecGrammar.tagMap[tag](v)
                 if o not in vlist:
                     vlist[o] = {}
                 if o == 'eq':

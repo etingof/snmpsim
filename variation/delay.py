@@ -4,6 +4,7 @@
 import sys
 import time
 import random
+from snmpsim.grammar.snmprec import SnmprecGrammar
 from snmpsim import error
 
 settingsCache = {}
@@ -38,8 +39,7 @@ def variate(oid, tag, value, **context):
                 o,v,d = settingsCache[oid]['vlist'][:3]
                 settingsCache[oid]['vlist'] = settingsCache[oid]['vlist'][3:]
                 d = int(d)
-                if tag in ('2', '65', '66', '67', '70'):
-                    v = int(v)
+                v = SnmprecGrammar.tagMap[tag](v)
                 if o not in vlist:
                     vlist[o] = {}
                 if o == 'eq':

@@ -50,8 +50,7 @@ def variate(oid, tag, value, **context):
             while settingsCache[oid]['vlist']:
                 o,v,e = settingsCache[oid]['vlist'][:3]
                 settingsCache[oid]['vlist'] = settingsCache[oid]['vlist'][3:]
-                if tag in ('2', '65', '66', '67', '70'):
-                    v = int(v)
+                v = SnmprecGrammar.tagMap[tag](v)
                 if o not in vlist:
                     vlist[o] = {}
                 if o == 'eq':
