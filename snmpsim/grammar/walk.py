@@ -1,5 +1,5 @@
 from pysnmp.proto import rfc1902
-from pyasn1.compat.octets import octs2str, int2oct
+from pyasn1.compat.octets import octs2str
 from snmpsim.grammar import abstract
 
 class WalkGrammar(abstract.AbstractGrammar):
@@ -38,7 +38,7 @@ class WalkGrammar(abstract.AbstractGrammar):
         return [int(y, 16) for y in value.split(' ')]
 
     def __bitsFilter(value):
-        return ''.join(['%.2x' % y for y in value.split(' ')])
+        return ''.join(['%.2x' % int(y, 16) for y in value.split(' ')])
 
     def __hexStringFilter(value):
         return [int(y, 16) for y in value.split(' ')]
@@ -51,11 +51,12 @@ class WalkGrammar(abstract.AbstractGrammar):
     }
 
     def parse(self, line):
+        line = line.decode('ascii', 'ignore').encode() # drop possible 8-bits
         oid, value = octs2str(line).strip().split(' = ', 1)
         if oid and oid[0] == '.':
             oid = oid[1:]
         if value.startswith('Wrong Type (should be'):
-            value = value.partition(': ')[2]
+            valjue = value[value.index(': ')+2:]
         if value.startswith('No more variables left in this MIB View'):
             value = 'STRING: '
         try:
