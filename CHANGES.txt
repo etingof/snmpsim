@@ -37,6 +37,7 @@
   and SNMP types resolution. However complex field formatting (such
   as grammar-specific tag modifiers) is now up to higher-level
   'Record' objects.
+- Snapshot files recording now works under Python3.
 
 0.2.0
 -----

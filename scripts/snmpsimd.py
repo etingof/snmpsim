@@ -175,7 +175,7 @@ if authProtocols[v3AuthProto] == config.usmNoAuthProtocol and \
 
 for variationModulesDir in confdir.variation:
     sys.stdout.write(
-        'Scanning "%s" directory for variation modules...' % variationModulesDir
+        'Scanning "%s" directory for variation modules... '%variationModulesDir
     )
     if not os.path.exists(variationModulesDir):
         sys.stdout.write(' no directory\r\n')

@@ -169,7 +169,7 @@ def record(oid, tag, value, **context):
             moduleContext['filenum'] = 0
         snmprecfile = os.path.join(moduleOptions['dir'],
                                    '%.5d.snmprec' % moduleContext['filenum'])
-        moduleContext['file'] = open(snmprecfile, 'w')
+        moduleContext['file'] = open(snmprecfile, 'wb')
         sys.stdout.write('multiplex: writing into %s file...\r\n' % snmprecfile)
 
     moduleContext['file'].write(

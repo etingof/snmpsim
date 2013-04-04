@@ -1,5 +1,5 @@
 from pysnmp.proto import rfc1902, rfc1905
-from pyasn1.compat.octets import octs2str
+from pyasn1.compat.octets import octs2str, str2octs
 from pyasn1.type import univ
 from snmpsim.grammar.abstract import AbstractGrammar
 
@@ -20,7 +20,7 @@ class SnmprecGrammar(AbstractGrammar):
                rfc1905.EndOfMibView ):
         tagMap[str(sum([ x for x in t.tagSet[0] ]))] = t
 
-    def build(self, oid, tag, val): return '%s|%s|%s\n' % (oid, tag, val)
+    def build(self, oid, tag, val): return str2octs('%s|%s|%s\n' % (oid, tag, val))
 
     def parse(self, line): return octs2str(line).strip().split('|', 2)
 

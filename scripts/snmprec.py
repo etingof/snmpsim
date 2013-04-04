@@ -159,7 +159,7 @@ for opt in opts:
     elif opt[0] == '--stop-oid':
         stopOID = univ.ObjectIdentifier(opt[1])
     elif opt[0] == '--output-file':
-        outputFile = open(opt[1], 'w')
+        outputFile = open(opt[1], 'wb')
     elif opt[0] == '--variation-modules-dir':
         variationModulesDirs.append(opt[1])
     elif opt[0] == '--variation-module':
@@ -183,7 +183,7 @@ if not variationModulesDirs:
 
 for variationModulesDir in variationModulesDirs:
     sys.stdout.write(
-        'Scanning "%s" directory for variation modules...' % variationModulesDir
+        'Scanning "%s" directory for variation modules... '%variationModulesDir
     )
     if not os.path.exists(variationModulesDir):
         sys.stdout.write(' no directory\r\n')

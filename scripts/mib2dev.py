@@ -59,7 +59,7 @@ for opt in opts:
     if opt[0] == '--manual-values':
         automaticValues = False
     if opt[0] == '--output-file':
-        outputFile = open(opt[1], 'w')
+        outputFile = open(opt[1], 'wb')
     if opt[0] == '--string-pool':
         stringPool = opt[1].split()
     if opt[0] == '--integer32-range':
