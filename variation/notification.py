@@ -5,6 +5,7 @@
 import sys
 from pysnmp.entity.rfc3413.oneliner import ntforg
 from pysnmp.proto import rfc1902
+from snmpsim.grammar.snmprec import SnmprecGrammar
 
 settingsCache = {}
 
@@ -39,7 +40,8 @@ def _cbFun(sendRequestHandle,
 def variate(oid, tag, value, **context):
     if ntfOrg is None:
         raise Exception('variation module not initialized')
-    if not context['exactMatch']:
+
+    if not context['nextFlag'] and not context['exactMatch']:
         return context['origOid'], tag, context['errorStatus']
 
     if oid not in settingsCache:
@@ -59,8 +61,38 @@ def variate(oid, tag, value, **context):
         if 'hexvalue' in settingsCache[oid]:
             settingsCache[oid]['value'] = [int(settingsCache[oid]['hexvalue'][x:x+2], 16) for x in range(0, len(settingsCache[oid]['hexvalue']), 2)]
 
+        if 'vlist' in settingsCache[oid]:
+            vlist = {}
+            settingsCache[oid]['vlist'] = settingsCache[oid]['vlist'].split(':')
+            while settingsCache[oid]['vlist']:
+                o,v = settingsCache[oid]['vlist'][:2]
+                settingsCache[oid]['vlist'] = settingsCache[oid]['vlist'][2:]
+                v = SnmprecGrammar.tagMap[tag](v)
+                if o not in vlist:
+                    vlist[o] = set()
+                if o == 'eq':
+                    vlist[o].add(v)
+                elif o in ('lt', 'gt'):
+                    vlist[o] = v
+                else:
+                    sys.stdout.write('delay: bad vlist syntax: %s\r\n' % settingsCache[oid]['vlist'])
+            settingsCache[oid]['vlist'] = vlist
+
     args = settingsCache[oid]
-    
+   
+    if context['setFlag'] and 'vlist' in args:
+        if 'eq' in args['vlist'] and  \
+                 context['origValue'] in args['vlist']['eq']:
+            pass
+        elif 'lt' in args['vlist'] and  \
+                 context['origValue'] < args['vlist']['lt']:
+            pass
+        elif 'gt' in args['vlist'] and  \
+                 context['origValue'] > args['vlist']['gt']:
+            pass
+        else:
+            return oid, tag, context['origValue']
+
     if args['op'] not in ('get', 'set', 'any', '*'):
         sys.stdout.write('notification: unknown SNMP request type configured: %s\r\n' % args['op'])
         return context['origOid'], tag, context['errorStatus']
@@ -140,7 +172,7 @@ def variate(oid, tag, value, **context):
             varBinds, cbInfo=(_cbFun, (oid, value))
         )
 
-    if 'value' in args:
+    if context['setFlag'] and 'value' in args:
         return oid, tag, args['value']
     else:
         return oid, tag, context['origValue']
