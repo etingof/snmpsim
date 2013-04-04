@@ -853,6 +853,9 @@ in .snmprec value field:
   op - either of 'get', 'set' or 'any' values to indicate SNMP operation that
        would trigger notification. Here 'get' also enables GETNEXT and GETBULK
        operations. Default is 'set'.
+  vlist - a list of duplets (comparation:constant) to use as event
+          triggering criteria to be compared against SET values. The
+          following comparations are supported: 'eq', 'lt', 'gt'.
   version - SNMP version to use (1,2c,3).
   ntftype - indicates notification type. Either 'trap' or 'inform'.
   community - SNMP community name. For v1, v2c only. Default is 'public'.
@@ -933,19 +936,6 @@ Please, note, that to make SQL's ORDER BY clause working with OIDs,
 each sub-OID stored in the database (in case of manual database population) 
 must be left-padded with a good bunch of spaces (each sub-OID width
 is 10 characters).
-
-Custom variation modules
-++++++++++++++++++++++++
-
-Whenever you consider coding your own variation module, take a look at the
-existing ones. The API is not too complex - it basically takes four Python 
-functions (init, variate, record and shutdown) where variate() accepts
-the oid-tag-value triplet from matching snmprec record as well as execution
-context. Its return value is expected to be an oid-tag-value triplet to be
-used for building response.
-
-Alternatively, we could help you with this task. Just let us know your
-requirements.
 
 Recording with variation modules
 --------------------------------
@@ -1119,33 +1109,64 @@ options whilst running in recording mode:
   dboptions - DBMS module connect string in form of arg1@arg2@arg3...
   dbtable - SQL table name to use for storing recorded snapshot.
 
-Example use of sql module for recording follows:
+Here's an example use of sql module with Python built-in SQLite
+database for snapshot recording purposes:
 
 $ snmprec.py --agent-udpv4-endpoint=127.0.0.1 
   --start-oid=1.3.6.1.2.1.2 --stop-oid=1.3.6.1.2.1.3 
   --output-file=data/sql.snmprec
   --variation-module=sql
-  --variation-module-options=dbtype:sqlite3,dboptions:/tmp/snmpsim.db,dbtable:system
+  --variation-module-options=dbtype:sqlite3,dboptions:/tmp/snmpsim.db,dbtable:snmprec
 Scanning "variation" directory for variation modules... sql module loaded
 SNMP version 2c
 Community name: public
 Querying UDP/IPv4 agent at 127.0.0.1:161
 Initializing variation module:
     sql...OK
-
 Shutting down variation modules:
     sql...OK
-OIDs dumped: 276, elapsed: 75.76 sec, rate: 3.64 OIDs/sec
+OIDs dumped: 45, elapsed: 0.21 sec, rate: 213.00 OIDs/sec
 
-Besides individual snmprec snapshots the "main" .snmprec file will also
-be written:
+By this point you'd get the data/sql.snmprec file where sql module
+is configured for OID subtree (taked from --start-oid parameter):
 
 $ cat data/sql.snmprec
-1.3.6.1.2.1.2|:sql|system
+1.3.6.1.2.1.2.2|:sql|snmprec
 $
 
-where the sql module is configured for specific OID subtree (actually,
-specified in --start-oid).
+and SQLite database /tmp/snmpsim.db having SQL table "snmprec" with the
+following contents:
+
+$ sqlite3 /tmp/snmpsim.db 
+SQLite version 3.7.5
+sqlite> .schema snmprec
+CREATE TABLE snmprec (oid text primary key, tag text, value text, maxaccess text default "read-only");
+sqlite> select * from snmprec limit 1;
+         1.         3.         6.         1.         2.         1.         2.         2.         1.         1.         1|2|1|read-write
+
+Notice the format of the OIDs there -- each sub-oid is left-padded with
+up to 8 spaces (must be 10 chars in total) to make OIDs ordering work 
+properly with SQL sorting facilities.
+
+When sql variation module is invoked by Simulator, it can read, create and
+modify individual rows in the SQL database we just created (this is
+described in relevant section of this document).
+
+You could also modify the contents of such SQL tables, create SQL triggers
+to react to certain changes elsewhere.
+
+Custom variation modules
+++++++++++++++++++++++++
+
+Whenever you consider coding your own variation module, take a look at the
+existing ones. The API is not too complex - it basically takes four Python 
+functions (init, variate, record and shutdown) where variate() accepts
+the oid-tag-value triplet from matching snmprec record as well as execution
+context. Its return value is expected to be an oid-tag-value triplet to be
+used for building response.
+
+Alternatively, we could help you with this task. Just let us know your
+requirements.
 
 Performance improvement
 -----------------------
