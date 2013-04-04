@@ -38,7 +38,7 @@ class WalkGrammar(abstract.AbstractGrammar):
         return [int(y, 16) for y in value.split(' ')]
 
     def __bitsFilter(value):
-        return ''.join([int2oct(int(y, 16)) for y in value.split(' ')])
+        return ''.join(['%.2x' % y for y in value.split(' ')])
 
     def __hexStringFilter(value):
         return [int(y, 16) for y in value.split(' ')]
