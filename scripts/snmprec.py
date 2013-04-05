@@ -28,6 +28,8 @@ from snmpsim import confdir, error
 
 # Defaults
 quietFlag = False
+getBulkFlag = False
+getBulkRepetitions = 25
 snmpVersion = 1
 snmpCommunity = 'public'
 v3User = None
@@ -63,11 +65,11 @@ privProtocols = {
   'NONE': config.usmNoPrivProtocol
 }
 
-helpMessage = 'Usage: %s [--help] [--debug=<category>] [--quiet] [--version=<1|2c|3>] [--community=<string>] [--v3-user=<username>] [--v3-auth-key=<key>] [--v3-priv-key=<key>] [--v3-auth-proto=<%s>] [--v3-priv-proto=<%s>] [--context=<string>] [--agent-udpv4-endpoint=<X.X.X.X:NNNNN>] [--agent-udpv6-endpoint=<[X:X:..X]:NNNNN>] [--agent-unix-endpoint=</path/to/named/pipe>] [--start-oid=<OID>] [--stop-oid=<OID>] [--output-file=<filename>] [--variation-modules-dir=<dir>] [--variation-module=<module>] [--variation-module-options=<args]>]' % (sys.argv[0], '|'.join([ x for x in authProtocols if x != 'NONE' ]), '|'.join([ x for x in privProtocols if x != 'NONE' ]))
+helpMessage = 'Usage: %s [--help] [--debug=<category>] [--quiet] [--version=<1|2c|3>] [--community=<string>] [--v3-user=<username>] [--v3-auth-key=<key>] [--v3-priv-key=<key>] [--v3-auth-proto=<%s>] [--v3-priv-proto=<%s>] [--context=<string>] [--use-getbulk] [--getbulk-repetitions=<number>] [--agent-udpv4-endpoint=<X.X.X.X:NNNNN>] [--agent-udpv6-endpoint=<[X:X:..X]:NNNNN>] [--agent-unix-endpoint=</path/to/named/pipe>] [--start-oid=<OID>] [--stop-oid=<OID>] [--output-file=<filename>] [--variation-modules-dir=<dir>] [--variation-module=<module>] [--variation-module-options=<args]>]' % (sys.argv[0], '|'.join([ x for x in authProtocols if x != 'NONE' ]), '|'.join([ x for x in privProtocols if x != 'NONE' ]))
 
 try:
     opts, params = getopt.getopt(sys.argv[1:], 'h',
-        ['help', 'debug=', 'quiet', 'v1', 'v2c', 'v3', 'version=', 'community=', 'v3-user=', 'v3-auth-key=', 'v3-priv-key=', 'v3-auth-proto=', 'v3-priv-proto=', 'context=', 'agent-address=', 'agent-port=', 'agent-udpv4-endpoint=', 'agent-udpv6-endpoint=', 'agent-unix-endpoint=', 'start-oid=', 'stop-oid=', 'output-file=', 'variation-modules-dir=', 'variation-module=', 'variation-module-options=']
+        ['help', 'debug=', 'quiet', 'v1', 'v2c', 'v3', 'version=', 'community=', 'v3-user=', 'v3-auth-key=', 'v3-priv-key=', 'v3-auth-proto=', 'v3-priv-proto=', 'context=', 'use-getbulk', 'getbulk-repetitions=', 'agent-address=', 'agent-port=', 'agent-udpv4-endpoint=', 'agent-udpv6-endpoint=', 'agent-unix-endpoint=', 'start-oid=', 'stop-oid=', 'output-file=', 'variation-modules-dir=', 'variation-module=', 'variation-module-options=']
         )
 except Exception:
     sys.stdout.write('getopt error: %s\r\n' % sys.exc_info()[1])
@@ -123,6 +125,10 @@ for opt in opts:
             sys.exit(-1)
     elif opt[0] == '--context':
         v3Context = opt[1]
+    elif opt[0] == '--use-getbulk':
+        getBulkFlag = True
+    elif opt[0] == '--getbulk-repetitions':
+        getBulkRepetitions = int(opt[1])
     elif opt[0] == '--agent-address':
         agentUDPv4Address = (opt[1], agentUDPv4Address[1])
     elif opt[0] == '--agent-port':
@@ -175,6 +181,10 @@ if not agentUDPv4Endpoint and not agentUDPv6Endpoint and not agentUNIXEndpoint:
         sys.exit(-1)
     else:
         agentUDPv4Endpoint = agentUDPv4Address
+
+if getBulkFlag and not snmpVersion:
+    sys.stdout.write('WARNING: will be using GETNEXT with SNMPv1!\r\n')
+    getBulkFlag = False
 
 # Load variation module
 
@@ -395,10 +405,18 @@ def cbFun(sendRequestHandle, errorIndication, errorStatus, errorIndex,
                 cbCtx['count'] = 0
                 cbCtx['iteration'] += 1
                 # initiate another SNMP walk iteration
-                cmdGen.sendReq(
-                    snmpEngine, 'tgt', ((startOID, None),), cbFun, cbCtx,
-                    contextName=v3Context
-                )
+                if getBulkFlag:
+                    cmdGen.sendReq(
+                        snmpEngine, 'tgt', 0, getBulkRepetitions, 
+                        ((startOID, None),), cbFun, cbCtx,
+                        contextName=v3Context
+                    )
+                else:
+                    cmdGen.sendReq(
+                        snmpEngine, 'tgt', ((startOID, None),), cbFun, cbCtx,
+                        contextName=v3Context
+                    )
+ 
             except error.NoDataNotification:
                 pass
             else:
@@ -416,8 +434,6 @@ def cbFun(sendRequestHandle, errorIndication, errorStatus, errorIndex,
     # Continue walking
     return not stopFlag
 
-cmdGen = cmdgen.NextCommandGenerator()
-
 cbCtx = {
     'total': 0,
     'count': 0,
@@ -425,9 +441,22 @@ cbCtx = {
     'reqTime': time.time()
 }
 
-cmdGen.sendReq(
-    snmpEngine, 'tgt', ((startOID, None),), cbFun, cbCtx, contextName=v3Context
-)
+if getBulkFlag:
+    cmdGen = cmdgen.BulkCommandGenerator()
+
+    cmdGen.sendReq(
+        snmpEngine, 'tgt', 0, getBulkRepetitions, ((startOID, None),), 
+        cbFun, cbCtx, contextName=v3Context
+    )
+else:
+    cmdGen = cmdgen.NextCommandGenerator()
+
+    cmdGen.sendReq(
+        snmpEngine, 'tgt', ((startOID, None),),
+        cbFun, cbCtx, contextName=v3Context
+    )
+
+sys.stdout.write('Sending initial %s request....\r\n' % (getBulkFlag and 'GETBULK' or 'GETNEXT'))
 
 t = time.time()
 

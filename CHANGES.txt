@@ -32,6 +32,7 @@
 - Recording functionality added to the delay.py and numeric.py modules.
 - The new "multiplex" variation module added to be able to record
   and replay a sequence of .snmprec files ordered by time.
+- SNMP GETBULK operation is now supported by snmprec.py.
 - Redesign of grammar objects -- the new concept is that they
   are only responsible for basic record layout, fields normalization.
   and SNMP types resolution. However complex field formatting (such

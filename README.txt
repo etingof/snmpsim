@@ -71,7 +71,7 @@ There is a pipe-separated triplet of OID-tag-value items where:
 
 * OID is a dot-separated set of numbers.
 * Tag is a BER-encoded ASN.1 tag. When value is hexified, an 'x' literal
-  is appended.
+  is appended. Reference to a variation module can also be embedded into tag.
 * Value is either a printable string, a number or a hexifed value.
 
 No other information or comments is allowed in the data file.
@@ -81,11 +81,14 @@ Device file recording would look like this:
 $ snmprec.py  -h
 SNMP Simulator version 0.2.1, written by Ilya Etingof <ilya@glas.net>
 Software documentation and support at http://snmpsim.sf.net
-Usage: snmprec.py [--help] [--debug=<category>] [--quiet] [--version=<1|2c|3>] [--community=<string>] [--v3-user=<username>] [--v3-auth-key=<key>] [--v3-priv-key=<key>] [--v3-auth-proto=<SHA|MD5>] [--v3-priv-proto=<3DES|AES256|DES|AES|AES128|AES192>] [--context=<string>] [--agent-udpv4-endpoint=<X.X.X.X:NNNNN>] [--agent-udpv6-endpoint=<[X:X:..X]:NNNNN>] [--agent-unix-endpoint=</path/to/named/pipe>] [--start-oid=<OID>] [--stop-oid=<OID>] [--output-file=<filename>] [--variation-modules-dir=<dir>] [--variation-module=<module>] [--variation-module-options=<args]>]
+Usage: scripts/snmprec.py [--help] [--debug=<category>] [--quiet] [--version=<1|2c|3>] [--community=<string>] [--v3-user=<username>] [--v3-auth-key=<key>] [--v3-priv-key=<key>] [--v3-auth-proto=<SHA|MD5>] [--v3-priv-proto=<3DES|AES256|DES|AES|AES128|AES192>] [--context=<string>] [--use-getbulk] [--getbulk-repetitions=<number>] [--agent-udpv4-endpoint=<X.X.X.X:NNNNN>] [--agent-udpv6-endpoint=<[X:X:..X]:NNNNN>] [--agent-unix-endpoint=</path/to/named/pipe>] [--start-oid=<OID>] [--stop-oid=<OID>] [--output-file=<filename>] [--variation-modules-dir=<dir>] [--variation-module=<module>] [--variation-module-options=<args]>]
 $
 $ snmprec.py --agent-udpv4-endpoint=127.0.0.1 --start-oid=1.3.6.1.2.1.2.1.0 --stop-oid=1.3.6.1.2.1.5  --output-file=snmpsim/data/linux/1.3.6.1.2.1/127.0.0.1\@public.snmprec
-SNMP version 1
+Scanning "variation" directory for variation modules...  none requested
+SNMP version 2c
 Community name: public
+Querying UDP/IPv4 agent at 127.0.0.1:161
+Sending initial GETNEXT request....
 OIDs dumped: 304, elapsed: 1.94 sec, rate: 157.00 OIDs/sec
 $
 $ ls -l snmpsim/data/linux/1.3.6.1.2.1/127.0.0.1\@public.snmprec
@@ -106,6 +109,14 @@ $ head snmpsim/data/linux/1.3.6.1.2.1/127.0.0.1\@public.snmprec
 There are no special requirements for data file name and location. Note,
 that Simulator treats data file path as an SNMPv1/v2c community string
 and its MD5 hash constitutes SNMPv3 context name.
+
+About three times faster snapshot recording may be achieved by using SNMP's
+GETBULK operation:
+
+$ snmprec.py --agent-udpv4-endpoint=127.0.0.1 --use-getbulk --output-file=snmpsim/data/linux/1.3.6.1.2.1/127.0.0.1\@public.snmprec
+
+Faster recording may be important for capturing Managed Object changes
+with better resolution.
 
 Another way to produce data files is to run the mib2dev.py tool against
 virtually any MIB file. With that method you do not have to have a donor
