@@ -61,7 +61,9 @@ def variate(oid, tag, value, **context):
             settingsCache[oid]['dirmap'] = dict(
                 [ (int(os.path.basename(x).split(os.path.extsep)[0]), os.path.join(d, x)) for x in os.listdir(d) if x[-7:] == 'snmprec' ]
             )
-            settingsCache[oid]['keys'] = settingsCache[oid]['dirmap'].keys()
+            settingsCache[oid]['keys'] = list(
+                settingsCache[oid]['dirmap'].keys()
+            )
             settingsCache[oid]['bounds'] = (
                 min(settingsCache[oid]['keys']), max(settingsCache[oid]['keys'])
             )
