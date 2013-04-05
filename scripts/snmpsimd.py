@@ -640,7 +640,7 @@ for dataDir in confdir.data:
     for fullPath, textParser, communityName in getDataFiles(dataDir):
         if fullPath in _mibInstrums:
             mibInstrum = _mibInstrums[fullPath]
-            sys.stdout.write('Shared data %s\r\n' % (mibInstrum,))
+            sys.stdout.write('Shared %s\r\n' % (mibInstrum,))
         else:
             dataFile = DataFile(fullPath, textParser).indexText(forceIndexBuild)
             mibInstrum = mibInstrumControllerSet[dataFile.layout](dataFile)
