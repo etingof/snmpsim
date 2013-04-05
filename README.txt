@@ -83,28 +83,25 @@ SNMP Simulator version 0.2.1, written by Ilya Etingof <ilya@glas.net>
 Software documentation and support at http://snmpsim.sf.net
 Usage: scripts/snmprec.py [--help] [--debug=<category>] [--quiet] [--version=<1|2c|3>] [--community=<string>] [--v3-user=<username>] [--v3-auth-key=<key>] [--v3-priv-key=<key>] [--v3-auth-proto=<SHA|MD5>] [--v3-priv-proto=<3DES|AES256|DES|AES|AES128|AES192>] [--context=<string>] [--use-getbulk] [--getbulk-repetitions=<number>] [--agent-udpv4-endpoint=<X.X.X.X:NNNNN>] [--agent-udpv6-endpoint=<[X:X:..X]:NNNNN>] [--agent-unix-endpoint=</path/to/named/pipe>] [--start-oid=<OID>] [--stop-oid=<OID>] [--output-file=<filename>] [--variation-modules-dir=<dir>] [--variation-module=<module>] [--variation-module-options=<args]>]
 $
-$ snmprec.py --agent-udpv4-endpoint=127.0.0.1 --start-oid=1.3.6.1.2.1.2.1.0 --stop-oid=1.3.6.1.2.1.5  --output-file=snmpsim/data/linux/1.3.6.1.2.1/127.0.0.1\@public.snmprec
+$ snmprec.py --agent-udpv4-endpoint=192.168.1.1 --start-oid=1.3.6.1.2.1 --stop-oid=1.3.6.1.2.1.5 --output-file=snmpsim/data/recorded/linksys-system.snmprec
 Scanning "variation" directory for variation modules...  none requested
 SNMP version 2c
 Community name: public
-Querying UDP/IPv4 agent at 127.0.0.1:161
+Querying UDP/IPv4 agent at 192.168.1.1:161
 Sending initial GETNEXT request....
 OIDs dumped: 304, elapsed: 1.94 sec, rate: 157.00 OIDs/sec
 $
-$ ls -l snmpsim/data/linux/1.3.6.1.2.1/127.0.0.1\@public.snmprec
--rw-r--r-- 1 ilya users 16252 Oct 26 14:49 snmpsim/data/linux/1.3.6.1.2.1/127.0.0.1@public.snmprec
+$ ls -l data/recorded/linksys-system.snmprec 
+-rw-r--r-- 1 ilya users 16252 Oct 26 14:49 data/recorded/linksys-system.snmprec 
 $
-$ head snmpsim/data/linux/1.3.6.1.2.1/127.0.0.1\@public.snmprec
-1.3.6.1.2.1.2.2.1.1.1|2|1
-1.3.6.1.2.1.2.2.1.1.2|2|2
-1.3.6.1.2.1.2.2.1.2.1|4|lo
-1.3.6.1.2.1.2.2.1.2.2|4|eth0
-1.3.6.1.2.1.2.2.1.3.1|2|24
-1.3.6.1.2.1.2.2.1.3.2|2|6
-1.3.6.1.2.1.2.2.1.4.1|2|16436
-1.3.6.1.2.1.2.2.1.4.2|2|1500
-1.3.6.1.2.1.2.2.1.5.1|66|10000000
-1.3.6.1.2.1.2.2.1.5.2|66|100000000
+$ head data/recorded/linksys-system.snmprec 
+1.3.6.1.2.1.1.1.0|4|BEFSX41
+1.3.6.1.2.1.1.2.0|6|1.3.6.1.4.1.3955.1.1
+1.3.6.1.2.1.1.3.0|67|638239
+1.3.6.1.2.1.1.4.0|4|Linksys
+1.3.6.1.2.1.1.5.0|4|isp-gw
+1.3.6.1.2.1.1.6.0|4|4, Petersburger strasse, Berlin, Germany
+1.3.6.1.2.1.1.8.0|67|4
 
 There are no special requirements for data file name and location. Note,
 that Simulator treats data file path as an SNMPv1/v2c community string
@@ -113,10 +110,10 @@ and its MD5 hash constitutes SNMPv3 context name.
 About three times faster snapshot recording may be achieved by using SNMP's
 GETBULK operation:
 
-$ snmprec.py --agent-udpv4-endpoint=127.0.0.1 --use-getbulk --output-file=snmpsim/data/linux/1.3.6.1.2.1/127.0.0.1\@public.snmprec
+$ snmprec.py --agent-udpv4-endpoint=127.0.0.1 --use-getbulk --output-file=data/recorded/linksys-system.snmprec
 
-Faster recording may be important for capturing Managed Object changes
-with better resolution.
+Faster recording may be important for capturing changes to Managed Objects
+at better resolution.
 
 Another way to produce data files is to run the mib2dev.py tool against
 virtually any MIB file. With that method you do not have to have a donor
@@ -197,13 +194,21 @@ Simulating SNMP Agents
 Your collection of data files should look like this:
 
 $ find snmpsim/data
-snmpsim/data/linux
-snmpsim/data/linux/1.3.6.1.2.1
-snmpsim/data/linux/1.3.6.1.2.1/127.0.0.1@public.snmprec
-snmpsim/data/3com
-snmpsim/data/3com/switch8800
-snmpsim/data/3com/switch8800/1.3.6.1.4.1
-snmpsim/data/3com/switch8800/1.3.6.1.4.1/172.17.1.22@public.snmprec
+snmpsim/data
+snmpsim/data/public.snmprec
+snmpsim/data/mib2dev
+snmpsim/data/mib2dev/ip-mib.snmprec
+snmpsim/data/mib2dev/host-resources-mib.snmprec
+snmpsim/data/mib2dev/tcp-mib.snmprec
+snmpsim/data/foreignformats
+snmpsim/data/foreignformats/linux.snmpwalk
+snmpsim/data/foreignformats/winxp.sapwalk
+snmpsim/data/variation
+snmpsim/data/variation/subprocess.snmprec
+snmpsim/data/variation/virtualtable.snmprec
+snmpsim/data/recorded
+snmpsim/data/recorded/linksys-system.snmprec
+snmpsim/data/recorded/udp-endpoint-table-walk.snmprec
 ...
 
 There're also a bunch of .dbm files created and maintained automatically
@@ -219,67 +224,79 @@ Usage: scripts/snmpsimd.py [--help] [--version ] [--debug=<category>] [--data-di
 
 Running Simulator:
 
-$ snmpsimd.py --agent-udpv4-endpoint=127.0.0.1:1161 --agent-udpv6-endpoint='[::1]:1161' --agent-unix-endpoint=/tmp/snmpsimd.socket
-Index ./snmpsim/data/linux/1.3.6.1.2.1/127.0.0.1@public.dbm out of date
-Indexing data file ./snmpsim/data/linux/1.3.6.1.2.1/127.0.0.1@public.snmprec...
-...303 entries indexed
+$ snmpsimd.py --agent-udpv4-endpoint=127.0.0.1:1161 --agent-udpv6-endpoint='[::1]:1161'
+Scanning "/home/ilya/.snmpsim/variation" directory for variation modules...  no directory
+Scanning "/usr/local/share/snmpsim/variation" directory for variation modules...  8 more modules found
+Initializing variation modules:
+    notification...  OK
+    sql...  FAILED: database type not specified
+    numeric...  OK
+    subprocess...  OK
+    delay...  OK
+    multiplex...  OK
+    error...  OK
+    writecache...  OK
+Scanning "/home/ilya/.snmpsim/data" directory for  *.snmpwalk, *.MVC, *.sapwalk, *.snmprec, *.dump data files... no directory
+Scanning "/usr/local/share/snmpsim/data" directory for  *.snmpwalk, *.MVC, *.sapwalk, *.snmprec, *.dump data files...
+==================================================================
+Index /tmp/snmpsim/usr_local_share_snmpsim_data_public.dbm does not exist for data file data/public.snmprec
+Building index /tmp/snmpsim/usr_local_share_snmpsim_data_public.dbm for data file /usr/local/share/snmpsim/data/public.snmprec (open flags "n")......133 entries indexed
+Data file /usr/local/share/snmpsim/data/public.snmprec, dbhash-indexed, closed
+SNMPv1/2c community name: public
+SNMPv3 context name: 4c9184f37cff01bcdc32dc486ec36961
 -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-Device file ./snmpsim/data/linux/1.3.6.1.2.1/127.0.0.1@public.snmprec, dbhash-indexed, closed
-SNMPv1/2c community name: @linux/1.3.6.1.2.1/127.0.0.1@public
-SNMPv3 context name: 6d42b10f70ddb49c6be1d27f5ce2239e
+Index /tmp/snmpsim/usr_local_share_snmpsim_data_recorded_linksys-system.dbm does not exist for data file /usr/local/share/snmpsim/data/recorded/linksys-system.snmprec
+Building index /tmp/snmpsim/usr_local_share_snmpsim_data_recorded_linksys-system.dbm for data file /usr/local/share/snmpsim/data/recorded/linksys-system.snmprec (open flags "n")......6 entries indexed
+Data file /usr/local/share/snmpsim/data/recorded/linksys-system.snmprec, dbhash-indexed, closed
+SNMPv1/2c community name: recorded/linksys-system
+SNMPv3 context name: 1a764f7fd0e7b0bf98bada8fe723e488
 -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-Device file ./snmpsim/data/3com/switch8800/1.3.6.1.4.1/172.17.1.22@public.dump, dbhash-indexed, closed
-SNMPv1/2c community name: @3com/switch8800/1.3.6.1.4.1/172.17.1.22@public
-SNMPv3 context name: 1a80634d11a76ee4e29b46bc8085d871
-
+...
+...
+...
 SNMPv3 credentials:
 Username: simulator
 Authentication key: auctoritas
 Authentication protocol: MD5
 Encryption (privacy) key: privatus
 Encryption protocol: DES
-
 Listening at:
   UDP/IPv4 endpoint 127.0.0.1:1161, transport ID 1.3.6.1.6.1.1.0
-  UDP/IPv6 endpoint [::1]:1161, transport ID 1.3.6.1.2.1.100.1.2.0
-  UNIX domain endpoint /tmp/snmpsimd.socket, transport ID 1.3.6.1.2.1.100.1.13.0
+  UDP/IPv6 endpoint ::1:1161, transport ID 1.3.6.1.2.1.100.1.2.0
 
-Please note that multiple transports are supported in Simulator version 0.1.4
-and later.  An unprivileged port is chosen in this example to avoid running
-as root.
+
+Simulator can listen at multiple local IP interfaces and/or UDP ports. Just
+pass multiple --agent-udpv4-endpoint / --agent-udpv6-endpoint command
+line parameters carrying addresses to listen on.
+
+An unprivileged port is chosen in this example to avoid running as root.
 
 At this point you can run you favorite SNMP Manager to talk to either
 of the two simulated devices through whatever transport you prefer.
 For instance, to talk to simulated Linux box over SNMP v2 through
 UDP over IPv4 run:
 
-$ snmpwalk -On -v2c -c '@linux/1.3.6.1.2.1/127.0.0.1@public' localhost:1161 .1.3.6
-.1.3.6.1.2.1.2.2.1.1.1 = INTEGER: 1
-.1.3.6.1.2.1.2.2.1.1.2 = INTEGER: 2
-.1.3.6.1.2.1.2.2.1.2.1 = STRING: lo
-.1.3.6.1.2.1.2.2.1.2.2 = STRING: eth0
-.1.3.6.1.2.1.2.2.1.3.1 = INTEGER: softwareLoopback(24)
-.1.3.6.1.2.1.2.2.1.3.2 = INTEGER: ethernetCsmacd(6)
-.1.3.6.1.2.1.2.2.1.4.1 = INTEGER: 16436
-.1.3.6.1.2.1.2.2.1.4.2 = INTEGER: 1500
-.1.3.6.1.2.1.2.2.1.5.1 = Gauge32: 10000000
-.1.3.6.1.2.1.2.2.1.5.2 = Gauge32: 100000000
-...
+$ snmpwalk -On -v2c -c recorded/linksys-system localhost:1161 1.3.6
+.1.3.6.1.2.1.1.1.0 = STRING: BEFSX41
+.1.3.6.1.2.1.1.2.0 = OID: .1.3.6.1.4.1.3955.1.1
+.1.3.6.1.2.1.1.3.0 = Timeticks: (638239) 1:46:22.39
+.1.3.6.1.2.1.1.4.0 = STRING: Linksys
+.1.3.6.1.2.1.1.5.0 = STRING: isp-gw
+.1.3.6.1.2.1.1.6.0 = STRING: 4, Petersburger strasse, Berlin, Germany
+.1.3.6.1.2.1.1.8.0 = Timeticks: (4) 0:00:00.04
+.1.3.6.1.2.1.1.8.0 = No more variables left in this MIB View
 
 To walk simulated 3com switch over SNMPv3 we'd run:
 
-$ snmpwalk -On -n 1a80634d11a76ee4e29b46bc8085d871 -u simulator -A auctoritas -X privatus -lauthPriv localhost:1161 .1.3.6
-.1.3.6.1.2.1.1.1.0 = STRING: 3Com SuperStackII Switch 1000, SW Version:2.0
-.1.3.6.1.2.1.1.2.0 = OID: .1.3.6.1.4.1.3.1.8.3
-.1.3.6.1.2.1.1.5.0 = STRING: Switch 1000
-.1.3.6.1.2.1.1.6.0 = STRING: 3Com
-.1.3.6.1.2.1.11.11.0 = Counter32: 0
-.1.3.6.1.2.1.11.12.0 = Counter32: 0
-.1.3.6.1.2.1.11.13.0 = Counter32: 1942
-.1.3.6.1.2.1.11.16.0 = Counter32: 1384
-.1.3.6.1.2.1.11.17.0 = Counter32: 0
-.1.3.6.1.2.1.11.18.0 = Counter32: 0
-...
+$ snmpwalk -On -n 1a764f7fd0e7b0bf98bada8fe723e488 -u simulator -A auctoritas -X privatus -lauthPriv localhost:1161 .1.3.6
+.1.3.6.1.2.1.1.1.0 = STRING: BEFSX41
+.1.3.6.1.2.1.1.2.0 = OID: .1.3.6.1.4.1.3955.1.1
+.1.3.6.1.2.1.1.3.0 = Timeticks: (638239) 1:46:22.39
+.1.3.6.1.2.1.1.4.0 = STRING: Linksys
+.1.3.6.1.2.1.1.5.0 = STRING: isp-gw
+.1.3.6.1.2.1.1.6.0 = STRING: 4, Petersburger strasse, Berlin, Germany
+.1.3.6.1.2.1.1.8.0 = Timeticks: (4) 0:00:00.04
+.1.3.6.1.2.1.1.8.0 = No more variables left in this MIB View
 
 Notice "-n <snmp-context>" parameter passed to snmpwalk to address particular
 simulated device at Simulator.
@@ -293,16 +310,28 @@ devices and their community/context names. Simulator maintains this
 information within its internal, dedicated SNMP context 'index':
 
 $ snmpwalk -On -v2c -c index localhost:1161 .1.3.6
-.1.3.6.1.4.1.20408.999.1.1.1 = STRING: "./snmpsim/data/linux/1.3.6.1.2.1.1.1/127.0.0.1@public.snmprec"
-.1.3.6.1.4.1.20408.999.1.2.1 = STRING: "snmpsim/data/linux/1.3.6.1.2.1.1.1/127.0.0.1@public"
-.1.3.6.1.4.1.20408.999.1.3.1 = STRING: "9535d96c66759362b3521f4e273fc749"
+.1.3.6.1.4.1.20408.999.1.1.1 = STRING: "data/public.snmprec"
+.1.3.6.1.4.1.20408.999.1.1.2 = STRING: "data/mib2dev/ip-mib.snmprec"
+...
+.1.3.6.1.4.1.20408.999.1.2.1 = STRING: "public"
+.1.3.6.1.4.1.20408.999.1.2.2 = STRING: "mib2dev/ip-mib"
+...
+.1.3.6.1.4.1.20408.999.1.3.1 = STRING: "4c9184f37cff01bcdc32dc486ec36961"
+.1.3.6.1.4.1.20408.999.1.3.2 = STRING: "b545e61d091faca8a69f426b2bc5285d"
+...
 
 or
 
-$ snmpwalk -O n -l authPriv -u simulator -A auctoritas -X privatus -n index localhost:1161 .1.3.6
-.1.3.6.1.4.1.20408.999.1.1.1 = STRING: "./snmpsim/data/linux/1.3.6.1.2.1.1.1/127.0.0.1@public.snmprec"
-.1.3.6.1.4.1.20408.999.1.2.1 = STRING: "snmpsim/data/linux/1.3.6.1.2.1.1.1/127.0.0.1@public"
-.1.3.6.1.4.1.20408.999.1.3.1 = STRING: "9535d96c66759362b3521f4e273fc749"
+$ snmpwalk -On -l authPriv -u simulator -A auctoritas -X privatus -n index localhost:1161 .1.3.6
+.1.3.6.1.4.1.20408.999.1.1.1 = STRING: "data/public.snmprec"
+.1.3.6.1.4.1.20408.999.1.1.2 = STRING: "data/mib2dev/ip-mib.snmprec"
+...
+.1.3.6.1.4.1.20408.999.1.2.1 = STRING: "public"
+.1.3.6.1.4.1.20408.999.1.2.2 = STRING: "mib2dev/ip-mib"
+...
+.1.3.6.1.4.1.20408.999.1.3.1 = STRING: "4c9184f37cff01bcdc32dc486ec36961"
+.1.3.6.1.4.1.20408.999.1.3.2 = STRING: "b545e61d091faca8a69f426b2bc5285d"
+...
 
 Where first column holds data file path, second - community string, and 
 third - SNMPv3 context name.
@@ -372,17 +401,40 @@ Sharing data files
 
 If a symbolic link is used as a data file, it would serve as an
 alternative CommunityName/ContextName for the Managed Objects collection
-read from the snapshot file being pointed to. Shared data files are
-mentioned explicitly on Simulator startup:
+read from the snapshot file being pointed toi:
+
+$ ls -l public.snmprec 
+-rw-r--r-- 1 ilya users 8036 Mar 12 23:26 public.snmprec
+$ ln -s public.snmprec private.snmprec
+$ ls -l private.snmprec 
+lrwxrwxrwx 1 ilya users 14 Apr  5 20:58 private.snmprec -> public.snmprec
+$
+
+Shared data files are mentioned explicitly on Simulator startup:
 
 $ snmpsimd.py --agent-udpv4-endpoint=127.0.0.1:1161
-Device file ./snmpsim/data/public/1.3.6.1.6.1.1.0/127.0.0.1.snmprec, dbhash-indexed, closed
-SNMPv1/2c community name: public/1.3.6.1.6.1.1.0/127.0.0.1
-SNMPv3 context name: 6d42b10f70ddb49c6be1d27f5ce2239e
+Scanning "/home/ilya/.snmpsim/variation" directory for variation modules...  no directory
+Scanning "/usr/local/share/snmpsim/variation" directory for variation modules... 8 more modules found
+Initializing variation modules:
+    notification...  OK
+    sql...  FAILED: database type not specified
+    numeric...  OK
+    subprocess...  OK
+    delay...  OK
+    multiplex...  OK
+    error...  OK
+    writecache...  OK
+Scanning "/usr/local/share/snmpsim/data" directory for  *.snmpwalk, *.MVC, *.sapwalk, *.snmprec, *.dump data files...
+==================================================================
+Data file /usr/local/share/snmpsim/data/public.snmprec, dbhash-indexed, closed
+SNMPv1/2c community name: public
+SNMPv3 context name: 4c9184f37cff01bcdc32dc486ec36961
 -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-Shared data file ./snmpsim/data/public/1.3.6.1.6.1.1.0/127.0.0.1.snmprec, dbhash-indexed, closed
-SNMPv1/2c community name: public/1.3.6.1.6.1.1.0/192.168.1.1
-SNMPv3 context name: 1a80634d11a76ee4e29b46bc8085d871
+Shared data file data/public.snmprec, dbhash-indexed, closed
+SNMPv1/2c community name: private
+SNMPv3 context name: 2c17c6393771ee3048ae34d6b380c5ec
+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+...
 
 SNMPv3 credentials:
 Username: simulator
@@ -395,12 +447,31 @@ Listening at:
   UDP/IPv4 endpoint 127.0.0.1:1161, transport ID 1.3.6.1.6.1.1.0
 ^C
 
-In the screenshot above, the public/1.3.6.1.6.1.1.0/127.0.0.1.snmprec
-file is shared with the public/1.3.6.1.6.1.1.0/192.168.1.1.snmprec
-symbolic link.
-
 Now Managers can then use different credentials to access and modify the
 same set of Managed Objects.
+
+$ snmpwalk -On -v2c -c public localhost:1161 1.3.6
+.1.3.6.1.2.1.1.1.0 = STRING: Device description
+.1.3.6.1.2.1.1.2.0 = OID: .1.3.6.1.4.1.34547
+.1.3.6.1.2.1.1.3.0 = Timeticks: (78171676) 9 days, 1:08:36.76
+.1.3.6.1.2.1.1.4.0 = STRING: The Owner
+.1.3.6.1.2.1.1.5.0 = STRING: DEVICE-192.168.1.1
+.1.3.6.1.2.1.1.6.0 = STRING: TheCloud
+.1.3.6.1.2.1.1.7.0 = INTEGER: 72
+...
+
+$ snmpwalk -On -v2c -c private localhost:1161 1.3.6
+.1.3.6.1.2.1.1.1.0 = STRING: Device description
+.1.3.6.1.2.1.1.2.0 = OID: .1.3.6.1.4.1.34547
+.1.3.6.1.2.1.1.3.0 = Timeticks: (78171676) 9 days, 1:08:36.76
+.1.3.6.1.2.1.1.4.0 = STRING: The Owner
+.1.3.6.1.2.1.1.5.0 = STRING: DEVICE-192.168.1.1
+.1.3.6.1.2.1.1.6.0 = STRING: TheCloud
+.1.3.6.1.2.1.1.7.0 = INTEGER: 72
+...
+
+So snmpwalk outputs are exactly the same with different community names
+used.
 
 Simulation based on snmpwalk output
 -----------------------------------
