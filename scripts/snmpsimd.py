@@ -107,7 +107,11 @@ for opt in opts:
         confdir.variation.insert(0, opt[1])
     elif opt[0] == '--variation-module-options':
         args = opt[1].split(':', 1)
-        modName, args = args[0], args[1]
+        try:
+            modName, args = args[0], args[1]
+        except:
+            sys.stdout.write('improper variation module options: %s\r\n'%opt[1])
+            sys.exit(-1)
         if '=' in modName:
             modName, alias = modName.split('=', 1)
         else:
