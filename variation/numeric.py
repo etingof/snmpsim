@@ -22,14 +22,15 @@ moduleContext = {}
 booted = time.time()
 
 def init(snmpEngine, **context):
-    for k,v in [x.split(':') for x in context['options'].split(',')]:
-        if k == 'addon':
-            if k in moduleOptions:
-                moduleOptions[k].append(v)
+    if context['options']:
+        for k,v in [x.split(':') for x in context['options'].split(',')]:
+            if k == 'addon':
+                if k in moduleOptions:
+                    moduleOptions[k].append(v)
+                else:
+                    moduleOptions[k] = [v]
             else:
-                moduleOptions[k] = [v]
-        else:
-            moduleOptions[k] = v
+                moduleOptions[k] = v
     if context['mode'] == 'recording':
         if 'iterations' in moduleOptions:
             moduleOptions['iterations'] = int(moduleOptions['iterations'])
