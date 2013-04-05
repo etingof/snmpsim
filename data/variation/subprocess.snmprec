@@ -2,4 +2,4 @@
 1.3.6.1.2.1.1.3.0|2:subprocess|date +%s
 1.3.6.1.2.1.1.5.0|4|new system name
 1.3.6.1.2.1.1.6.0|4:subprocess|false
-1.3.6.1.2.1.1.7.0|4:subprocess|true
+1.3.6.1.2.1.1.7.0|2:subprocess|echo 123
