@@ -39,6 +39,7 @@
   as grammar-specific tag modifiers) is now up to higher-level
   'Record' objects.
 - Snapshot files recording now works under Python3.
+- On Windows, install both data and variation modules into %PROGRAMFILES%
 
 0.2.0
 -----

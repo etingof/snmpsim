@@ -95,7 +95,7 @@ params.update( {
 
 # data files installation prefix is platform-dependent
 if sys.platform[:3] == 'win':
-  prefix = os.path.sep.join(os.environ['APPDATA'].split('\\')) + '/SNMP Simulator'
+  prefix = os.path.sep.join(os.environ['PROGRAMFILES'].split('\\')) + '/SNMP Simulator'
 elif sys.platform == 'darwin':
   prefix = '/usr/local/share/snmpsim'
 else:
