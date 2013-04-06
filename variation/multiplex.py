@@ -173,7 +173,8 @@ def record(oid, tag, value, **context):
         if 'filenum' not in moduleContext:
             moduleContext['filenum'] = 0
         snmprecfile = os.path.join(moduleOptions['dir'],
-                                   '%.5d.snmprec' % moduleContext['filenum'])
+                                   '%.5d%ssnmprec' % (moduleContext['filenum'],
+                                                      os.path.extsep))
         moduleContext['file'] = open(snmprecfile, 'wb')
         sys.stdout.write('multiplex: writing into %s file...\r\n' % snmprecfile)
 
@@ -183,7 +184,7 @@ def record(oid, tag, value, **context):
 
     if not context['count']:
         settings = {
-            'dir': moduleOptions['dir']
+            'dir': moduleOptions['dir'].replace(os.path.sep, '/')
         }
         if 'period' in moduleOptions:
             settings['period'] = '%.2f' % float(moduleOptions['period'])
