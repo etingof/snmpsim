@@ -383,7 +383,12 @@ class DataFile(AbstractLayout):
                         _nextLine = text.readline() # next line
                         if _nextLine:
                             _nextOid, _ = self.__textParser.evaluate(_nextLine, oidOnly=True)
-                            _, subtreeFlag, _ = self.__recordIndex.lookup(str(_nextOid)).split(str2octs(','))
+                            try:
+                                _, subtreeFlag, _ = self.__recordIndex.lookup(str(_nextOid)).split(str2octs(','))
+                            except KeyError:
+                                sys.stdout.write('data error for %s at %s, index broken?\r\n' % (self, _nextOid))
+                                line = ''  # fatal error
+                                break
                             subtreeFlag = int(subtreeFlag)
                         line = _nextLine
                 else: # search function above always rounds up to the next OID
@@ -391,7 +396,12 @@ class DataFile(AbstractLayout):
                         _oid, _  = self.__textParser.evaluate(
                             line, oidOnly=True
                         )
-                        _, _, _prevOffset = self.__recordIndex.lookup(str(_oid)).split(str2octs(','))
+                        try:
+                            _, _, _prevOffset = self.__recordIndex.lookup(str(_oid)).split(str2octs(','))
+                        except KeyError:
+                            sys.stdout.write('data error for %s at %s, index broken?\r\n' % (self, _oid))
+                            line = ''  # fatal error
+                            break
                         _prevOffset = int(_prevOffset)
 
                         if _prevOffset >= 0:  # previous line serves a subtree
