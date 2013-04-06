@@ -12,7 +12,7 @@ def init(snmpEngine, **context):
             dict([x.split(':') for x in context['options'].split(',')])
         )
     if 'shell' not in moduleOptions:
-        moduleOptions['shell'] = sys.platform=='win'
+        moduleOptions['shell'] = sys.platform[:3] == 'win'
     else:
         moduleOptions['shell'] = int(moduleOptions['shell'])
  
