@@ -172,9 +172,9 @@ def variate(oid, tag, value, **context):
             varBinds, cbInfo=(_cbFun, (oid, value))
         )
 
-    if context['setFlag'] and 'value' in args:
-        return oid, tag, args['value']
-    else:
+    if context['setFlag'] or 'value' not in args:
         return oid, tag, context['origValue']
+    else:
+        return oid, tag, args['value']
 
 def shutdown(snmpEngine, **context): pass 
