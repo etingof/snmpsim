@@ -232,11 +232,14 @@ if not agentUDPv4Endpoints and \
     agentUDPv4Endpoints.append(agentUDPv4Address)
 
 if not os.path.exists(confdir.cache):
+    sys.stdout.write('Creating cache directory %s... \r' % confdir.cache)
     try:
         os.makedirs(confdir.cache)
     except OSError:
-        sys.stdout.write('ERROR: failed to create cache dir %s: %s\r\n' % (confdir.cache, sys.exc_info()[1]))
+        sys.stdout.write('ERROR: %s: %s\r\n' % (confdir.cache, sys.exc_info()[1]))
         sys.exit(-1)
+    else:
+        sys.stdout.write('done\r\n')
 
 # Extended snmprec record handler
 
