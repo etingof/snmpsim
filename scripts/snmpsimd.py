@@ -460,9 +460,11 @@ def getDataFiles(tgtDir, topLen=None):
         dExt = os.path.splitext(dFile)[1][1:]
         if dExt not in recordSet:
             continue
-        dirContent.append((fullPath,
-                           recordSet[dExt],
-                           os.path.splitext(os.path.join(*relPath))[0]))
+        dirContent.append(
+            (fullPath,
+             recordSet[dExt],
+             os.path.splitext(os.path.join(*relPath))[0].replace(os.path.sep, '/'))
+        )
     return dirContent
 
 # Lightweignt MIB instrumentation (API-compatible with pysnmp's)

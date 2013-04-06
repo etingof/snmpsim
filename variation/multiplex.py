@@ -48,6 +48,9 @@ def variate(oid, tag, value, **context):
     if oid not in settingsCache:
         settingsCache[oid] = dict([ x.split('=') for x in value.split(',') ])
         if 'dir' in settingsCache[oid]:
+            settingsCache[oid]['dir'] = settingsCache[oid]['dir'].replace(
+                '/', os.path.sep
+            )
             if settingsCache[oid]['dir'][0] != os.path.sep:
                 for x in confdir.data:
                     d = os.path.join(x, settingsCache[oid]['dir'])

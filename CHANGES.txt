@@ -38,6 +38,9 @@
   and SNMP types resolution. However complex field formatting (such
   as grammar-specific tag modifiers) is now up to higher-level
   'Record' objects.
+- Simulator-generated community names now uses '/' as path separator
+  regardless of the platform. This allows for unified Simulator view
+  in terms of community and context names across the platforms.
 - Snapshot files recording now works under Python3.
 - On Windows, install both data and variation modules into %PROGRAMFILES%
 
