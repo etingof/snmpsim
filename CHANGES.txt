@@ -1,6 +1,11 @@
 0.2.1
 -----
 
+- WARNING: this release brings some backward incompatibilities in
+    * variation modules names and options
+    * snmpsimd.py community names (in Windows platform)
+    * stock variation modules installation location
+  Please read the changes below for more information.
 - License updated to vanilla BSD 2-Clause
   (http://opensource.org/licenses/BSD-2-Clause).
 - Variation modules can now participate in .snmprec production what
