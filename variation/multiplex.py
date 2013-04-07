@@ -130,8 +130,12 @@ def variate(oid, tag, value, **context):
 
     line = text.readline()  # matched line
 
-    if context['nextFlag'] and exactMatch:
-        line = text.readline()
+    if context['nextFlag']:
+        if exactMatch:
+            line = text.readline()
+    else:
+        if not exactMatch:
+            return context['origOid'], tag, context['errorStatus']
 
     if not line:
         return context['origOid'], tag, context['errorStatus']
