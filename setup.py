@@ -57,7 +57,7 @@ try:
     from setuptools import setup
     params = {
         'install_requires': [ 'pysnmp>=4.2.4' ],
-        'zip_safe': True
+        'zip_safe': False  # this is due to data and variation dirs
         }
 except ImportError:
     for arg in sys.argv:
@@ -93,23 +93,15 @@ params.update( {
                   'snmpsim.record.search' ]
 } )
 
-# data files installation prefix is platform-dependent
-if sys.platform[:3] == 'win':
-  prefix = os.path.sep.join(os.environ['PROGRAMFILES'].split('\\')) + '/SNMP Simulator'
-elif sys.platform == 'darwin':
-  prefix = '/usr/local/share/snmpsim'
-else:
-  prefix = os.path.sep.join(sys.prefix.split('/')) + '/share/snmpsim'
-
 # install stock variation modules as data_files
 params['data_files'] = [
-    ( prefix + '/' + 'variation', glob.glob(os.path.join('variation', '*.py')) )
+    ( 'snmpsim/' + 'variation', glob.glob(os.path.join('variation', '*.py')) )
 ]
 
 # install sample .snmprec files as data_files
 for x in os.walk('data'):
     params['data_files'].append(
-        ( prefix + '/' + '/'.join(os.path.split(x[0])),
+        ( 'snmpsim/' + '/'.join(os.path.split(x[0])),
           glob.glob(os.path.join(x[0], '*.snmprec')) + \
           glob.glob(os.path.join(x[0], '*.snmpwalk')) + \
           glob.glob(os.path.join(x[0], '*.sapwalk')) )
@@ -132,7 +124,10 @@ if 'py2exe' in sys.argv:
             'compressed': True
         }
     }
+
     params['zipfile'] = None
+
+    del params['data_files']  # no need to store these in .exe
 
     # additional modules used by snmpsimd but not seen by py2exe
     for m in ('dbm', 'gdbm', 'dbhash', 'dumbdb',

@@ -47,7 +47,10 @@
   regardless of the platform. This allows for unified Simulator view
   in terms of community and context names across the platforms.
 - Snapshot files recording now works under Python3.
-- On Windows, install both data and variation modules into %PROGRAMFILES%
+- Install data and variation modules into package root to make easy_install
+  work again. Search thesee directories at runtime as a last resort - prefer
+  system or home locations as it is more natural to keep changing data there.
+- On Windows, search both data and variation modules into %PROGRAMFILES%
 
 0.2.0
 -----
