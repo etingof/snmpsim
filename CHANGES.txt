@@ -48,7 +48,7 @@
   in terms of community and context names across the platforms.
 - Snapshot files recording now works under Python3.
 - Install data and variation modules into package root to make easy_install
-  work again. Search thesee directories at runtime as a last resort - prefer
+  work again. Search these directories at runtime as a last resort - prefer
   system or home locations as it is more natural to keep changing data there.
 - Simulator is now more tolerant to duplicate variation modules (just ignores
   recently found) and catches duplicate data files (also ignores more recent).

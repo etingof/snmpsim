@@ -11,9 +11,11 @@ with different kinds of SNMP-capable devices.
 
 Typical use case for this software starts with recording a snapshot of 
 SNMP objects of donor Agents into text files using "snmprec" tool. 
-Another option is to generate snapshots directly from MIB files with 
-"mib2dev" tool. The latter appears useful whenever you do not posess 
-a physical donor device. Then Simulator daemon would be run over the 
+Or, if you'd better query your donor SNMP Agent with Net-SNMP's snmpwalk,
+tool - snmpwalk output could also be used as a source of information by 
+the Simulator. Another option is to generate snapshots directly from MIB 
+files with "mib2dev" tool. The latter appears useful whenever you do not
+posess a physical donor device. Then Simulator daemon would be run over the 
 snapshots so that it could respond to SNMP queries in the same way as 
 donor SNMP Agents did at the time of recording.
 
@@ -74,9 +76,22 @@ There is a pipe-separated triplet of OID-tag-value items where:
   is appended. Reference to a variation module can also be embedded into tag.
 * Value is either a printable string, a number or a hexifed value.
 
+Valid tag values and their corresponding ASN.1/SNMP types are:
+
+Integer32         - 2
+OCTET STRING      - 4
+NULL              - 5
+OBJECT IDENTIFIER - 6
+IpAddress         - 64
+Counter32         - 65
+Gauge32           - 66
+TimeTicks         - 67
+Opaque            - 68
+Counter64         - 70
+
 No other information or comments is allowed in the data file.
 
-Device file recording would look like this:
+Data file recording would look like this:
 
 $ snmprec.py  -h
 SNMP Simulator version 0.2.1, written by Ilya Etingof <ilya@glas.net>
@@ -84,7 +99,7 @@ Software documentation and support at http://snmpsim.sf.net
 Usage: scripts/snmprec.py [--help] [--debug=<category>] [--quiet] [--version=<1|2c|3>] [--community=<string>] [--v3-user=<username>] [--v3-auth-key=<key>] [--v3-priv-key=<key>] [--v3-auth-proto=<SHA|MD5>] [--v3-priv-proto=<3DES|AES256|DES|AES|AES128|AES192>] [--context=<string>] [--use-getbulk] [--getbulk-repetitions=<number>] [--agent-udpv4-endpoint=<X.X.X.X:NNNNN>] [--agent-udpv6-endpoint=<[X:X:..X]:NNNNN>] [--agent-unix-endpoint=</path/to/named/pipe>] [--start-oid=<OID>] [--stop-oid=<OID>] [--output-file=<filename>] [--variation-modules-dir=<dir>] [--variation-module=<module>] [--variation-module-options=<args]>]
 $
 $ snmprec.py --agent-udpv4-endpoint=192.168.1.1 --start-oid=1.3.6.1.2.1 --stop-oid=1.3.6.1.2.1.5 --output-file=snmpsim/data/recorded/linksys-system.snmprec
-Scanning "variation" directory for variation modules...  none requested
+Scanning "/usr/local/share/snmpsim/variation" directory for variation modules...  none requested
 SNMP version 2c
 Community name: public
 Querying UDP/IPv4 agent at 192.168.1.1:161
@@ -191,8 +206,22 @@ Finally, you could always modify your data files with a text editor.
 Simulating SNMP Agents
 ----------------------
 
-Your collection of data files should look like this:
+Upon Simulator installation or Agents snapshotting you should manually
+put data files into one of the following directories:
 
+* ~/.snmpsim/data
+* /usr/local/share/snmpsim/data
+* <python-package-root>/data
+
+or on Windows:
+
+* \Document and Settings\<user>\Application Data\SNMP Simulator\Data
+* \Program Files\SNMP Simulator\Data
+* <python-package-root>/data
+
+These directories are searched in that order. Now your collection of data files should look like this:
+
+$ cd /usr/local/share
 $ find snmpsim/data
 snmpsim/data
 snmpsim/data/public.snmprec
