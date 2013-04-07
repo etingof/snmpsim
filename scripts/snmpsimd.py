@@ -201,8 +201,8 @@ for variationModulesDir in confdir.variation:
 
         for alias, args in _toLoad:
             if alias in variationModules:
-                sys.stdout.write('\r\nvariation module %s already registered\r\n' %  alias)
-                sys.exit(-1)
+                sys.stdout.write('\r\nWARNING: ignoring duplicate module %s at %s\r\n' %  (alias, mod))
+                continue
 
             ctx = { 'path': mod,
                     'alias': alias,
@@ -647,6 +647,7 @@ if variationModules:
 # Build pysnmp Managed Objects base from data files information
 
 _mibInstrums = {}
+_dataFiles = {}
 
 for dataDir in confdir.data:
     sys.stdout.write(
@@ -657,7 +658,10 @@ for dataDir in confdir.data:
         continue
     sys.stdout.write('\r\n%s\r\n' % ('='*66,))
     for fullPath, textParser, communityName in getDataFiles(dataDir):
-        if fullPath in _mibInstrums:
+        if communityName in _dataFiles:
+            sys.stdout.write('WARNING: ignoring duplicate Community/ContextName "%s" for data file %s (%s already loaded)\r\n' % (communityName, fullPath, _dataFiles[communityName]))
+            continue
+        elif fullPath in _mibInstrums:
             mibInstrum = _mibInstrums[fullPath]
             sys.stdout.write('Shared %s\r\n' % (mibInstrum,))
         else:
@@ -665,6 +669,8 @@ for dataDir in confdir.data:
             mibInstrum = mibInstrumControllerSet[dataFile.layout](dataFile)
 
             _mibInstrums[fullPath] = mibInstrum
+            _dataFiles[communityName] = fullPath
+
             sys.stdout.write('%s\r\n' % (mibInstrum,))
 
         sys.stdout.write('SNMPv1/2c community name: %s\r\n' % (communityName,))
@@ -694,6 +700,7 @@ for dataDir in confdir.data:
         sys.stdout.write('%s\r\n' % ('-+' * 33,))
         
 del _mibInstrums
+del _dataFiles
 
 if v2cArch:
     def getBulkHandler(varBinds, nonRepeaters, maxRepetitions, readNextVars):
