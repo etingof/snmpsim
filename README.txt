@@ -365,8 +365,8 @@ $ snmpwalk -On -l authPriv -u simulator -A auctoritas -X privatus -n index local
 Where first column holds data file path, second - community string, and 
 third - SNMPv3 context name.
 
-Transport address based simulation
-----------------------------------
+Transport address based variation
+---------------------------------
 
 Sometimes Managers can't easily change community name to address particular
 simulated device instance as mention in the previous section. Or it may be
@@ -406,7 +406,7 @@ For example, to make Simulator reporting from particular file to
 a Manager at 192.168.1.10 whenever community name "public" is used and
 queries are sent to Simulator over UDP/IPv4 to 192.168.1.1 interface
 (which is reported by Simulator under transport ID 1.3.6.1.6.1.1.0),
-data file public/1.3.6.1.6.1.1.0/192.168.1.10.snmprec whould be used
+data file public/1.3.6.1.6.1.1.0/192.168.1.10.snmprec would be used
 for building responses.
 
 When Simulator is NOT running in --v2c-arch mode, e.g. SNMPv3 engine is
@@ -430,7 +430,7 @@ Sharing data files
 
 If a symbolic link is used as a data file, it would serve as an
 alternative CommunityName/ContextName for the Managed Objects collection
-read from the snapshot file being pointed toi:
+read from the snapshot file being pointed to:
 
 $ ls -l public.snmprec 
 -rw-r--r-- 1 ilya users 8036 Mar 12 23:26 public.snmprec
@@ -853,7 +853,7 @@ Here's an example writecache module use in a .snmprec file:
 
 In the above configuration, the initial value is 42 and can be modified by:
 
-snmpset -v2c -c <commiunity> localhost 1.3.6.1.2.1.1.3.0 i 24
+snmpset -v2c -c <community> localhost 1.3.6.1.2.1.1.3.0 i 24
 
 command (assuming correct community name and Simulator is running locally).
 
@@ -892,6 +892,14 @@ Here's an example of multiplex module use:
  
 1.3.6.1.2.1.2|:multiplex|dir=variation/snapshots,period=10.0
 1.3.6.1.3.1.1|4|system
+
+The variation/snapshots/ directory contents is a name-ordered collectionof .snmprec files: 
+
+$ ls -l /usr/local/share/snmpsim/data/variation/snapshots
+-rw-r--r--  1 ilya  staff  3145 Mar 30 22:52 00000.snmprec
+-rw-r--r--  1 ilya  staff  3145 Mar 30 22:52 00001.snmprec
+-rw-r--r--  1 ilya  staff  3145 Mar 30 22:52 00002.snmprec
+...
 
 The .snmprec files served by the multiplex module can not include references
 to variation modules.
@@ -988,7 +996,11 @@ in .snmprec value field:
   host - hostname or network address to send notification to.
   port - UDP port to send notification to. Default is 162.
 
-where <TAG> is a single character of:
+where var-bind has a syntax of:
+
+var-bind = <oid>,<tag>,<value>
+
+and <tag> is a single character of:
 
   s: OctetString
   i: Integer32
@@ -1096,7 +1108,7 @@ $ snmprec.py --agent-udpv4-endpoint=127.0.0.1
   --start-oid=1.3.6.1.2.1.2 --stop-oid=1.3.6.1.2.1.3 
   --variation-module=numeric 
   --variation-module-options=taglist:65,iterations:2,period:15
-Scanning "variation" directory for variation modules...numeric module loaded
+Scanning "/usr/local/share/snmpsim/variation" directory for variation modules...numeric module loaded
 SNMP version 2c
 Community name: public
 Querying UDP/IPv4 agent at 127.0.0.1:161
@@ -1122,7 +1134,7 @@ Managed Objects at an Agent requesting numeric module to configure
 itself into generated .snmprec data for Counter32-typed objects (ID 65).
 
 Produced snmprec could be used for simulation as-is or edited by
-hand to change variation module behaviour on on a per-OID basis..
+hand to change variation module behaviour on on a per-OID basis.
 
 Delay module
 ++++++++++++
@@ -1135,7 +1147,7 @@ Example use of delay module for recording follows:
 $ snmprec.py --agent-udpv4-endpoint=127.0.0.1 
   --start-oid=1.3.6.1.2.1.2 --stop-oid=1.3.6.1.2.1.3 
   --variation-module=delay
-Scanning "variation" directory for variation modules...delay module loaded
+Scanning "/usr/local/share/snmpsim/variation" directory for variation modules...delay module loaded
 SNMP version 2c
 Community name: public
 Querying UDP/IPv4 agent at 127.0.0.1:161
@@ -1177,7 +1189,7 @@ $ snmprec.py --agent-udpv4-endpoint=127.0.0.1
   --output-file=data/multiplex.snmprec
   --variation-module=multiplex
   --variation-module-options=dir:data/multiplex:,iterations:5,period:15
-Scanning "variation" directory for variation modules...multiplex module loaded
+Scanning "/usr/local/share/snmpsim/variation" directory for variation modules...multiplex module loaded
 SNMP version 2c
 Community name: public
 Querying UDP/IPv4 agent at 127.0.0.1:161
@@ -1228,7 +1240,7 @@ $ snmprec.py --agent-udpv4-endpoint=127.0.0.1
   --output-file=data/sql.snmprec
   --variation-module=sql
   --variation-module-options=dbtype:sqlite3,dboptions:/tmp/snmpsim.db,dbtable:snmprec
-Scanning "variation" directory for variation modules... sql module loaded
+Scanning "/usr/local/share/snmpsim/variation" directory for variation modules... sql module loaded
 SNMP version 2c
 Community name: public
 Querying UDP/IPv4 agent at 127.0.0.1:161
