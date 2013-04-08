@@ -5,6 +5,7 @@
     * variation modules names and options
     * snmpsimd.py community names (in Windows platform)
     * stock variation modules installation location
+    * sql module OID format stored in database
   Please read the changes below for more information.
 - License updated to vanilla BSD 2-Clause
   (http://opensource.org/licenses/BSD-2-Clause).
@@ -34,6 +35,8 @@
   SET value.
 - The delay.py variation module extended to support variation based on
   SET value and time of date.
+- Format of the OID stored in SQL database changed in a backward incompatible 
+  manner.
 - Recording functionality added to the delay.py and numeric.py modules.
 - The new "multiplex" variation module added to be able to record
   and replay a sequence of .snmprec files ordered by time.
