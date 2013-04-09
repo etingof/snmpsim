@@ -550,9 +550,7 @@ def probeContext(transportDomain, transportAddress, contextName):
     candidate = [ str(x) for x in candidate if x ]
 
     while candidate:
-        yield rfc1902.OctetString(
-                  os.path.normpath(os.path.sep.join(candidate))
-              ).asOctets()
+        yield rfc1902.OctetString(os.path.normpath(os.path.sep.join(candidate)).replace(os.path.sep, '/')).asOctets()
         del candidate[-1]
  
 if not v2cArch:
