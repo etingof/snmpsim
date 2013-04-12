@@ -45,7 +45,6 @@ agentUNIXEndpoint = None
 startOID = univ.ObjectIdentifier('1.3.6')
 stopOID = None
 outputFile = sys.stderr
-variationModulesDirs = []
 variationModuleOptions = ""
 variationModuleName = variationModule = None
 
@@ -167,7 +166,7 @@ for opt in opts:
     elif opt[0] == '--output-file':
         outputFile = open(opt[1], 'wb')
     elif opt[0] == '--variation-modules-dir':
-        variationModulesDirs.append(opt[1])
+        confdir.variation.insert(0, opt[1])
     elif opt[0] == '--variation-module':
         variationModuleName = opt[1]
     elif opt[0] == '--variation-module-options':
@@ -188,40 +187,37 @@ if getBulkFlag and not snmpVersion:
 
 # Load variation module
 
-if not variationModulesDirs:
-    [ variationModulesDirs.append(x) for x in confdir.variation ]
+if variationModuleName:
+    for variationModulesDir in confdir.variation:
+        sys.stdout.write(
+            'Scanning "%s" directory for variation modules... ' % variationModulesDir
+        )
+        if not os.path.exists(variationModulesDir):
+            sys.stdout.write(' no directory\r\n')
+            continue
 
-for variationModulesDir in variationModulesDirs:
-    sys.stdout.write(
-        'Scanning "%s" directory for variation modules... '%variationModulesDir
-    )
-    if not os.path.exists(variationModulesDir):
-        sys.stdout.write(' no directory\r\n')
-        continue
+        mod = os.path.join(variationModulesDir, variationModuleName + '.py')
+        if not os.path.exists(mod):
+            sys.stdout.write(' no module\r\n')
+            continue
 
-    if not variationModuleName:
-        sys.stdout.write(' none requested\r\n')
-        break
+        ctx = { 'path': mod }
 
-    mod = os.path.join(variationModulesDir, variationModuleName + '.py')
-
-    ctx = { 'path': mod }
-
-    try:
-        if sys.version_info[0] > 2:
-            exec(compile(open(mod).read(), mod, 'exec'), ctx)
+        try:
+            if sys.version_info[0] > 2:
+                exec(compile(open(mod).read(), mod, 'exec'), ctx)
+            else:
+                execfile(mod, ctx)
+        except Exception:
+            sys.stdout.write('\r\nvariation module %s execution failure: %s\r\n' %  (mod, sys.exc_info()[1]))
+            sys.exit(-1)
         else:
-            execfile(mod, ctx)
-    except Exception:
-        sys.stdout.write('\r\nvariation module %s execution failure: %s\r\n' %  (mod, sys.exc_info()[1]))
-        sys.exit(-1)
+            variationModule = ctx
+            sys.stdout.write('%s module loaded\r\n' % variationModuleName)
+            break
     else:
-        variationModule = ctx
-        sys.stdout.write('%s module loaded\r\n' % variationModuleName)
-        break
-else:
-    sys.stdout.write('ERROR: variation module %s not found\r\n%s\r\n' % (variationModuleName, helpMessage))
-    sys.exit(-1)
+        sys.stdout.write('ERROR: variation module %s not found\r\n%s\r\n' % (variationModuleName, helpMessage))
+        sys.exit(-1)
 
 if snmpVersion == 3:
     if v3User is None:
