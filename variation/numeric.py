@@ -12,6 +12,7 @@ import math
 import time
 import random
 from pysnmp.proto import rfc1902
+from snmpsim import log
 from snmpsim import error
 
 settingsCache = {}
@@ -137,12 +138,8 @@ def record(oid, tag, value, **context):
         if moduleOptions['iterations']:
             if context['stopFlag']:
                 wait = max(0, float(moduleOptions['period']) - (time.time() - moduleContext['started']))
-                while wait > 0:
-                    sys.stdout.write('numeric: waiting %.2f sec(s), %s OIDs dumped, %s iterations remaining...\r' % (wait, context['total']+context['count'], moduleOptions['iterations']))
-                    sys.stdout.flush()
-                    time.sleep(1)
-                    wait -= 1
-                sys.stdout.write(' ' * 77 + '\r')
+                log.msg('numeric: waiting %.2f sec(s), %s OIDs dumped, %s iterations remaining...\r\n' % (wait, context['total']+context['count'], moduleOptions['iterations']))
+                time.sleep(wait)
                 moduleOptions['iterations'] -= 1
                 moduleContext['started'] = time.time()
                 raise error.MoreDataNotification()

@@ -38,6 +38,7 @@ from snmpsim import confdir
 from snmpsim.record import dump, mvc, sap, walk, snmprec
 from snmpsim.record.search.file import searchRecordByOid
 from snmpsim.record.search.database import RecordIndex
+from snmpsim import log
 
 # Process command-line options
 
@@ -74,27 +75,35 @@ privProtocols = {
   'NONE': config.usmNoPrivProtocol
 }
  
-helpMessage = 'Usage: %s [--help] [--version ] [--debug=<category>] [--data-dir=<dir>] [--cache-dir=<dir>] [--force-index-rebuild] [--validate-data] [--variation-modules-dir=<dir>] [--variation-module-options=<module[=alias][:args]>] [--agent-udpv4-endpoint=<X.X.X.X:NNNNN>] [--agent-udpv6-endpoint=<[X:X:..X]:NNNNN>] [--agent-unix-endpoint=</path/to/named/pipe>] [--v2c-arch] [--v3-only] [--v3-user=<username>] [--v3-auth-key=<key>] [--v3-auth-proto=<%s>] [--v3-priv-key=<key>] [--v3-priv-proto=<%s>]' % (sys.argv[0], '|'.join(authProtocols), '|'.join(privProtocols))
+helpMessage = 'Usage: %s [--help] [--version ] [--debug=<category>] [--logging-method=<method|?>] [--data-dir=<dir>] [--cache-dir=<dir>] [--force-index-rebuild] [--validate-data] [--variation-modules-dir=<dir>] [--variation-module-options=<module[=alias][:args]>] [--agent-udpv4-endpoint=<X.X.X.X:NNNNN>] [--agent-udpv6-endpoint=<[X:X:..X]:NNNNN>] [--agent-unix-endpoint=</path/to/named/pipe>] [--v2c-arch] [--v3-only] [--v3-user=<username>] [--v3-auth-key=<key>] [--v3-auth-proto=<%s>] [--v3-priv-key=<key>] [--v3-priv-proto=<%s>]' % (sys.argv[0], '|'.join(authProtocols), '|'.join(privProtocols))
+
+log.setLogger('snmpsimd', 'stdout')
 
 try:
     opts, params = getopt.getopt(sys.argv[1:], 'h',
-        ['help', 'debug=', 'device-dir=', 'data-dir=', 'cache-dir=', 'force-index-rebuild', 'validate-device-data', 'validate-data', 'variation-modules-dir=', 'variation-module-options=', 'agent-address=', 'agent-port=', 'agent-udpv4-endpoint=', 'agent-udpv6-endpoint=', 'agent-unix-endpoint=', 'v2c-arch', 'v3-only', 'v3-user=', 'v3-auth-key=', 'v3-auth-proto=', 'v3-priv-key=', 'v3-priv-proto=']
+        ['help', 'debug=', 'logging-method=', 'device-dir=', 'data-dir=', 'cache-dir=', 'force-index-rebuild', 'validate-device-data', 'validate-data', 'variation-modules-dir=', 'variation-module-options=', 'agent-address=', 'agent-port=', 'agent-udpv4-endpoint=', 'agent-udpv6-endpoint=', 'agent-unix-endpoint=', 'v2c-arch', 'v3-only', 'v3-user=', 'v3-auth-key=', 'v3-auth-proto=', 'v3-priv-key=', 'v3-priv-proto=']
         )
 except Exception:
-    sys.stdout.write('%s\r\n%s\r\n' % (sys.exc_info()[1], helpMessage))
+    sys.stderr.write('%s\r\n%s\r\n' % (sys.exc_info()[1], helpMessage))
     sys.exit(-1)
 
 if params:
-    sys.stdout.write('extra arguments supplied %s%s\r\n' % (params, helpMessage))
+    sys.stderr.write('extra arguments supplied %s%s\r\n' % (params, helpMessage))
     sys.exit(-1)
 
 for opt in opts:
     if opt[0] == '-h' or opt[0] == '--help' or \
        opt[0] == '-v' or opt[0] == '--version':
-        sys.stdout.write('SNMP Simulator version %s, written by Ilya Etingof <ilya@glas.net>\r\nSoftware documentation and support at http://snmpsim.sf.net\r\n%s\r\n' % (__version__, helpMessage))
+        sys.stderr.write('SNMP Simulator version %s, written by Ilya Etingof <ilya@glas.net>\r\nSoftware documentation and support at http://snmpsim.sf.net\r\n%s\r\n' % (__version__, helpMessage))
         sys.exit(-1)
     elif opt[0] == '--debug':
         debug.setLogger(debug.Debug(opt[1]))
+    elif opt[0] == '--logging-method':
+        try:
+            log.setLogger('snmpsimd', *opt[1].split(':'))
+        except SnmpsimError:
+            sys.stderr.write('%s\r\n%s\r\n' % (sys.exc_info()[1], helpMessage))
+            sys.exit(-1)
     elif opt[0] in ('--device-dir', '--data-dir'):
         confdir.data.insert(0, opt[1])
     elif opt[0] == '--cache-dir':
@@ -110,7 +119,7 @@ for opt in opts:
         try:
             modName, args = args[0], args[1]
         except:
-            sys.stdout.write('improper variation module options: %s\r\n'%opt[1])
+            sys.stderr.write('improper variation module options: %s\r\n'%opt[1])
             sys.exit(-1)
         if '=' in modName:
             modName, alias = modName.split('=', 1)
@@ -124,18 +133,18 @@ for opt in opts:
         try:
             agentUDPv4Endpoints.append(f(*opt[1].split(':')))
         except:
-            sys.stdout.write('improper IPv4/UDP endpoint %s\r\n' % opt[1])
+            sys.stderr.write('improper IPv4/UDP endpoint %s\r\n' % opt[1])
             sys.exit(-1)
     elif opt[0] == '--agent-udpv6-endpoint':
         if not udp6:
-            sys.stdout.write('This system does not support UDP/IP6\r\n')
+            sys.stderr.write('This system does not support UDP/IP6\r\n')
             sys.exit(-1)
         if opt[1].find(']:') != -1 and opt[1][0] == '[':
             h, p = opt[1].split(']:')
             try:
                 h, p = h[1:], int(p)
             except:
-                sys.stdout.write('improper IPv6/UDP endpoint %s\r\n' % opt[1])
+                sys.stderr.write('improper IPv6/UDP endpoint %s\r\n' % opt[1])
                 sys.exit(-1)
         elif opt[1][0] == '[' and opt[1][-1] == ']':
             h, p = opt[1][1:-1], 161
@@ -144,7 +153,7 @@ for opt in opts:
         agentUDPv6Endpoints.append((h, p))
     elif opt[0] == '--agent-unix-endpoint':
         if not unix:
-            sys.stdout.write('This system does not support UNIX domain sockets\r\n')
+            sys.stderr.write('This system does not support UNIX domain sockets\r\n')
             sys.exit(-1)
         agentUNIXEndpoints.append(opt[1])
     elif opt[0] == '--agent-address':
@@ -162,27 +171,25 @@ for opt in opts:
     elif opt[0] == '--v3-auth-proto':
         v3AuthProto = opt[1].upper()
         if v3AuthProto not in authProtocols:
-            sys.stdout.write('bad v3 auth protocol %s\r\n' % v3AuthProto)
+            sys.stderr.write('bad v3 auth protocol %s\r\n' % v3AuthProto)
             sys.exit(-1)
     elif opt[0] == '--v3-priv-key':
         v3PrivKey = opt[1]
     elif opt[0] == '--v3-priv-proto':
         v3PrivProto = opt[1].upper()
         if v3PrivProto not in privProtocols:
-            sys.stdout.write('bad v3 privacy protocol %s\r\n' % v3PrivProto)
+            sys.stderr.write('bad v3 privacy protocol %s\r\n' % v3PrivProto)
             sys.exit(-1)
 
 if authProtocols[v3AuthProto] == config.usmNoAuthProtocol and \
     privProtocols[v3PrivProto] != config.usmNoPrivProtocol:
-        sys.stdout.write('privacy impossible without authentication\r\n')
+        sys.stderr.write('privacy impossible without authentication\r\n')
         sys.exit(-1)
 
 for variationModulesDir in confdir.variation:
-    sys.stdout.write(
-        'Scanning "%s" directory for variation modules... '%variationModulesDir
-    )
+    log.msg('Scanning "%s" directory for variation modules...\r\n' % variationModulesDir)
     if not os.path.exists(variationModulesDir):
-        sys.stdout.write(' no directory\r\n')
+        log.msg('Directory %s does not exist\r\n' % variationModulesDir)
         continue
     for dFile in os.listdir(variationModulesDir):
         if dFile[-3:] != '.py':
@@ -201,7 +208,7 @@ for variationModulesDir in confdir.variation:
 
         for alias, args in _toLoad:
             if alias in variationModules:
-                sys.stdout.write('\r\nWARNING: ignoring duplicate module %s at %s\r\n' %  (alias, mod))
+                log.msg('WARNING: ignoring duplicate module %s at %s\r\n' %  (alias, mod))
                 continue
 
             ctx = { 'path': mod,
@@ -214,15 +221,15 @@ for variationModulesDir in confdir.variation:
                 else:
                     execfile(mod, ctx)
             except Exception:
-                sys.stdout.write('\r\nvariation module %s execution failure: %s\r\n' %  (mod, sys.exc_info()[1]))
+                log.msg('Variation module %s execution failure: %s\r\n' %  (mod, sys.exc_info()[1]))
                 sys.exit(-1)
             else:
                 variationModules[alias] = ctx
 
-    sys.stdout.write('%s more modules found\r\n' % len(variationModules))
+    log.msg('A total of %s modules found in %s\r\n' % (len(variationModules), variationModulesDir))
 
 if variationModulesOptions:
-    sys.stdout.write('ERROR: unused options for variation modules: %s\r\n' %  ', '.join(variationModulesOptions.keys()))
+    log.msg('ERROR: unused options for variation modules: %s\r\n' %  ', '.join(variationModulesOptions.keys()))
     sys.exit(-1)
      
 # for backward compatibility
@@ -232,14 +239,14 @@ if not agentUDPv4Endpoints and \
     agentUDPv4Endpoints.append(agentUDPv4Address)
 
 if not os.path.exists(confdir.cache):
-    sys.stdout.write('Creating cache directory %s... \r' % confdir.cache)
+    log.msg('Creating cache directory %s... \r' % confdir.cache)
     try:
         os.makedirs(confdir.cache)
     except OSError:
-        sys.stdout.write('ERROR: %s: %s\r\n' % (confdir.cache, sys.exc_info()[1]))
+        log.msg('ERROR: %s: %s\r\n' % (confdir.cache, sys.exc_info()[1]))
         sys.exit(-1)
     else:
-        sys.stdout.write('done\r\n')
+        log.msg('done\r\n')
 
 # Extended snmprec record handler
 
@@ -265,7 +272,7 @@ class SnmprecRecord(snmprec.SnmprecRecord):
                     # invoke variation module
                     oid, tag, value = context['variationModules'][modName]['variate'](oid, tag, value, **context)
             else:
-                raise SnmpsimError('variation module "%s" referenced but not loaded\r\n' % modName)
+                raise SnmpsimError('Variation module "%s" referenced but not loaded\r\n' % modName)
 
         if not modName:
             if 'dataValidation' in context:
@@ -386,7 +393,7 @@ class DataFile(AbstractLayout):
                             try:
                                 _, subtreeFlag, _ = self.__recordIndex.lookup(str(_nextOid)).split(str2octs(','))
                             except KeyError:
-                                sys.stdout.write('data error for %s at %s, index broken?\r\n' % (self, _nextOid))
+                                log.msg('data error for %s at %s, index broken?\r\n' % (self, _nextOid))
                                 line = ''  # fatal error
                                 break
                             subtreeFlag = int(subtreeFlag)
@@ -399,7 +406,7 @@ class DataFile(AbstractLayout):
                         try:
                             _, _, _prevOffset = self.__recordIndex.lookup(str(_oid)).split(str2octs(','))
                         except KeyError:
-                            sys.stdout.write('data error for %s at %s, index broken?\r\n' % (self, _oid))
+                            log.msg('data error for %s at %s, index broken?\r\n' % (self, _oid))
                             line = ''  # fatal error
                             break
                         _prevOffset = int(_prevOffset)
@@ -433,9 +440,7 @@ class DataFile(AbstractLayout):
                 except Exception:
                     _oid = oid
                     _val = errorStatus
-                    sys.stdout.write(
-                        'data error at %s for %s: %s\r\n' % (self, textOid, sys.exc_info()[1])
-                    )
+                    log.msg('data error at %s for %s: %s\r\n' % (self, textOid, sys.exc_info()[1]))
 
                 break
 
@@ -626,21 +631,20 @@ else:
         )
 
 if variationModules:
-    sys.stdout.write('Initializing variation modules:\r\n')
+    log.msg('Initializing variation modules...\r\n')
     for name, body in variationModules.items():
-        sys.stdout.write('    %s...  ' % name)
         for x in ('init', 'variate', 'shutdown'):
             if x not in body:
-                sys.stdout.write('error: missing %s handler!\r\n' % x)
+                log.msg('ERROR: missing %s handler in %s!\r\n' % (x, name))
                 sys.exit(-1)
         try:
             body['init'](not v2cArch and snmpEngine or None,
                          options=body['args'],
                          mode='variating')
         except Exception:
-            sys.stdout.write('FAILED: %s\r\n' % sys.exc_info()[1])
+            log.msg('Module %s load FAILED: %s\r\n' % (name,sys.exc_info()[1]))
         else:
-            sys.stdout.write('OK\r\n')
+            log.msg('Modile %s loaded OK\r\n' % name)
 
 # Build pysnmp Managed Objects base from data files information
 
@@ -648,20 +652,19 @@ _mibInstrums = {}
 _dataFiles = {}
 
 for dataDir in confdir.data:
-    sys.stdout.write(
-        'Scanning "%s" directory for %s data files...' % (dataDir, ','.join([' *%s%s' % (os.path.extsep, x.ext) for x in recordSet.values()]))
+    log.msg('Scanning "%s" directory for %s data files...\r\n' % (dataDir, ','.join([' *%s%s' % (os.path.extsep, x.ext) for x in recordSet.values()]))
     )
     if not os.path.exists(dataDir):
-        sys.stdout.write(' no directory\r\n')
+        log.msg('Directory %s does not exist\r\n' % dataDir)
         continue
-    sys.stdout.write('\r\n%s\r\n' % ('='*66,))
+    log.msg('%s\r\n' % ('='*66,))
     for fullPath, textParser, communityName in getDataFiles(dataDir):
         if communityName in _dataFiles:
-            sys.stdout.write('WARNING: ignoring duplicate Community/ContextName "%s" for data file %s (%s already loaded)\r\n' % (communityName, fullPath, _dataFiles[communityName]))
+            log.msg('WARNING: ignoring duplicate Community/ContextName "%s" for data file %s (%s already loaded)\r\n' % (communityName, fullPath, _dataFiles[communityName]))
             continue
         elif fullPath in _mibInstrums:
             mibInstrum = _mibInstrums[fullPath]
-            sys.stdout.write('Shared %s\r\n' % (mibInstrum,))
+            log.msg('Shared %s\r\n' % (mibInstrum,))
         else:
             dataFile = DataFile(fullPath, textParser).indexText(forceIndexBuild)
             mibInstrum = mibInstrumControllerSet[dataFile.layout](dataFile)
@@ -669,9 +672,9 @@ for dataDir in confdir.data:
             _mibInstrums[fullPath] = mibInstrum
             _dataFiles[communityName] = fullPath
 
-            sys.stdout.write('%s\r\n' % (mibInstrum,))
+            log.msg('%s\r\n' % (mibInstrum,))
 
-        sys.stdout.write('SNMPv1/2c community name: %s\r\n' % (communityName,))
+        log.msg('SNMPv1/2c community name: %s\r\n' % (communityName,))
 
         if v2cArch:
             contexts[univ.OctetString(communityName)] = mibInstrum
@@ -693,9 +696,9 @@ for dataDir in confdir.data:
                 fullPath, communityName, contextName
             )
                  
-            sys.stdout.write('SNMPv3 context name: %s\r\n' % (contextName,))
+            log.msg('SNMPv3 context name: %s\r\n' % (contextName,))
         
-        sys.stdout.write('%s\r\n' % ('-+' * 33,))
+        log.msg('%s\r\n' % ('-+' * 33,))
         
 del _mibInstrums
 del _dataFiles
@@ -727,7 +730,7 @@ if v2cArch:
             if msgVer in api.protoModules:
                 pMod = api.protoModules[msgVer]
             else:
-                sys.stdout.write('Unsupported SNMP version %s\r\n' % (msgVer,))
+                log.msg('Unsupported SNMP version %s\r\n' % (msgVer,))
                 return
             reqMsg, wholeMsg = decoder.decode(
                 wholeMsg, asn1Spec=pMod.Message(),
@@ -753,7 +756,7 @@ if v2cArch:
             elif hasattr(pMod, 'GetBulkRequestPDU') and \
                      reqPDU.isSameTypeWith(pMod.GetBulkRequestPDU()):
                 if not msgVer:
-                    sys.stdout.write('GETBULK over SNMPv1 from %s:%s\r\n' % (
+                    log.msg('GETBULK over SNMPv1 from %s:%s\r\n' % (
                         transportDomain, transportAddress
                         ))
                     return wholeMsg
@@ -762,7 +765,7 @@ if v2cArch:
                     pMod.apiBulkPDU.getMaxRepetitions(reqPDU),
                     contexts[communityName].readNextVars)
             else:
-                sys.stdout.write('Unsuppored PDU type %s from %s:%s\r\n' % (
+                log.msg('Unsuppored PDU type %s from %s:%s\r\n' % (
                     reqPDU.__class__.__name__, transportDomain,
                     transportAddress
                     ))
@@ -801,34 +804,32 @@ if v2cArch:
     
     # Configure socket server
    
-    sys.stdout.write('Listening at:\r\n')
- 
     transportDispatcher = AsynsockDispatcher()
     for idx in range(len(agentUDPv4Endpoints)):
         transportDispatcher.registerTransport(
                 udp.domainName + (idx,),
                 udp.UdpTransport().openServerMode(agentUDPv4Endpoints[idx])
             )
-        sys.stdout.write('  UDP/IPv4 endpoint %s:%s, transport ID %s\r\n' % (agentUDPv4Endpoints[idx] + ('.'.join([str(x) for x in udp.domainName + (idx,)]),)))
+        log.msg('Listening at UDP/IPv4 endpoint %s:%s, transport ID %s\r\n' % (agentUDPv4Endpoints[idx] + ('.'.join([str(x) for x in udp.domainName + (idx,)]),)))
     for idx in range(len(agentUDPv6Endpoints)):
         transportDispatcher.registerTransport(
                 udp6.domainName + (idx,),
                 udp6.Udp6Transport().openServerMode(agentUDPv6Endpoints[idx])
             )
-        sys.stdout.write('  UDP/IPv6 endpoint %s:%s, transport ID %s\r\n' % (agentUDPv6Endpoints[idx] + ('.'.join([str(x) for x in udp6.domainName + (idx,)]),)))
+        log.msg('Listening at UDP/IPv6 endpoint %s:%s, transport ID %s\r\n' % (agentUDPv6Endpoints[idx] + ('.'.join([str(x) for x in udp6.domainName + (idx,)]),)))
     for idx in range(len(agentUNIXEndpoints)):
         transportDispatcher.registerTransport(
                 unix.domainName + (idx,),
                 unix.UnixTransport().openServerMode(agentUNIXEndpoints[idx])
             )
-        sys.stdout.write('  UNIX domain endpoint %s, transport ID %s\r\n' % (agentUNIXEndpoints[idx], '.'.join([str(x) for x in unix.domainName + (idx,)])))
+        log.msg('Listening at UNIX domain endpoint %s, transport ID %s\r\n' % (agentUNIXEndpoints[idx], '.'.join([str(x) for x in unix.domainName + (idx,)])))
     transportDispatcher.registerRecvCbFun(commandResponderCbFun)
 else:
-    sys.stdout.write('SNMPv3 credentials:\r\nUsername: %s\r\n' % v3User)
+    log.msg('SNMPv3 USM SecurityName: %s\r\n' % v3User)
     if authProtocols[v3AuthProto] != config.usmNoAuthProtocol:
-        sys.stdout.write('Authentication key: %s\r\nAuthentication protocol: %s\r\n' % (v3AuthKey, v3AuthProto))
+        log.msg('SNMP USM authentication key: %s, authentication protocol: %s\r\n' % (v3AuthKey, v3AuthProto))
         if privProtocols[v3PrivProto] != config.usmNoPrivProtocol:
-            sys.stdout.write('Encryption (privacy) key: %s\r\nEncryption protocol: %s\r\n' % (v3PrivKey, v3PrivProto))
+            log.msg('SNMP USM encryption (privacy) key: %s, encryption protocol: %s\r\n' % (v3PrivKey, v3PrivProto))
 
     # Configure access to data index
 
@@ -841,29 +842,27 @@ else:
 
     # Configure socket server
 
-    sys.stdout.write('Listening at:\r\n')
-
     for idx in range(len(agentUDPv4Endpoints)):
         config.addSocketTransport(
             snmpEngine,
             udp.domainName + (idx,),
             udp.UdpTransport().openServerMode(agentUDPv4Endpoints[idx])
         )
-        sys.stdout.write('  UDP/IPv4 endpoint %s:%s, transport ID %s\r\n' % (agentUDPv4Endpoints[idx] + ('.'.join([str(x) for x in udp.domainName + (idx,)]),)))
+        log.msg('Listening at UDP/IPv4 endpoint %s:%s, transport ID %s\r\n' % (agentUDPv4Endpoints[idx] + ('.'.join([str(x) for x in udp.domainName + (idx,)]),)))
     for idx in range(len(agentUDPv6Endpoints)):
         config.addSocketTransport(
             snmpEngine,
             udp6.domainName + (idx,),
             udp6.Udp6Transport().openServerMode(agentUDPv6Endpoints[idx])
         )
-        sys.stdout.write('  UDP/IPv6 endpoint %s:%s, transport ID %s\r\n' % (agentUDPv6Endpoints[idx] + ('.'.join([str(x) for x in udp6.domainName + (idx,)]),)))
+        log.msg('Listening at UDP/IPv6 endpoint %s:%s, transport ID %s\r\n' % (agentUDPv6Endpoints[idx] + ('.'.join([str(x) for x in udp6.domainName + (idx,)]),)))
     for idx in range(len(agentUNIXEndpoints)):
         config.addSocketTransport(
             snmpEngine,
             unix.domainName + (idx,),
             unix.UnixTransport().openServerMode(agentUNIXEndpoints[idx])
         )
-        sys.stdout.write('  UNIX domain endpoint %s, transport ID %s\r\n' % (agentUNIXEndpoints[idx], '.'.join([str(x) for x in unix.domainName + (idx,)])))
+        log.msg('Listening at UNIX domain endpoint %s, transport ID %s\r\n' % (agentUNIXEndpoints[idx], '.'.join([str(x) for x in unix.domainName + (idx,)])))
 
     # SNMP applications
 
@@ -885,21 +884,20 @@ exc_info = None
 try:
     transportDispatcher.runDispatcher()
 except KeyboardInterrupt:
-    sys.stdout.write('Process terminated\r\n')
+    log.msg('Process terminated\r\n')
 except Exception:
     exc_info = sys.exc_info()
 
 if variationModules:
-    sys.stdout.write('Shutting down variation modules:\r\n')
+    log.msg('Shutting down variation modules:\r\n')
     for name, body in variationModules.items():
-        sys.stdout.write('    %s...  ' % name)
         try:
             body['shutdown'](not v2cArch and snmpEngine or None,
                              options=body['args'], mode='variation')
         except Exception:
-            sys.stdout.write('FAILED: %s\r\n' % sys.exc_info()[1])
+            log.msg('Module %s shutdown FAILED: %s\r\n' % (name, sys.exc_info()[1]))
         else:
-            sys.stdout.write('OK\r\n')
+            log.msg('Module %s shutdown OK\r\n' % name)
 
 transportDispatcher.closeDispatcher()
 

@@ -6,7 +6,7 @@ if sys.version_info[0] < 3:
 else:
     import dbm
     whichdb = dbm.whichdb
-from snmpsim import confdir
+from snmpsim import confdir, log
 
 class RecordIndex:
     def __init__(self, textFile, textParser):
@@ -50,17 +50,17 @@ class RecordIndex:
             if os.path.exists(dbFile):
                 if textFileStamp < os.stat(dbFile)[8]:
                     if indexNeeded:
-                        sys.stdout.write('Forced index rebuild %s\r\n' % dbFile)
+                        log.msg('Forced index rebuild %s\r\n' % dbFile)
                     elif not whichdb(dbFile):
                         indexNeeded = True
-                        sys.stdout.write('Unsupported index format, rebuilding index %s\r\n' % dbFile)
+                        log.msg('Unsupported index format, rebuilding index %s\r\n' % dbFile)
                 else:
                     indexNeeded = True
-                    sys.stdout.write('Index %s out of date\r\n' % dbFile)
+                    log.msg('Index %s out of date\r\n' % dbFile)
                 break
         else:
             indexNeeded = True
-            sys.stdout.write('Index %s does not exist for data file %s\r\n' % (self.__dbFile, self.__textFile))
+            log.msg('Index %s does not exist for data file %s\r\n' % (self.__dbFile, self.__textFile))
             
         if indexNeeded:
             # these might speed-up indexing
@@ -77,7 +77,7 @@ class RecordIndex:
 
             text = open(self.__textFile, 'rb')
 
-            sys.stdout.write('Building index %s for data file %s (open flags \"%s\")...' % (self.__dbFile, self.__textFile, open_flags))
+            log.msg('Building index %s for data file %s (open flags \"%s\")...\r\n' % (self.__dbFile, self.__textFile, open_flags))
             sys.stdout.flush()
         
             lineNo = 0
@@ -125,10 +125,10 @@ class RecordIndex:
                             oid, tag, val, dataValidation=True
                         )
                     except Exception:
-                        sys.stdout.write(
-                            '\r\n*** Error at line %s, value %r: %s\r\n' % \
+                        log.msg(
+                            'ERROR at line %s, value %r: %s\r\n' % \
                             (lineNo, val, sys.exc_info()[1])
-                            )
+                        )
 
                 # for lines serving subtrees, type is empty in tag field
                 db[oid] = '%d,%d,%d' % (offset, tag[0] == ':', prevOffset)
@@ -143,7 +143,7 @@ class RecordIndex:
             text.close()
             db.close()
         
-            sys.stdout.write('...%d entries indexed\r\n' % (lineNo - 1,))
+            log.msg('...%d entries indexed\r\n' % (lineNo - 1,))
 
         self.__dbType = whichdb(self.__dbFile)
 

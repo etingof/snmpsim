@@ -5,6 +5,7 @@ import sys
 import time
 import random
 from snmpsim.grammar.snmprec import SnmprecGrammar
+from snmpsim import log
 from snmpsim import error
 
 settingsCache = {}
@@ -47,7 +48,7 @@ def variate(oid, tag, value, **context):
                 elif o in ('lt', 'gt'):
                     vlist[o] = v,d
                 else:
-                    sys.stdout.write('delay: bad vlist syntax: %s\r\n' % settingsCache[oid]['vlist'])
+                    log.msg('delay: bad vlist syntax: %s\r\n' % settingsCache[oid]['vlist'])
             settingsCache[oid]['vlist'] = vlist
 
         if 'tlist' in settingsCache[oid]:
@@ -64,7 +65,7 @@ def variate(oid, tag, value, **context):
                 elif o in ('lt', 'gt'):
                     tlist[o] = v,d
                 else:
-                    sys.stdout.write('delay: bad tlist syntax: %s\r\n' % settingsCache[oid]['tlist'])
+                    log.msg('delay: bad tlist syntax: %s\r\n' % settingsCache[oid]['tlist'])
             settingsCache[oid]['tlist'] = tlist
 
     if context['setFlag'] and 'vlist' in settingsCache[oid]:

@@ -24,7 +24,7 @@ from pysnmp.entity.rfc3413 import cmdgen
 from pysnmp import debug
 from snmpsim import __version__
 from snmpsim.record import snmprec
-from snmpsim import confdir, error
+from snmpsim import confdir, error, log
 
 # Defaults
 quietFlag = False
@@ -64,28 +64,36 @@ privProtocols = {
   'NONE': config.usmNoPrivProtocol
 }
 
-helpMessage = 'Usage: %s [--help] [--debug=<category>] [--quiet] [--version=<1|2c|3>] [--community=<string>] [--v3-user=<username>] [--v3-auth-key=<key>] [--v3-priv-key=<key>] [--v3-auth-proto=<%s>] [--v3-priv-proto=<%s>] [--context=<string>] [--use-getbulk] [--getbulk-repetitions=<number>] [--agent-udpv4-endpoint=<X.X.X.X:NNNNN>] [--agent-udpv6-endpoint=<[X:X:..X]:NNNNN>] [--agent-unix-endpoint=</path/to/named/pipe>] [--start-oid=<OID>] [--stop-oid=<OID>] [--output-file=<filename>] [--variation-modules-dir=<dir>] [--variation-module=<module>] [--variation-module-options=<args]>]' % (sys.argv[0], '|'.join([ x for x in authProtocols if x != 'NONE' ]), '|'.join([ x for x in privProtocols if x != 'NONE' ]))
+helpMessage = 'Usage: %s [--help] [--debug=<category>] --logging-method=<method|?>] [--quiet] [--version=<1|2c|3>] [--community=<string>] [--v3-user=<username>] [--v3-auth-key=<key>] [--v3-priv-key=<key>] [--v3-auth-proto=<%s>] [--v3-priv-proto=<%s>] [--context=<string>] [--use-getbulk] [--getbulk-repetitions=<number>] [--agent-udpv4-endpoint=<X.X.X.X:NNNNN>] [--agent-udpv6-endpoint=<[X:X:..X]:NNNNN>] [--agent-unix-endpoint=</path/to/named/pipe>] [--start-oid=<OID>] [--stop-oid=<OID>] [--output-file=<filename>] [--variation-modules-dir=<dir>] [--variation-module=<module>] [--variation-module-options=<args]>]' % (sys.argv[0], '|'.join([ x for x in authProtocols if x != 'NONE' ]), '|'.join([ x for x in privProtocols if x != 'NONE' ]))
+
+log.setLogger('snmprec', 'stdout')
 
 try:
     opts, params = getopt.getopt(sys.argv[1:], 'h',
-        ['help', 'debug=', 'quiet', 'v1', 'v2c', 'v3', 'version=', 'community=', 'v3-user=', 'v3-auth-key=', 'v3-priv-key=', 'v3-auth-proto=', 'v3-priv-proto=', 'context=', 'use-getbulk', 'getbulk-repetitions=', 'agent-address=', 'agent-port=', 'agent-udpv4-endpoint=', 'agent-udpv6-endpoint=', 'agent-unix-endpoint=', 'start-oid=', 'stop-oid=', 'output-file=', 'variation-modules-dir=', 'variation-module=', 'variation-module-options=']
+        ['help', 'debug=', 'logging-method=', 'quiet', 'v1', 'v2c', 'v3', 'version=', 'community=', 'v3-user=', 'v3-auth-key=', 'v3-priv-key=', 'v3-auth-proto=', 'v3-priv-proto=', 'context=', 'use-getbulk', 'getbulk-repetitions=', 'agent-address=', 'agent-port=', 'agent-udpv4-endpoint=', 'agent-udpv6-endpoint=', 'agent-unix-endpoint=', 'start-oid=', 'stop-oid=', 'output-file=', 'variation-modules-dir=', 'variation-module=', 'variation-module-options=']
         )
 except Exception:
-    sys.stdout.write('getopt error: %s\r\n' % sys.exc_info()[1])
-    sys.stdout.write(helpMessage + '\r\n')
+    sys.stderr.write('getopt error: %s\r\n' % sys.exc_info()[1])
+    sys.stderr.write(helpMessage + '\r\n')
     sys.exit(-1)
 
 if params:
-    sys.stdout.write('extra arguments supplied %s\r\n' % params)
-    sys.stdout.write(helpMessage + '\r\n')
+    sys.stderr.write('extra arguments supplied %s\r\n' % params)
+    sys.stderr.write(helpMessage + '\r\n')
     sys.exit(-1)
 
 for opt in opts:
     if opt[0] == '-h' or opt[0] == '--help':
-        sys.stdout.write('SNMP Simulator version %s, written by Ilya Etingof <ilya@glas.net>\r\nSoftware documentation and support at http://snmpsim.sf.net\r\n%s\r\n' % (__version__, helpMessage))
+        sys.stderr.write('SNMP Simulator version %s, written by Ilya Etingof <ilya@glas.net>\r\nSoftware documentation and support at http://snmpsim.sf.net\r\n%s\r\n' % (__version__, helpMessage))
         sys.exit(-1)
     elif opt[0] == '--debug':
         debug.setLogger(debug.Debug(opt[1]))
+    elif opt[0] == '--logging-method':
+        try:
+            log.setLogger('snmprec', *opt[1].split(':'))
+        except error.SnmpsimError:
+            sys.stderr.write('%s\r\n%s\r\n' % (sys.exc_info()[1], helpMessage))
+            sys.exit(-1)
     elif opt[0] == '--quiet':
         quietFlag = True
     elif opt[0] == '--v1':
@@ -102,7 +110,7 @@ for opt in opts:
         elif opt[1] in ('3', 'v3'):
             snmpVersion = 3
         else:
-            sys.stdout.write('unknown SNMP version %s\r\n' % opt[1])
+            sys.stderr.write('unknown SNMP version %s\r\n' % opt[1])
             sys.exit(-1)
     elif opt[0] == '--community':
         snmpCommunity = opt[1]
@@ -113,14 +121,14 @@ for opt in opts:
     elif opt[0] == '--v3-auth-proto':
         v3AuthProto = opt[1].upper()
         if v3AuthProto not in authProtocols:
-            sys.stdout.write('bad v3 auth protocol %s\r\n' % v3AuthProto)
+            sys.stderr.write('bad v3 auth protocol %s\r\n' % v3AuthProto)
             sys.exit(-1)
     elif opt[0] == '--v3-priv-key':
         v3PrivKey = opt[1]
     elif opt[0] == '--v3-priv-proto':
         v3PrivProto = opt[1].upper()
         if v3PrivProto not in privProtocols:
-            sys.stdout.write('bad v3 privacy protocol %s\r\n' % v3PrivProto)
+            sys.stderr.write('bad v3 privacy protocol %s\r\n' % v3PrivProto)
             sys.exit(-1)
     elif opt[0] == '--context':
         v3Context = opt[1]
@@ -137,18 +145,18 @@ for opt in opts:
         try:
             agentUDPv4Endpoint = f(*opt[1].split(':'))
         except:
-            sys.stdout.write('improper IPv4/UDP endpoint %s\r\n' % opt[1])
+            sys.stderr.write('improper IPv4/UDP endpoint %s\r\n' % opt[1])
             sys.exit(-1)
     elif opt[0] == '--agent-udpv6-endpoint':
         if not udp6:
-            sys.stdout.write('This system does not support UDP/IP6\r\n')
+            sys.stderr.write('This system does not support UDP/IP6\r\n')
             sys.exit(-1)
         if opt[1].find(']:') != -1 and opt[1][0] == '[':
             h, p = opt[1].split(']:')
             try:
                 agentUDPv6Endpoint = h[1:], int(p)
             except:
-                sys.stdout.write('improper IPv6/UDP endpoint %s\r\n' % opt[1])
+                sys.stderr.write('improper IPv6/UDP endpoint %s\r\n' % opt[1])
                 sys.exit(-1)
         elif opt[1][0] == '[' and opt[1][-1] == ']':
             agentUDPv6Endpoint = opt[1][1:-1], 161
@@ -156,7 +164,7 @@ for opt in opts:
             agentUDPv6Endpoint = opt[1], 161
     elif opt[0] == '--agent-unix-endpoint':
         if not unix:
-            sys.stdout.write('This system does not support UNIX domain sockets\r\n')
+            sys.stderr.write('This system does not support UNIX domain sockets\r\n')
             sys.exit(-1)
         agentUNIXEndpoint = opt[1]
     elif opt[0] == '--start-oid':
@@ -176,29 +184,49 @@ for opt in opts:
 
 if not agentUDPv4Endpoint and not agentUDPv6Endpoint and not agentUNIXEndpoint:
     if agentUDPv4Address[0] is None:
-        sys.stdout.write('ERROR: agent address endpoint not given\r\n%s\r\n' % helpMessage)
+        sys.stderr.write('ERROR: agent address endpoint not given\r\n%s\r\n' % helpMessage)
         sys.exit(-1)
     else:
         agentUDPv4Endpoint = agentUDPv4Address
 
+if snmpVersion == 3:
+    if v3User is None:
+        sys.stderr.write('--v3-user is missing\r\n%s\r\n' % helpMessage)
+        sys.exit(-1)
+    if v3PrivKey and not v3AuthKey:
+        sys.stderr.write('--v3-auth-key is missing\r\n%s\r\n' % helpMessage)
+        sys.exit(-1)
+    if authProtocols[v3AuthProto] == config.usmNoAuthProtocol:
+        if v3AuthKey is not None:
+            v3AuthProto = 'MD5'
+    else:
+        if v3AuthKey is None:
+            sys.stderr.write('--v3-auth-key is missing\r\n%s\r\n' % helpMessage)
+            sys.exit(-1)
+    if privProtocols[v3PrivProto] == config.usmNoPrivProtocol:
+        if v3PrivKey is not None:
+            v3PrivProto = 'DES'
+    else:
+        if v3PrivKey is None:
+            sys.stderr.write('--v3-priv-key is missing\r\n%s\r\n' % helpMessage)
+            sys.exit(-1)
+ 
 if getBulkFlag and not snmpVersion:
-    sys.stdout.write('WARNING: will be using GETNEXT with SNMPv1!\r\n')
+    log.msg('WARNING: will be using GETNEXT with SNMPv1!\r\n')
     getBulkFlag = False
 
 # Load variation module
 
 if variationModuleName:
     for variationModulesDir in confdir.variation:
-        sys.stdout.write(
-            'Scanning "%s" directory for variation modules... ' % variationModulesDir
-        )
+        log.msg('Scanning "%s" directory for variation modules...\r\n' % variationModulesDir)
         if not os.path.exists(variationModulesDir):
-            sys.stdout.write(' no directory\r\n')
+            log.msg('Directory %s does not exist\r\n' % variationModulesDir)
             continue
 
         mod = os.path.join(variationModulesDir, variationModuleName + '.py')
         if not os.path.exists(mod):
-            sys.stdout.write(' no module\r\n')
+            log.msg('Module %s not found\r\n' % mod)
             continue
 
         ctx = { 'path': mod }
@@ -209,38 +237,16 @@ if variationModuleName:
             else:
                 execfile(mod, ctx)
         except Exception:
-            sys.stdout.write('\r\nvariation module %s execution failure: %s\r\n' %  (mod, sys.exc_info()[1]))
+            log.msg('Variation module %s execution failure: %s\r\n' %  (mod, sys.exc_info()[1]))
             sys.exit(-1)
         else:
             variationModule = ctx
-            sys.stdout.write('%s module loaded\r\n' % variationModuleName)
+            log.msg('Module %s loaded\r\n' % variationModuleName)
             break
     else:
-        sys.stdout.write('ERROR: variation module %s not found\r\n%s\r\n' % (variationModuleName, helpMessage))
+        log.msg('ERROR: variation module %s not found\r\n' % variationModuleName)
         sys.exit(-1)
-
-if snmpVersion == 3:
-    if v3User is None:
-        sys.stdout.write('--v3-user is missing\r\n%s\r\n' % helpMessage)
-        sys.exit(-1)
-    if v3PrivKey and not v3AuthKey:
-        sys.stdout.write('--v3-auth-key is missing\r\n%s\r\n' % helpMessage)
-        sys.exit(-1)
-    if authProtocols[v3AuthProto] == config.usmNoAuthProtocol:
-        if v3AuthKey is not None:
-            v3AuthProto = 'MD5'
-    else:
-        if v3AuthKey is None:
-            sys.stdout.write('--v3-auth-key is missing\r\n%s\r\n' % helpMessage)
-            sys.exit(-1)
-    if privProtocols[v3PrivProto] == config.usmNoPrivProtocol:
-        if v3PrivKey is not None:
-            v3PrivProto = 'DES'
-    else:
-        if v3PrivKey is None:
-            sys.stdout.write('--v3-priv-key is missing\r\n%s\r\n' % helpMessage)
-            sys.exit(-1)
-        
+       
 # SNMP configuration
 
 snmpEngine = engine.SnmpEngine()
@@ -258,7 +264,7 @@ if snmpVersion == 3:
         privProtocols[v3PrivProto], v3PrivKey
         )
     if not quietFlag:
-        sys.stdout.write('SNMP version 3\r\nContext name: %s\r\nUser: %s\r\nSecurity level: %s\r\nAuthentication key/protocol: %s/%s\r\nEncryption (privacy) key/protocol: %s/%s\r\n' % (v3Context == '' and '\'\'' or v3Context, v3User, secLevel, v3AuthKey is None and '<NONE>' or v3AuthKey, v3AuthProto, v3PrivKey is None and '<NONE>' or v3PrivKey, v3PrivProto))
+        log.msg('SNMP version 3, Context name: %s, SecurityName: %s, SecurityLevel: %s, Authentication key/protocol: %s/%s, Encryption (privacy) key/protocol: %s/%s\r\n' % (v3Context == '' and '\'\'' or v3Context, v3User, secLevel, v3AuthKey is None and '<NONE>' or v3AuthKey, v3AuthProto, v3PrivKey is None and '<NONE>' or v3PrivKey, v3PrivProto))
 else:
     v3User = 'agt'
     secLevel = 'noAuthNoPriv'
@@ -266,7 +272,7 @@ else:
         snmpEngine, v3User, snmpCommunity
     )
     if not quietFlag:
-        sys.stdout.write('SNMP version %s\r\nCommunity name: %s\r\n' % (snmpVersion == 0 and '1' or '2c', snmpCommunity))
+        log.msg('SNMP version %s, Community name: %s\r\n' % (snmpVersion == 0 and '1' or '2c', snmpCommunity))
 
 config.addTargetParams(snmpEngine, 'pms', v3User, secLevel, snmpVersion)
 
@@ -280,7 +286,7 @@ if agentUDPv6Endpoint:
         snmpEngine, 'tgt', udp6.domainName, agentUDPv6Endpoint, 'pms'
     )
     if not quietFlag:
-        sys.stdout.write('Querying UDP/IPv6 agent at [%s]:%s\r\n' % agentUDPv6Endpoint)
+        log.msg('Querying UDP/IPv6 agent at [%s]:%s\r\n' % agentUDPv6Endpoint)
 elif agentUNIXEndpoint:
     config.addSocketTransport(
         snmpEngine,
@@ -291,7 +297,7 @@ elif agentUNIXEndpoint:
         snmpEngine, 'tgt', unix.domainName, agentUNIXEndpoint, 'pms'
     )
     if not quietFlag:
-        sys.stdout.write('Querying UNIX named pipe agent at %s\r\n' % agentUNIXEndpoint)
+        log.msg('Querying UNIX named pipe agent at %s\r\n' % agentUNIXEndpoint)
 elif agentUDPv4Endpoint:
     config.addSocketTransport(
         snmpEngine,
@@ -302,15 +308,15 @@ elif agentUDPv4Endpoint:
         snmpEngine, 'tgt', udp.domainName, agentUDPv4Endpoint, 'pms'
     )
     if not quietFlag:
-        sys.stdout.write('Querying UDP/IPv4 agent at %s:%s\r\n' % agentUDPv4Endpoint)
+        log.msg('Querying UDP/IPv4 agent at %s:%s\r\n' % agentUDPv4Endpoint)
 
 # Variation module initialization
 
 if variationModule:
-    sys.stdout.write('Initializing variation module:\r\n    %s...' % variationModuleName)
+    log.msg('Initializing variation module...\r\n')
     for x in ('init', 'record', 'shutdown'):
         if x not in variationModule:
-            sys.stdout.write('error: missing %s handler!\r\n' % x)
+            log.msg('ERROR: missing %s handler at module %s\r\n' % (x, variationModuleName))
             sys.exit(-1)
     try:
         variationModule['init'](snmpEngine,
@@ -319,9 +325,9 @@ if variationModule:
                                 startOID=startOID,
                                 stopOID=stopOID)
     except Exception:
-        sys.stdout.write('FAILED: %s\r\n' % sys.exc_info()[1])
+        log.msg('Module %s initialization FAILED: %s\r\n' % (variationModuleName, sys.exc_info()[1]))
     else:
-        sys.stdout.write('OK\r\n')
+        log.msg('Module %s initialization OK\r\n' % variationModuleName)
 
 # Data file builder
 
@@ -357,12 +363,12 @@ dataFileHandler = SnmprecRecord()
 def cbFun(sendRequestHandle, errorIndication, errorStatus, errorIndex,
           varBindTable, cbCtx):
     if errorIndication and errorIndication != 'oidNotIncreasing':
-        sys.stdout.write('%s\r\n' % errorIndication)
+        log.msg('SNMP Engine error: %s\r\n' % errorIndication)
         return
     # SNMPv1 response may contain noSuchName error *and* SNMPv2c exception,
     # so we ignore noSuchName error here
     if errorStatus and errorStatus != 2:
-        sys.stdout.write('%s\r\n' % errorStatus.prettyPrint())
+        log.msg('Remote SNMP error: %s\r\n' % errorStatus.prettyPrint())
         return
 
     stopFlag = False
@@ -420,9 +426,8 @@ def cbFun(sendRequestHandle, errorIndication, errorStatus, errorIndex,
 
             cbCtx['count'] += 1
 
-            if not quietFlag:
-                sys.stdout.write('OIDs dumped: %s/%s\r' % (cbCtx['iteration'], cbCtx['count']))
-                sys.stdout.flush()
+            if not quietFlag and cbCtx['count'] % 100 == 0:
+                log.msg('OIDs dumped: %s/%s\r\n' % (cbCtx['iteration'], cbCtx['count']))
 
     # Next request time
     cbCtx['reqTime'] = time.time()
@@ -452,7 +457,7 @@ else:
         cbFun, cbCtx, contextName=v3Context
     )
 
-sys.stdout.write('Sending initial %s request....\r\n' % (getBulkFlag and 'GETBULK' or 'GETNEXT'))
+log.msg('Sending initial %s request....\r\n' % (getBulkFlag and 'GETBULK' or 'GETNEXT'))
 
 t = time.time()
 
@@ -464,20 +469,20 @@ try:
     snmpEngine.transportDispatcher.runDispatcher()
 except KeyboardInterrupt:
     if not quietFlag:
-        sys.stdout.write('Process terminated\r\n')
+        log.msg('Process terminated\r\n')
 except Exception:
     exc_info = sys.exc_info()
 
 if variationModule:
-    sys.stdout.write('Shutting down variation modules:\r\n    %s...' % variationModuleName)
+    log.msg('Shutting down variation module %s...\r\n' % variationModuleName)
     try:
         variationModule['shutdown'](snmpEngine,
                                     options=variationModuleOptions,
                                     mode='recording')
     except Exception:
-        sys.stdout.write('FAILED: %s\r\n' % sys.exc_info()[1])
+        log.msg('Variation module %s shutdown FAILED: %s\r\n' % (variationModuleName, sys.exc_info()[1]))
     else:
-        sys.stdout.write('OK\r\n')
+        log.msg('Variation module %s shutdown OK\r\n' % variationModuleName)
 
 snmpEngine.transportDispatcher.closeDispatcher()
 
@@ -486,9 +491,7 @@ t = time.time() - t
 cbCtx['total'] += cbCtx['count']
 
 if not quietFlag:
-    sys.stdout.write(
-        'OIDs dumped: %s, elapsed: %.2f sec, rate: %.2f OIDs/sec\r\n' % (cbCtx['total'], t, t and cbCtx['count']//t or 0)
-        )
+    log.msg('OIDs dumped: %s, elapsed: %.2f sec, rate: %.2f OIDs/sec\r\n' % (cbCtx['total'], t, t and cbCtx['count']//t or 0))
 
 if exc_info:
     e = exc_info[0](exc_info[1])

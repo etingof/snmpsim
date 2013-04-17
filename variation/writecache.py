@@ -4,6 +4,7 @@
 import shelve
 from pysnmp.smi import error
 from snmpsim.grammar.snmprec import SnmprecGrammar
+from snmpsim import log
 
 errorTypes = {
         'generror': error.GenError,
@@ -58,7 +59,7 @@ def variate(oid, tag, value, **context):
                 elif o in ('lt', 'gt'):
                     vlist[o] = v, e
                 else:
-                    sys.stdout.write('delay: bad vlist syntax: %s\r\n' % settingsCache[oid]['vlist'])
+                    log.msg('writecache: bad vlist syntax: %s\r\n' % settingsCache[oid]['vlist'])
             settingsCache[oid]['vlist'] = vlist
 
     textOid = str(oid)
