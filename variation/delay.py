@@ -105,7 +105,10 @@ def variate(oid, tag, value, **context):
     if delay < 0:
         delay = 0
     elif delay > 99999:
+        log.msg('delay: dropping response for %s\r\n' % oid)
         raise error.NoDataNotification()
+
+    log.msg('delay: waiting %d milliseconds for %s\r\n' % (delay, oid))
 
     time.sleep(delay/1000)  # ms
 

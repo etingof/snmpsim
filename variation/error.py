@@ -84,6 +84,7 @@ def variate(oid, tag, value, **context):
                 e = settingsCache[oid]['status']
 
     if e and e in errorTypes:
+        log.msg('error: reporting %s for %s\r\n' % (e, oid))
         raise errorTypes[e](
             name=oid, idx=context['varsTotal']-context['varsRemaining']
         )

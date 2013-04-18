@@ -3,6 +3,7 @@
 # Get/set managed value by invoking an external program
 import sys
 import subprocess
+from snmpsim import log
 
 moduleOptions = {}
 
@@ -17,6 +18,7 @@ def init(snmpEngine, **context):
         moduleOptions['shell'] = int(moduleOptions['shell'])
  
 def variate(oid, tag, value, **context):
+    log.msg('subprocess: executing external process "%s"\r\n' % value)
     try:
         return oid, tag, subprocess.check_output(
             [ x\
@@ -32,6 +34,7 @@ def variate(oid, tag, value, **context):
               for x in value.split(' ') ], shell=moduleOptions['shell']
         )
     except subprocess.CalledProcessError:
+        log.msg('subprocess: external program execution failed\r\n')
         return context['origOid'], tag, context['errorStatus']
 
 def shutdown(snmpEngine, **context): pass 

@@ -3,6 +3,8 @@
 
 - Centralized logging facility added. Logging into syslog or file is
   now supported.
+- More logging added into snmpsimd.py, snmprec.py and variation modules
+  to ease the understanding of their operation.
 - The --quiet flag of snmprec.py now depricated in favor of "null"
   logging method.
 - Fix to community names '/'-normalization at transport address based

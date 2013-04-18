@@ -113,6 +113,8 @@ def variate(oid, tag, value, **context):
             datafile, SnmprecRecord()
         ).create()
         moduleContext['datafile'] = datafile
+
+        log.msg('multiplex: switching to data file %s for %s\r\n' % (datafile, context['origOid']))
         
     text, db = moduleContext['datafileobj'].getHandles()
 

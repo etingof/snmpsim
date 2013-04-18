@@ -33,6 +33,7 @@ class SyslogLogger(AbstractLogger):
         for l in [ x for x in s.split('\r\n') if x ]:
             syslog.syslog(self.priority, l)
 
+
 class FileLogger(AbstractLogger):
     def init(self, *priv):
         if not priv:
@@ -55,6 +56,8 @@ class ProtoStdLogger(FileLogger):
     stdfile = None
     def init(self, *priv):
         self._fileobj = self.stdfile
+
+    def __call__(self, s): self._fileobj.write(s)
 
 class StdoutLogger(ProtoStdLogger):
     stdfile = sys.stdout

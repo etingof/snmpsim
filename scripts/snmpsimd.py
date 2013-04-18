@@ -339,10 +339,13 @@ class DataFile(AbstractLayout):
     def getHandles(self):
         if not self.__recordIndex.isOpen():
             if len(DataFile.openedQueue) > self.maxQueueEntries:
+                log.msg('Closing %s\r\n' % self)
                 DataFile.openedQueue[0].close()
                 del DataFile.openedQueue[0]
 
             DataFile.openedQueue.append(self)
+
+            log.msg('Opening %s\r\n' % self)
 
             self.__recordIndex.open()
 
@@ -562,14 +565,18 @@ if not v2cArch:
     def probeHashContext(self, snmpEngine, stateReference, contextName):
         transportDomain, transportAddress = snmpEngine.msgAndPduDsp.getTransportInfo(stateReference)
 
-        for probedContextName in probeContext(transportDomain, transportAddress, contextName):
-            probedContextName = md5(probedContextName).hexdigest()
+        for candidate in probeContext(transportDomain, transportAddress, contextName):
+            probedContextName = md5(candidate).hexdigest()
             try:
-                self.snmpContext.getMibInstrum(probedContextName)
+                mibInstrum = self.snmpContext.getMibInstrum(probedContextName)
             except error.PySnmpError:
-                pass
+                log.msg('Candidate data file %s not registered\r\n' % candidate)
             else:
+                log.msg('Using %s selected by candidate %s; transport ID %s, source address %s, community name "%s"\r\n' % (mibInstrum, candidate, univ.ObjectIdentifier(transportDomain), transportAddress[0], communityName))
                 return probedContextName
+        else:
+            log.msg('Using %s selected by contextName "%s", transport ID %s, source address %s\r\n' % (self.snmpContext.getMibInstrum(contextName), contextName, univ.ObjectIdentifier(transportDomain), transportAddress[0]))
+
         return contextName
 
     class GetCommandResponder(cmdrsp.GetCommandResponder):
@@ -737,10 +744,15 @@ if v2cArch:
                 )
 
             communityName = reqMsg.getComponentByPosition(1)
-            for communityName in probeContext(transportDomain, transportAddress, communityName):
-                if communityName in contexts:
+            for candidate in probeContext(transportDomain, transportAddress, communityName):
+                if candidate in contexts:
+                    log.msg('Using %s selected by candidate %s; transport ID %s, source address %s, community name "%s"\r\n' % (contexts[candidate], candidate, univ.ObjectIdentifier(transportDomain), transportAddress[0], communityName))
+                    communityName = candidate
                     break
+                else:
+                    log.msg('Candidate data file %s not registered\r\n' % candidate)
             else:
+                log.msg('No data file selected for transport ID %s, source address %s, community name "%s"\r\n' % (univ.ObjectIdentifier(transportDomain), transportAddress[0], communityName))
                 return wholeMsg
             
             rspMsg = pMod.apiMessage.getResponse(reqMsg)
@@ -827,9 +839,9 @@ if v2cArch:
 else:
     log.msg('SNMPv3 USM SecurityName: %s\r\n' % v3User)
     if authProtocols[v3AuthProto] != config.usmNoAuthProtocol:
-        log.msg('SNMP USM authentication key: %s, authentication protocol: %s\r\n' % (v3AuthKey, v3AuthProto))
+        log.msg('SNMPv3 USM authentication key: %s, authentication protocol: %s\r\n' % (v3AuthKey, v3AuthProto))
         if privProtocols[v3PrivProto] != config.usmNoPrivProtocol:
-            log.msg('SNMP USM encryption (privacy) key: %s, encryption protocol: %s\r\n' % (v3PrivKey, v3PrivProto))
+            log.msg('SNMPv3 USM encryption (privacy) key: %s, encryption protocol: %s\r\n' % (v3PrivKey, v3PrivProto))
 
     # Configure access to data index
 

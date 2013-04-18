@@ -173,6 +173,8 @@ def variate(oid, tag, value, **context):
             varBinds, cbInfo=(_cbFun, (oid, value))
         )
 
+        log.msg('notification: sending Notification to %s with credentials %s\r\n' % (authData, target))
+
     if context['setFlag'] or 'value' not in args:
         return oid, tag, context['origValue']
     else:
