@@ -27,7 +27,6 @@ from snmpsim.record import snmprec
 from snmpsim import confdir, error, log
 
 # Defaults
-quietFlag = False
 getBulkFlag = False
 getBulkRepetitions = 25
 snmpVersion = 1
@@ -64,7 +63,7 @@ privProtocols = {
   'NONE': config.usmNoPrivProtocol
 }
 
-helpMessage = 'Usage: %s [--help] [--debug=<category>] --logging-method=<method|?>] [--quiet] [--version=<1|2c|3>] [--community=<string>] [--v3-user=<username>] [--v3-auth-key=<key>] [--v3-priv-key=<key>] [--v3-auth-proto=<%s>] [--v3-priv-proto=<%s>] [--context=<string>] [--use-getbulk] [--getbulk-repetitions=<number>] [--agent-udpv4-endpoint=<X.X.X.X:NNNNN>] [--agent-udpv6-endpoint=<[X:X:..X]:NNNNN>] [--agent-unix-endpoint=</path/to/named/pipe>] [--start-oid=<OID>] [--stop-oid=<OID>] [--output-file=<filename>] [--variation-modules-dir=<dir>] [--variation-module=<module>] [--variation-module-options=<args]>]' % (sys.argv[0], '|'.join([ x for x in authProtocols if x != 'NONE' ]), '|'.join([ x for x in privProtocols if x != 'NONE' ]))
+helpMessage = 'Usage: %s [--help] [--debug=<category>] --logging-method=<method|?>] [--version=<1|2c|3>] [--community=<string>] [--v3-user=<username>] [--v3-auth-key=<key>] [--v3-priv-key=<key>] [--v3-auth-proto=<%s>] [--v3-priv-proto=<%s>] [--context=<string>] [--use-getbulk] [--getbulk-repetitions=<number>] [--agent-udpv4-endpoint=<X.X.X.X:NNNNN>] [--agent-udpv6-endpoint=<[X:X:..X]:NNNNN>] [--agent-unix-endpoint=</path/to/named/pipe>] [--start-oid=<OID>] [--stop-oid=<OID>] [--output-file=<filename>] [--variation-modules-dir=<dir>] [--variation-module=<module>] [--variation-module-options=<args]>]' % (sys.argv[0], '|'.join([ x for x in authProtocols if x != 'NONE' ]), '|'.join([ x for x in privProtocols if x != 'NONE' ]))
 
 log.setLogger('snmprec', 'stdout')
 
@@ -95,7 +94,7 @@ for opt in opts:
             sys.stderr.write('%s\r\n%s\r\n' % (sys.exc_info()[1], helpMessage))
             sys.exit(-1)
     elif opt[0] == '--quiet':
-        quietFlag = True
+       log.setLogger('snmprec', 'null') 
     elif opt[0] == '--v1':
         snmpVersion = 0
     elif opt[0] == '--v2c':
@@ -263,16 +262,14 @@ if snmpVersion == 3:
         authProtocols[v3AuthProto], v3AuthKey,
         privProtocols[v3PrivProto], v3PrivKey
         )
-    if not quietFlag:
-        log.msg('SNMP version 3, Context name: %s, SecurityName: %s, SecurityLevel: %s, Authentication key/protocol: %s/%s, Encryption (privacy) key/protocol: %s/%s\r\n' % (v3Context == '' and '\'\'' or v3Context, v3User, secLevel, v3AuthKey is None and '<NONE>' or v3AuthKey, v3AuthProto, v3PrivKey is None and '<NONE>' or v3PrivKey, v3PrivProto))
+    log.msg('SNMP version 3, Context name: %s, SecurityName: %s, SecurityLevel: %s, Authentication key/protocol: %s/%s, Encryption (privacy) key/protocol: %s/%s\r\n' % (v3Context == '' and '\'\'' or v3Context, v3User, secLevel, v3AuthKey is None and '<NONE>' or v3AuthKey, v3AuthProto, v3PrivKey is None and '<NONE>' or v3PrivKey, v3PrivProto))
 else:
     v3User = 'agt'
     secLevel = 'noAuthNoPriv'
     config.addV1System(
         snmpEngine, v3User, snmpCommunity
     )
-    if not quietFlag:
-        log.msg('SNMP version %s, Community name: %s\r\n' % (snmpVersion == 0 and '1' or '2c', snmpCommunity))
+    log.msg('SNMP version %s, Community name: %s\r\n' % (snmpVersion == 0 and '1' or '2c', snmpCommunity))
 
 config.addTargetParams(snmpEngine, 'pms', v3User, secLevel, snmpVersion)
 
@@ -285,8 +282,7 @@ if agentUDPv6Endpoint:
     config.addTargetAddr(
         snmpEngine, 'tgt', udp6.domainName, agentUDPv6Endpoint, 'pms'
     )
-    if not quietFlag:
-        log.msg('Querying UDP/IPv6 agent at [%s]:%s\r\n' % agentUDPv6Endpoint)
+    log.msg('Querying UDP/IPv6 agent at [%s]:%s\r\n' % agentUDPv6Endpoint)
 elif agentUNIXEndpoint:
     config.addSocketTransport(
         snmpEngine,
@@ -296,8 +292,7 @@ elif agentUNIXEndpoint:
     config.addTargetAddr(
         snmpEngine, 'tgt', unix.domainName, agentUNIXEndpoint, 'pms'
     )
-    if not quietFlag:
-        log.msg('Querying UNIX named pipe agent at %s\r\n' % agentUNIXEndpoint)
+    log.msg('Querying UNIX named pipe agent at %s\r\n' % agentUNIXEndpoint)
 elif agentUDPv4Endpoint:
     config.addSocketTransport(
         snmpEngine,
@@ -307,8 +302,7 @@ elif agentUDPv4Endpoint:
     config.addTargetAddr(
         snmpEngine, 'tgt', udp.domainName, agentUDPv4Endpoint, 'pms'
     )
-    if not quietFlag:
-        log.msg('Querying UDP/IPv4 agent at %s:%s\r\n' % agentUDPv4Endpoint)
+    log.msg('Querying UDP/IPv4 agent at %s:%s\r\n' % agentUDPv4Endpoint)
 
 # Variation module initialization
 
@@ -426,7 +420,7 @@ def cbFun(sendRequestHandle, errorIndication, errorStatus, errorIndex,
 
             cbCtx['count'] += 1
 
-            if not quietFlag and cbCtx['count'] % 100 == 0:
+            if cbCtx['count'] % 100 == 0:
                 log.msg('OIDs dumped: %s/%s\r\n' % (cbCtx['iteration'], cbCtx['count']))
 
     # Next request time
@@ -468,8 +462,7 @@ exc_info = None
 try:
     snmpEngine.transportDispatcher.runDispatcher()
 except KeyboardInterrupt:
-    if not quietFlag:
-        log.msg('Process terminated\r\n')
+    log.msg('Process terminated\r\n')
 except Exception:
     exc_info = sys.exc_info()
 
@@ -490,8 +483,7 @@ t = time.time() - t
 
 cbCtx['total'] += cbCtx['count']
 
-if not quietFlag:
-    log.msg('OIDs dumped: %s, elapsed: %.2f sec, rate: %.2f OIDs/sec\r\n' % (cbCtx['total'], t, t and cbCtx['count']//t or 0))
+log.msg('OIDs dumped: %s, elapsed: %.2f sec, rate: %.2f OIDs/sec\r\n' % (cbCtx['total'], t, t and cbCtx['count']//t or 0))
 
 if exc_info:
     e = exc_info[0](exc_info[1])
