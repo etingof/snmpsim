@@ -31,13 +31,11 @@ try:
         ['help', 'debug=', 'quiet', 'pysnmp-mib-dir=', 'mib-module=', 'start-oid=', 'stop-oid=', 'manual-values', 'output-file=', 'string-pool=', 'integer32-range=']
         )
 except Exception:
-    sys.stdout.write('getopt error: %s\r\n' % sys.exc_info()[1])
-    sys.stdout.write(helpMessage + '\r\n')
+    sys.stdout.write('ERROR: %s\r\n%s\r\n' % (sys.exc_info()[1], helpMessage))
     sys.exit(-1)
 
 if params:
-    sys.stdout.write('extra arguments supplied %s\r\n' % params)
-    sys.stdout.write(helpMessage + '\r\n')
+    sys.stdout.write('ERROR: extra arguments supplied %s\r\n%s\r\n' % (params, helpMessage))
     sys.exit(-1)    
 
 for opt in opts:
@@ -67,8 +65,7 @@ for opt in opts:
 
 # Catch missing params
 if not modNames:
-    sys.stdout.write('ERROR: MIB modules not specified\r\n')
-    sys.stdout.write(helpMessage + '\r\n')
+    sys.stdout.write('ERROR: MIB modules not specified\r\n%s\r\n' % helpMessage)
     sys.exit(-1)    
 
 def getValue(syntax, hint=''):

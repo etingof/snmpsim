@@ -72,13 +72,11 @@ try:
         ['help', 'debug=', 'logging-method=', 'quiet', 'v1', 'v2c', 'v3', 'version=', 'community=', 'v3-user=', 'v3-auth-key=', 'v3-priv-key=', 'v3-auth-proto=', 'v3-priv-proto=', 'context=', 'use-getbulk', 'getbulk-repetitions=', 'agent-address=', 'agent-port=', 'agent-udpv4-endpoint=', 'agent-udpv6-endpoint=', 'agent-unix-endpoint=', 'start-oid=', 'stop-oid=', 'output-file=', 'variation-modules-dir=', 'variation-module=', 'variation-module-options=']
         )
 except Exception:
-    sys.stderr.write('getopt error: %s\r\n' % sys.exc_info()[1])
-    sys.stderr.write(helpMessage + '\r\n')
+    sys.stderr.write('ERROR: %s\r\n%s\r\n' % (sys.exc_info()[1], helpMessage))
     sys.exit(-1)
 
 if params:
-    sys.stderr.write('extra arguments supplied %s\r\n' % params)
-    sys.stderr.write(helpMessage + '\r\n')
+    sys.stderr.write('ERROR: extra arguments supplied %s\r\n%s\r\n' % (params, helpMessage))
     sys.exit(-1)
 
 for opt in opts:
@@ -109,7 +107,7 @@ for opt in opts:
         elif opt[1] in ('3', 'v3'):
             snmpVersion = 3
         else:
-            sys.stderr.write('unknown SNMP version %s\r\n' % opt[1])
+            sys.stderr.write('ERROR: unknown SNMP version %s\r\n%s\r\n' % (opt[1], helpMessage))
             sys.exit(-1)
     elif opt[0] == '--community':
         snmpCommunity = opt[1]
@@ -120,14 +118,14 @@ for opt in opts:
     elif opt[0] == '--v3-auth-proto':
         v3AuthProto = opt[1].upper()
         if v3AuthProto not in authProtocols:
-            sys.stderr.write('bad v3 auth protocol %s\r\n' % v3AuthProto)
+            sys.stderr.write('ERROR: bad v3 auth protocol %s\r\n%s\r\n' % (v3AuthProto, helpMessage))
             sys.exit(-1)
     elif opt[0] == '--v3-priv-key':
         v3PrivKey = opt[1]
     elif opt[0] == '--v3-priv-proto':
         v3PrivProto = opt[1].upper()
         if v3PrivProto not in privProtocols:
-            sys.stderr.write('bad v3 privacy protocol %s\r\n' % v3PrivProto)
+            sys.stderr.write('ERROR: bad v3 privacy protocol %s\r\n%s\r\n' % (v3PrivProto, helpMessage))
             sys.exit(-1)
     elif opt[0] == '--context':
         v3Context = opt[1]
@@ -144,7 +142,7 @@ for opt in opts:
         try:
             agentUDPv4Endpoint = f(*opt[1].split(':'))
         except:
-            sys.stderr.write('improper IPv4/UDP endpoint %s\r\n' % opt[1])
+            sys.stderr.write('ERROR: improper IPv4/UDP endpoint %s\r\n%s\r\n' % (opt[1], helpMessage))
             sys.exit(-1)
     elif opt[0] == '--agent-udpv6-endpoint':
         if not udp6:
@@ -155,7 +153,7 @@ for opt in opts:
             try:
                 agentUDPv6Endpoint = h[1:], int(p)
             except:
-                sys.stderr.write('improper IPv6/UDP endpoint %s\r\n' % opt[1])
+                sys.stderr.write('ERROR: improper IPv6/UDP endpoint %s\r\n%s\r\n' % (opt[1], helpMessage))
                 sys.exit(-1)
         elif opt[1][0] == '[' and opt[1][-1] == ']':
             agentUDPv6Endpoint = opt[1][1:-1], 161
@@ -183,31 +181,31 @@ for opt in opts:
 
 if not agentUDPv4Endpoint and not agentUDPv6Endpoint and not agentUNIXEndpoint:
     if agentUDPv4Address[0] is None:
-        sys.stderr.write('ERROR: agent address endpoint not given\r\n%s\r\n' % helpMessage)
+        sys.stderr.write('ERROR: agent endpoint address not specified\r\n%s\r\n' % helpMessage)
         sys.exit(-1)
     else:
         agentUDPv4Endpoint = agentUDPv4Address
 
 if snmpVersion == 3:
     if v3User is None:
-        sys.stderr.write('--v3-user is missing\r\n%s\r\n' % helpMessage)
+        sys.stderr.write('ERROR: --v3-user is missing\r\n%s\r\n' % helpMessage)
         sys.exit(-1)
     if v3PrivKey and not v3AuthKey:
-        sys.stderr.write('--v3-auth-key is missing\r\n%s\r\n' % helpMessage)
+        sys.stderr.write('ERROR: --v3-auth-key is missing\r\n%s\r\n' % helpMessage)
         sys.exit(-1)
     if authProtocols[v3AuthProto] == config.usmNoAuthProtocol:
         if v3AuthKey is not None:
             v3AuthProto = 'MD5'
     else:
         if v3AuthKey is None:
-            sys.stderr.write('--v3-auth-key is missing\r\n%s\r\n' % helpMessage)
+            sys.stderr.write('ERROR: --v3-auth-key is missing\r\n%s\r\n' % helpMessage)
             sys.exit(-1)
     if privProtocols[v3PrivProto] == config.usmNoPrivProtocol:
         if v3PrivKey is not None:
             v3PrivProto = 'DES'
     else:
         if v3PrivKey is None:
-            sys.stderr.write('--v3-priv-key is missing\r\n%s\r\n' % helpMessage)
+            sys.stderr.write('ERROR: --v3-priv-key is missing\r\n%s\r\n' % helpMessage)
             sys.exit(-1)
  
 if getBulkFlag and not snmpVersion:
