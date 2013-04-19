@@ -150,14 +150,14 @@ for opt in opts:
         else:
             h, p = opt[1], 161
         agentUDPv6Endpoints.append(
-            udp6.Udp6Transport().openServerMode((h, p)), opt[1]
+            (udp6.Udp6Transport().openServerMode((h, p)), opt[1])
         )
     elif opt[0] == '--agent-unix-endpoint':
         if not unix:
             sys.stderr.write('This system does not support UNIX domain sockets\r\n')
             sys.exit(-1)
         agentUNIXEndpoints.append(
-            unix.UnixTransport().openServerMode(opt[1]), opt[1]
+            (unix.UnixTransport().openServerMode(opt[1]), opt[1])
         )
     elif opt[0] == '--agent-address':
         sys.stderr.write('ERROR: use --agent-udpv4-endpoint=%s option instead of --agent-address\r\n%s\r\n' % (opt[1], helpMessage))
@@ -831,7 +831,7 @@ if v2cArch:
         transportDispatcher.registerTransport(
                 udp6.domainName + (idx,), agentUDPv6Endpoints[idx][0]
             )
-        log.msg('Listening at UDP/IPv6 endpoint %s:%s, transport ID %s\r\n' % (agentUDPv6Endpoints[idx][1] + ('.'.join([str(x) for x in udp6.domainName + (idx,)]),)))
+        log.msg('Listening at UDP/IPv6 endpoint %s, transport ID %s\r\n' % (agentUDPv6Endpoints[idx][1], '.'.join([str(x) for x in udp6.domainName + (idx,)]),))
     for idx in range(len(agentUNIXEndpoints)):
         transportDispatcher.registerTransport(
                 unix.domainName + (idx,), agentUNIXEndpoints[idx][0]
@@ -867,7 +867,7 @@ else:
             snmpEngine,
             udp6.domainName + (idx,), agentUDPv6Endpoints[idx][0]
         )
-        log.msg('Listening at UDP/IPv6 endpoint %s:%s, transport ID %s\r\n' % (agentUDPv6Endpoints[idx][1] + ('.'.join([str(x) for x in udp6.domainName + (idx,)]),)))
+        log.msg('Listening at UDP/IPv6 endpoint %s, transport ID %s\r\n' % (agentUDPv6Endpoints[idx][1], '.'.join([str(x) for x in udp6.domainName + (idx,)]),))
     for idx in range(len(agentUNIXEndpoints)):
         config.addSocketTransport(
             snmpEngine,
