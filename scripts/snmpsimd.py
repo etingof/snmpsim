@@ -52,7 +52,6 @@ v3AuthKey = 'auctoritas'
 v3AuthProto = 'MD5'
 v3PrivKey = 'privatus'
 v3PrivProto = 'DES'
-agentUDPv4Address = ('127.0.0.1', 161)
 agentUDPv4Endpoints = []
 agentUDPv6Endpoints = []
 agentUNIXEndpoints = []
@@ -84,11 +83,11 @@ try:
         ['help', 'debug=', 'logging-method=', 'device-dir=', 'data-dir=', 'cache-dir=', 'force-index-rebuild', 'validate-device-data', 'validate-data', 'variation-modules-dir=', 'variation-module-options=', 'agent-address=', 'agent-port=', 'agent-udpv4-endpoint=', 'agent-udpv6-endpoint=', 'agent-unix-endpoint=', 'v2c-arch', 'v3-only', 'v3-user=', 'v3-auth-key=', 'v3-auth-proto=', 'v3-priv-key=', 'v3-priv-proto=']
         )
 except Exception:
-    sys.stderr.write('%s\r\n%s\r\n' % (sys.exc_info()[1], helpMessage))
+    sys.stderr.write('ERROR: %s\r\n%s\r\n' % (sys.exc_info()[1], helpMessage))
     sys.exit(-1)
 
 if params:
-    sys.stderr.write('extra arguments supplied %s%s\r\n' % (params, helpMessage))
+    sys.stderr.write('ERROR: extra arguments supplied %s\r\n%s\r\n' % (params, helpMessage))
     sys.exit(-1)
 
 for opt in opts:
@@ -119,7 +118,7 @@ for opt in opts:
         try:
             modName, args = args[0], args[1]
         except:
-            sys.stderr.write('improper variation module options: %s\r\n'%opt[1])
+            sys.stderr.write('ERROR: improper variation module options: %s\r\n%s\r\n' % (opt[1], helpMessage))
             sys.exit(-1)
         if '=' in modName:
             modName, alias = modName.split('=', 1)
@@ -131,9 +130,9 @@ for opt in opts:
     elif opt[0] == '--agent-udpv4-endpoint':
         f = lambda h,p=161: (h, int(p))
         try:
-            agentUDPv4Endpoints.append(f(*opt[1].split(':')))
+            agentUDPv4Endpoints.append((udp.UdpTransport().openServerMode(f(*opt[1].split(':'))), opt[1]))
         except:
-            sys.stderr.write('improper IPv4/UDP endpoint %s\r\n' % opt[1])
+            sys.stderr.write('ERROR: improper IPv4/UDP endpoint %s\r\n%s\r\n' % (opt[1], helpMessage))
             sys.exit(-1)
     elif opt[0] == '--agent-udpv6-endpoint':
         if not udp6:
@@ -144,22 +143,28 @@ for opt in opts:
             try:
                 h, p = h[1:], int(p)
             except:
-                sys.stderr.write('improper IPv6/UDP endpoint %s\r\n' % opt[1])
+                sys.stderr.write('ERROR: improper IPv6/UDP endpoint %s\r\n%s\r\n' % (opt[1], helpMessage))
                 sys.exit(-1)
         elif opt[1][0] == '[' and opt[1][-1] == ']':
             h, p = opt[1][1:-1], 161
         else:
             h, p = opt[1], 161
-        agentUDPv6Endpoints.append((h, p))
+        agentUDPv6Endpoints.append(
+            udp6.Udp6Transport().openServerMode((h, p)), opt[1]
+        )
     elif opt[0] == '--agent-unix-endpoint':
         if not unix:
             sys.stderr.write('This system does not support UNIX domain sockets\r\n')
             sys.exit(-1)
-        agentUNIXEndpoints.append(opt[1])
+        agentUNIXEndpoints.append(
+            unix.UnixTransport().openServerMode(opt[1]), opt[1]
+        )
     elif opt[0] == '--agent-address':
-        agentUDPv4Address = (opt[1], agentUDPv4Address[1])
+        sys.stderr.write('ERROR: use --agent-udpv4-endpoint=%s option instead of --agent-address\r\n%s\r\n' % (opt[1], helpMessage))
+        sys.exit(-1)
     elif opt[0] == '--agent-port':
-        agentUDPv4Address = (agentUDPv4Address[0], int(opt[1]))
+        sys.stderr.write('ERROR: use --agent-udpv4-endpoint=0.0.0.0:%s option instead of --agent-port\r\n%s\r\n' % (opt[1], helpMessage))
+        sys.exit(-1)
     elif opt[0] == '--v2c-arch':
         v2cArch = True
     elif opt[0] == '--v3-only':
@@ -171,19 +176,25 @@ for opt in opts:
     elif opt[0] == '--v3-auth-proto':
         v3AuthProto = opt[1].upper()
         if v3AuthProto not in authProtocols:
-            sys.stderr.write('bad v3 auth protocol %s\r\n' % v3AuthProto)
+            sys.stderr.write('ERROR: bad v3 auth protocol %s\r\n%s\r\n' % (v3AuthProto, helpMessage))
             sys.exit(-1)
     elif opt[0] == '--v3-priv-key':
         v3PrivKey = opt[1]
     elif opt[0] == '--v3-priv-proto':
         v3PrivProto = opt[1].upper()
         if v3PrivProto not in privProtocols:
-            sys.stderr.write('bad v3 privacy protocol %s\r\n' % v3PrivProto)
+            sys.stderr.write('ERROR: bad v3 privacy protocol %s\r\n%s\r\n' % (v3PrivProto, helpMessage))
             sys.exit(-1)
 
 if authProtocols[v3AuthProto] == config.usmNoAuthProtocol and \
     privProtocols[v3PrivProto] != config.usmNoPrivProtocol:
-        sys.stderr.write('privacy impossible without authentication\r\n')
+        sys.stderr.write('ERROR: privacy impossible without authentication\r\n%s\r\n', helpMessage)
+        sys.exit(-1)
+
+if not agentUDPv4Endpoints and \
+   not agentUDPv6Endpoints and \
+   not agentUNIXEndpoints:
+        sys.stderr.write('ERROR: agent endpoint address(es) not specified\r\n%s\r\n' % helpMessage)
         sys.exit(-1)
 
 for variationModulesDir in confdir.variation:
@@ -231,12 +242,6 @@ for variationModulesDir in confdir.variation:
 if variationModulesOptions:
     log.msg('ERROR: unused options for variation modules: %s\r\n' %  ', '.join(variationModulesOptions.keys()))
     sys.exit(-1)
-     
-# for backward compatibility
-if not agentUDPv4Endpoints and \
-   not agentUDPv6Endpoints and \
-   not agentUNIXEndpoints:
-    agentUDPv4Endpoints.append(agentUDPv4Address)
 
 if not os.path.exists(confdir.cache):
     log.msg('Creating cache directory %s... \r' % confdir.cache)
@@ -819,22 +824,19 @@ if v2cArch:
     transportDispatcher = AsynsockDispatcher()
     for idx in range(len(agentUDPv4Endpoints)):
         transportDispatcher.registerTransport(
-                udp.domainName + (idx,),
-                udp.UdpTransport().openServerMode(agentUDPv4Endpoints[idx])
+                udp.domainName + (idx,), agentUDPv4Endpoints[idx][0]
             )
-        log.msg('Listening at UDP/IPv4 endpoint %s:%s, transport ID %s\r\n' % (agentUDPv4Endpoints[idx] + ('.'.join([str(x) for x in udp.domainName + (idx,)]),)))
+        log.msg('Listening at UDP/IPv4 endpoint %s, transport ID %s\r\n' % (agentUDPv4Endpoints[idx][1], '.'.join([str(x) for x in udp.domainName + (idx,)]),))
     for idx in range(len(agentUDPv6Endpoints)):
         transportDispatcher.registerTransport(
-                udp6.domainName + (idx,),
-                udp6.Udp6Transport().openServerMode(agentUDPv6Endpoints[idx])
+                udp6.domainName + (idx,), agentUDPv6Endpoints[idx][0]
             )
-        log.msg('Listening at UDP/IPv6 endpoint %s:%s, transport ID %s\r\n' % (agentUDPv6Endpoints[idx] + ('.'.join([str(x) for x in udp6.domainName + (idx,)]),)))
+        log.msg('Listening at UDP/IPv6 endpoint %s:%s, transport ID %s\r\n' % (agentUDPv6Endpoints[idx][1] + ('.'.join([str(x) for x in udp6.domainName + (idx,)]),)))
     for idx in range(len(agentUNIXEndpoints)):
         transportDispatcher.registerTransport(
-                unix.domainName + (idx,),
-                unix.UnixTransport().openServerMode(agentUNIXEndpoints[idx])
+                unix.domainName + (idx,), agentUNIXEndpoints[idx][0]
             )
-        log.msg('Listening at UNIX domain endpoint %s, transport ID %s\r\n' % (agentUNIXEndpoints[idx], '.'.join([str(x) for x in unix.domainName + (idx,)])))
+        log.msg('Listening at UNIX domain endpoint %s, transport ID %s\r\n' % (agentUNIXEndpoints[idx][1], '.'.join([str(x) for x in unix.domainName + (idx,)])))
     transportDispatcher.registerRecvCbFun(commandResponderCbFun)
 else:
     log.msg('SNMPv3 USM SecurityName: %s\r\n' % v3User)
@@ -857,24 +859,21 @@ else:
     for idx in range(len(agentUDPv4Endpoints)):
         config.addSocketTransport(
             snmpEngine,
-            udp.domainName + (idx,),
-            udp.UdpTransport().openServerMode(agentUDPv4Endpoints[idx])
+            udp.domainName + (idx,), agentUDPv4Endpoints[idx][0]
         )
-        log.msg('Listening at UDP/IPv4 endpoint %s:%s, transport ID %s\r\n' % (agentUDPv4Endpoints[idx] + ('.'.join([str(x) for x in udp.domainName + (idx,)]),)))
+        log.msg('Listening at UDP/IPv4 endpoint %s, transport ID %s\r\n' % (agentUDPv4Endpoints[idx][1], '.'.join([str(x) for x in udp.domainName + (idx,)]),))
     for idx in range(len(agentUDPv6Endpoints)):
         config.addSocketTransport(
             snmpEngine,
-            udp6.domainName + (idx,),
-            udp6.Udp6Transport().openServerMode(agentUDPv6Endpoints[idx])
+            udp6.domainName + (idx,), agentUDPv6Endpoints[idx][0]
         )
-        log.msg('Listening at UDP/IPv6 endpoint %s:%s, transport ID %s\r\n' % (agentUDPv6Endpoints[idx] + ('.'.join([str(x) for x in udp6.domainName + (idx,)]),)))
+        log.msg('Listening at UDP/IPv6 endpoint %s:%s, transport ID %s\r\n' % (agentUDPv6Endpoints[idx][1] + ('.'.join([str(x) for x in udp6.domainName + (idx,)]),)))
     for idx in range(len(agentUNIXEndpoints)):
         config.addSocketTransport(
             snmpEngine,
-            unix.domainName + (idx,),
-            unix.UnixTransport().openServerMode(agentUNIXEndpoints[idx])
+            unix.domainName + (idx,), agentUNIXEndpoints[idx][0]
         )
-        log.msg('Listening at UNIX domain endpoint %s, transport ID %s\r\n' % (agentUNIXEndpoints[idx], '.'.join([str(x) for x in unix.domainName + (idx,)])))
+        log.msg('Listening at UNIX domain endpoint %s, transport ID %s\r\n' % (agentUNIXEndpoints[idx][1], '.'.join([str(x) for x in unix.domainName + (idx,)])))
 
     # SNMP applications
 
