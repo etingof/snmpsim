@@ -39,7 +39,7 @@ class FileLogger(AbstractLogger):
         if not priv:
             raise error.SnmpsimError('Bad log file params, need filename')
         try:
-            self._fileobj = open(priv[0], 'w+')
+            self._fileobj = open(priv[0], 'a')
         except:
             raise error.SnmpsimError(
                 'Log file open failure: %s' % sys.exc_info()[1]
