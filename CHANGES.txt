@@ -3,6 +3,7 @@
 
 - Centralized logging facility added. Logging into syslog or file is
   now supported.
+- Simulator process daemonization and privileges drop implemented.
 - More logging added into snmpsimd.py, snmprec.py and variation modules
   to ease the understanding of their operation.
 - The --quiet flag of snmprec.py now depricated in favor of "null"

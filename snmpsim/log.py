@@ -10,7 +10,7 @@ from snmpsim import error
 
 class AbstractLogger:
     def __init__(self, progId, *priv):
-        self.progId = '%s[%d]' % (progId, getattr(os, 'getpid', lambda x: 0)())
+        self.progId = progId
         self.init(*priv)
     def __call__(self, s): pass
     def init(self, *priv): pass
@@ -50,7 +50,8 @@ class FileLogger(AbstractLogger):
                '.%.3d' % int((time.time() % 1) * 1000)
 
     def __call__(self, s):
-        self._fileobj.write('%s %s: %s' % (self.timestamp(), self.progId, s))
+        self._fileobj.write('%s %s[%s]: %s' % (self.timestamp(), self.progId, getattr(os, 'getpid', lambda x: 0)(), s))
+        self._fileobj.flush()
 
 class ProtoStdLogger(FileLogger):
     stdfile = None

@@ -34,11 +34,10 @@ from pysnmp import error
 from pysnmp import debug
 from snmpsim import __version__
 from snmpsim.error import SnmpsimError, NoDataNotification
-from snmpsim import confdir
+from snmpsim import confdir, log, daemon
 from snmpsim.record import dump, mvc, sap, walk, snmprec
 from snmpsim.record.search.file import searchRecordByOid
 from snmpsim.record.search.database import RecordIndex
-from snmpsim import log
 
 # Process command-line options
 
@@ -52,6 +51,9 @@ v3AuthKey = 'auctoritas'
 v3AuthProto = 'MD5'
 v3PrivKey = 'privatus'
 v3PrivProto = 'DES'
+pidFile = '/var/run/snmpsim/snmpsimd.pid'
+foregroundFlag = True
+procUser = procGroup = None
 agentUDPv4Endpoints = []
 agentUDPv6Endpoints = []
 agentUNIXEndpoints = []
@@ -74,185 +76,6 @@ privProtocols = {
   'NONE': config.usmNoPrivProtocol
 }
  
-helpMessage = 'Usage: %s [--help] [--version ] [--debug=<category>] [--logging-method=<method|?>] [--data-dir=<dir>] [--cache-dir=<dir>] [--force-index-rebuild] [--validate-data] [--variation-modules-dir=<dir>] [--variation-module-options=<module[=alias][:args]>] [--agent-udpv4-endpoint=<X.X.X.X:NNNNN>] [--agent-udpv6-endpoint=<[X:X:..X]:NNNNN>] [--agent-unix-endpoint=</path/to/named/pipe>] [--v2c-arch] [--v3-only] [--v3-user=<username>] [--v3-auth-key=<key>] [--v3-auth-proto=<%s>] [--v3-priv-key=<key>] [--v3-priv-proto=<%s>]' % (sys.argv[0], '|'.join(authProtocols), '|'.join(privProtocols))
-
-log.setLogger('snmpsimd', 'stdout')
-
-try:
-    opts, params = getopt.getopt(sys.argv[1:], 'h',
-        ['help', 'debug=', 'logging-method=', 'device-dir=', 'data-dir=', 'cache-dir=', 'force-index-rebuild', 'validate-device-data', 'validate-data', 'variation-modules-dir=', 'variation-module-options=', 'agent-address=', 'agent-port=', 'agent-udpv4-endpoint=', 'agent-udpv6-endpoint=', 'agent-unix-endpoint=', 'v2c-arch', 'v3-only', 'v3-user=', 'v3-auth-key=', 'v3-auth-proto=', 'v3-priv-key=', 'v3-priv-proto=']
-        )
-except Exception:
-    sys.stderr.write('ERROR: %s\r\n%s\r\n' % (sys.exc_info()[1], helpMessage))
-    sys.exit(-1)
-
-if params:
-    sys.stderr.write('ERROR: extra arguments supplied %s\r\n%s\r\n' % (params, helpMessage))
-    sys.exit(-1)
-
-for opt in opts:
-    if opt[0] == '-h' or opt[0] == '--help' or \
-       opt[0] == '-v' or opt[0] == '--version':
-        sys.stderr.write('SNMP Simulator version %s, written by Ilya Etingof <ilya@glas.net>\r\nSoftware documentation and support at http://snmpsim.sf.net\r\n%s\r\n' % (__version__, helpMessage))
-        sys.exit(-1)
-    elif opt[0] == '--debug':
-        debug.setLogger(debug.Debug(opt[1]))
-    elif opt[0] == '--logging-method':
-        try:
-            log.setLogger('snmpsimd', *opt[1].split(':'))
-        except SnmpsimError:
-            sys.stderr.write('%s\r\n%s\r\n' % (sys.exc_info()[1], helpMessage))
-            sys.exit(-1)
-    elif opt[0] in ('--device-dir', '--data-dir'):
-        confdir.data.insert(0, opt[1])
-    elif opt[0] == '--cache-dir':
-        confdir.cache = opt[1]
-    elif opt[0] == '--force-index-rebuild':
-        forceIndexBuild = True
-    elif opt[0] in ('--validate-device-data', '--validate-data'):
-        validateData = True
-    elif opt[0] == '--variation-modules-dir':
-        confdir.variation.insert(0, opt[1])
-    elif opt[0] == '--variation-module-options':
-        args = opt[1].split(':', 1)
-        try:
-            modName, args = args[0], args[1]
-        except:
-            sys.stderr.write('ERROR: improper variation module options: %s\r\n%s\r\n' % (opt[1], helpMessage))
-            sys.exit(-1)
-        if '=' in modName:
-            modName, alias = modName.split('=', 1)
-        else:
-            alias = os.path.splitext(os.path.basename(modName))[0]
-        if modName not in variationModulesOptions:
-            variationModulesOptions[modName] = []
-        variationModulesOptions[modName].append((alias, args))
-    elif opt[0] == '--agent-udpv4-endpoint':
-        f = lambda h,p=161: (h, int(p))
-        try:
-            agentUDPv4Endpoints.append((udp.UdpTransport().openServerMode(f(*opt[1].split(':'))), opt[1]))
-        except:
-            sys.stderr.write('ERROR: improper IPv4/UDP endpoint %s\r\n%s\r\n' % (opt[1], helpMessage))
-            sys.exit(-1)
-    elif opt[0] == '--agent-udpv6-endpoint':
-        if not udp6:
-            sys.stderr.write('This system does not support UDP/IP6\r\n')
-            sys.exit(-1)
-        if opt[1].find(']:') != -1 and opt[1][0] == '[':
-            h, p = opt[1].split(']:')
-            try:
-                h, p = h[1:], int(p)
-            except:
-                sys.stderr.write('ERROR: improper IPv6/UDP endpoint %s\r\n%s\r\n' % (opt[1], helpMessage))
-                sys.exit(-1)
-        elif opt[1][0] == '[' and opt[1][-1] == ']':
-            h, p = opt[1][1:-1], 161
-        else:
-            h, p = opt[1], 161
-        agentUDPv6Endpoints.append(
-            (udp6.Udp6Transport().openServerMode((h, p)), opt[1])
-        )
-    elif opt[0] == '--agent-unix-endpoint':
-        if not unix:
-            sys.stderr.write('This system does not support UNIX domain sockets\r\n')
-            sys.exit(-1)
-        agentUNIXEndpoints.append(
-            (unix.UnixTransport().openServerMode(opt[1]), opt[1])
-        )
-    elif opt[0] == '--agent-address':
-        sys.stderr.write('ERROR: use --agent-udpv4-endpoint=%s option instead of --agent-address\r\n%s\r\n' % (opt[1], helpMessage))
-        sys.exit(-1)
-    elif opt[0] == '--agent-port':
-        sys.stderr.write('ERROR: use --agent-udpv4-endpoint=0.0.0.0:%s option instead of --agent-port\r\n%s\r\n' % (opt[1], helpMessage))
-        sys.exit(-1)
-    elif opt[0] == '--v2c-arch':
-        v2cArch = True
-    elif opt[0] == '--v3-only':
-        v3Only = True
-    elif opt[0] == '--v3-user':
-        v3User = opt[1]
-    elif opt[0] == '--v3-auth-key':
-        v3AuthKey = opt[1]
-    elif opt[0] == '--v3-auth-proto':
-        v3AuthProto = opt[1].upper()
-        if v3AuthProto not in authProtocols:
-            sys.stderr.write('ERROR: bad v3 auth protocol %s\r\n%s\r\n' % (v3AuthProto, helpMessage))
-            sys.exit(-1)
-    elif opt[0] == '--v3-priv-key':
-        v3PrivKey = opt[1]
-    elif opt[0] == '--v3-priv-proto':
-        v3PrivProto = opt[1].upper()
-        if v3PrivProto not in privProtocols:
-            sys.stderr.write('ERROR: bad v3 privacy protocol %s\r\n%s\r\n' % (v3PrivProto, helpMessage))
-            sys.exit(-1)
-
-if authProtocols[v3AuthProto] == config.usmNoAuthProtocol and \
-    privProtocols[v3PrivProto] != config.usmNoPrivProtocol:
-        sys.stderr.write('ERROR: privacy impossible without authentication\r\n%s\r\n', helpMessage)
-        sys.exit(-1)
-
-if not agentUDPv4Endpoints and \
-   not agentUDPv6Endpoints and \
-   not agentUNIXEndpoints:
-        sys.stderr.write('ERROR: agent endpoint address(es) not specified\r\n%s\r\n' % helpMessage)
-        sys.exit(-1)
-
-for variationModulesDir in confdir.variation:
-    log.msg('Scanning "%s" directory for variation modules...\r\n' % variationModulesDir)
-    if not os.path.exists(variationModulesDir):
-        log.msg('Directory %s does not exist\r\n' % variationModulesDir)
-        continue
-    for dFile in os.listdir(variationModulesDir):
-        if dFile[-3:] != '.py':
-            continue
-        _toLoad = []
-        modName = os.path.splitext(os.path.basename(dFile))[0]
-        if modName in variationModulesOptions:
-            while variationModulesOptions[modName]:
-                alias, args = variationModulesOptions[modName].pop()
-                _toLoad.append((alias, args))
-            del variationModulesOptions[modName]
-        else:
-            _toLoad.append((modName, ''))
-
-        mod = variationModulesDir + os.path.sep + dFile
-
-        for alias, args in _toLoad:
-            if alias in variationModules:
-                log.msg('WARNING: ignoring duplicate module %s at %s\r\n' %  (alias, mod))
-                continue
-
-            ctx = { 'path': mod,
-                    'alias': alias,
-                    'args': args }
-
-            try:
-                if sys.version_info[0] > 2:
-                    exec(compile(open(mod).read(), mod, 'exec'), ctx)
-                else:
-                    execfile(mod, ctx)
-            except Exception:
-                log.msg('Variation module %s execution failure: %s\r\n' %  (mod, sys.exc_info()[1]))
-                sys.exit(-1)
-            else:
-                variationModules[alias] = ctx
-
-    log.msg('A total of %s modules found in %s\r\n' % (len(variationModules), variationModulesDir))
-
-if variationModulesOptions:
-    log.msg('ERROR: unused options for variation modules: %s\r\n' %  ', '.join(variationModulesOptions.keys()))
-    sys.exit(-1)
-
-if not os.path.exists(confdir.cache):
-    log.msg('Creating cache directory %s... \r' % confdir.cache)
-    try:
-        os.makedirs(confdir.cache)
-    except OSError:
-        log.msg('ERROR: %s: %s\r\n' % (confdir.cache, sys.exc_info()[1]))
-        sys.exit(-1)
-    else:
-        log.msg('done\r\n')
-
 # Extended snmprec record handler
 
 class SnmprecRecord(snmprec.SnmprecRecord):
@@ -623,6 +446,205 @@ if not v2cArch:
                 probeHashContext(self, snmpEngine, stateReference, contextName),
                 PDU, acInfo
             )
+
+# main script body starts here
+
+helpMessage = 'Usage: %s [--help] [--version ] [--debug=<category>] [--daemonize] [--process-user=<uname>] [--process-group=<gname>] [--logging-method=<method|?>] [--data-dir=<dir>] [--cache-dir=<dir>] [--force-index-rebuild] [--validate-data] [--variation-modules-dir=<dir>] [--variation-module-options=<module[=alias][:args]>] [--agent-udpv4-endpoint=<X.X.X.X:NNNNN>] [--agent-udpv6-endpoint=<[X:X:..X]:NNNNN>] [--agent-unix-endpoint=</path/to/named/pipe>] [--v2c-arch] [--v3-only] [--v3-user=<username>] [--v3-auth-key=<key>] [--v3-auth-proto=<%s>] [--v3-priv-key=<key>] [--v3-priv-proto=<%s>]' % (sys.argv[0], '|'.join(authProtocols), '|'.join(privProtocols))
+
+try:
+    opts, params = getopt.getopt(sys.argv[1:], 'h',
+        ['help', 'debug=', 'daemonize', 'process-user=', 'process-group=', 'logging-method=', 'device-dir=', 'data-dir=', 'cache-dir=', 'force-index-rebuild', 'validate-device-data', 'validate-data', 'variation-modules-dir=', 'variation-module-options=', 'agent-address=', 'agent-port=', 'agent-udpv4-endpoint=', 'agent-udpv6-endpoint=', 'agent-unix-endpoint=', 'v2c-arch', 'v3-only', 'v3-user=', 'v3-auth-key=', 'v3-auth-proto=', 'v3-priv-key=', 'v3-priv-proto=']
+        )
+except Exception:
+    sys.stderr.write('ERROR: %s\r\n%s\r\n' % (sys.exc_info()[1], helpMessage))
+    sys.exit(-1)
+
+if params:
+    sys.stderr.write('ERROR: extra arguments supplied %s\r\n%s\r\n' % (params, helpMessage))
+    sys.exit(-1)
+
+log.setLogger('snmpsimd', 'stdout')
+
+for opt in opts:
+    if opt[0] == '-h' or opt[0] == '--help' or \
+       opt[0] == '-v' or opt[0] == '--version':
+        sys.stderr.write('SNMP Simulator version %s, written by Ilya Etingof <ilya@glas.net>\r\nSoftware documentation and support at http://snmpsim.sf.net\r\n%s\r\n' % (__version__, helpMessage))
+        sys.exit(-1)
+    elif opt[0] == '--debug':
+        debug.setLogger(debug.Debug(opt[1]))
+    elif opt[0] == '--daemonize':
+        foregroundFlag = False
+    elif opt[0] == '--process-user':
+        procUser = opt[1]
+    elif opt[0] == '--process-group':
+        procGroup = opt[1]
+    elif opt[0] == '--logging-method':
+        try:
+            log.setLogger('snmpsimd', *opt[1].split(':'))
+        except SnmpsimError:
+            sys.stderr.write('%s\r\n%s\r\n' % (sys.exc_info()[1], helpMessage))
+            sys.exit(-1)
+    elif opt[0] in ('--device-dir', '--data-dir'):
+        confdir.data.insert(0, opt[1])
+    elif opt[0] == '--cache-dir':
+        confdir.cache = opt[1]
+    elif opt[0] == '--force-index-rebuild':
+        forceIndexBuild = True
+    elif opt[0] in ('--validate-device-data', '--validate-data'):
+        validateData = True
+    elif opt[0] == '--variation-modules-dir':
+        confdir.variation.insert(0, opt[1])
+    elif opt[0] == '--variation-module-options':
+        args = opt[1].split(':', 1)
+        try:
+            modName, args = args[0], args[1]
+        except:
+            sys.stderr.write('ERROR: improper variation module options: %s\r\n%s\r\n' % (opt[1], helpMessage))
+            sys.exit(-1)
+        if '=' in modName:
+            modName, alias = modName.split('=', 1)
+        else:
+            alias = os.path.splitext(os.path.basename(modName))[0]
+        if modName not in variationModulesOptions:
+            variationModulesOptions[modName] = []
+        variationModulesOptions[modName].append((alias, args))
+    elif opt[0] == '--agent-udpv4-endpoint':
+        f = lambda h,p=161: (h, int(p))
+        try:
+            agentUDPv4Endpoints.append((udp.UdpTransport().openServerMode(f(*opt[1].split(':'))), opt[1]))
+        except:
+            sys.stderr.write('ERROR: improper/busy IPv4/UDP endpoint %s\r\n%s\r\n' % (opt[1], helpMessage))
+            sys.exit(-1)
+    elif opt[0] == '--agent-udpv6-endpoint':
+        if not udp6:
+            sys.stderr.write('This system does not support UDP/IP6\r\n')
+            sys.exit(-1)
+        if opt[1].find(']:') != -1 and opt[1][0] == '[':
+            h, p = opt[1].split(']:')
+            try:
+                h, p = h[1:], int(p)
+            except:
+                sys.stderr.write('ERROR: improper/busy IPv6/UDP endpoint %s\r\n%s\r\n' % (opt[1], helpMessage))
+                sys.exit(-1)
+        elif opt[1][0] == '[' and opt[1][-1] == ']':
+            h, p = opt[1][1:-1], 161
+        else:
+            h, p = opt[1], 161
+        agentUDPv6Endpoints.append(
+            (udp6.Udp6Transport().openServerMode((h, p)), opt[1])
+        )
+    elif opt[0] == '--agent-unix-endpoint':
+        if not unix:
+            sys.stderr.write('This system does not support UNIX domain sockets\r\n')
+            sys.exit(-1)
+        agentUNIXEndpoints.append(
+            (unix.UnixTransport().openServerMode(opt[1]), opt[1])
+        )
+    elif opt[0] == '--agent-address':
+        sys.stderr.write('ERROR: use --agent-udpv4-endpoint=%s option instead of --agent-address\r\n%s\r\n' % (opt[1], helpMessage))
+        sys.exit(-1)
+    elif opt[0] == '--agent-port':
+        sys.stderr.write('ERROR: use --agent-udpv4-endpoint=0.0.0.0:%s option instead of --agent-port\r\n%s\r\n' % (opt[1], helpMessage))
+        sys.exit(-1)
+    elif opt[0] == '--v2c-arch':
+        v2cArch = True
+    elif opt[0] == '--v3-only':
+        v3Only = True
+    elif opt[0] == '--v3-user':
+        v3User = opt[1]
+    elif opt[0] == '--v3-auth-key':
+        v3AuthKey = opt[1]
+    elif opt[0] == '--v3-auth-proto':
+        v3AuthProto = opt[1].upper()
+        if v3AuthProto not in authProtocols:
+            sys.stderr.write('ERROR: bad v3 auth protocol %s\r\n%s\r\n' % (v3AuthProto, helpMessage))
+            sys.exit(-1)
+    elif opt[0] == '--v3-priv-key':
+        v3PrivKey = opt[1]
+    elif opt[0] == '--v3-priv-proto':
+        v3PrivProto = opt[1].upper()
+        if v3PrivProto not in privProtocols:
+            sys.stderr.write('ERROR: bad v3 privacy protocol %s\r\n%s\r\n' % (v3PrivProto, helpMessage))
+            sys.exit(-1)
+
+if authProtocols[v3AuthProto] == config.usmNoAuthProtocol and \
+    privProtocols[v3PrivProto] != config.usmNoPrivProtocol:
+        sys.stderr.write('ERROR: privacy impossible without authentication\r\n%s\r\n', helpMessage)
+        sys.exit(-1)
+
+if not agentUDPv4Endpoints and \
+   not agentUDPv6Endpoints and \
+   not agentUNIXEndpoints:
+        sys.stderr.write('ERROR: agent endpoint address(es) not specified\r\n%s\r\n' % helpMessage)
+        sys.exit(-1)
+
+try:
+    daemon.dropPrivileges(procUser, procGroup)
+except:
+    sys.stderr.write('ERROR: cant drop priveleges: %s\r\n%s\r\n' % (sys.exc_info()[1], helpMessage))
+    sys.exit(-1)
+
+if not foregroundFlag:
+    try:
+        daemon.daemonize(pidFile)
+    except:
+        sys.stderr.write('ERROR: cant daemonize process: %s\r\n%s\r\n' % (sys.exc_info()[1], helpMessage))
+        sys.exit(-1)
+
+for variationModulesDir in confdir.variation:
+    log.msg('Scanning "%s" directory for variation modules...\r\n' % variationModulesDir)
+    if not os.path.exists(variationModulesDir):
+        log.msg('Directory %s does not exist\r\n' % variationModulesDir)
+        continue
+    for dFile in os.listdir(variationModulesDir):
+        if dFile[-3:] != '.py':
+            continue
+        _toLoad = []
+        modName = os.path.splitext(os.path.basename(dFile))[0]
+        if modName in variationModulesOptions:
+            while variationModulesOptions[modName]:
+                alias, args = variationModulesOptions[modName].pop()
+                _toLoad.append((alias, args))
+            del variationModulesOptions[modName]
+        else:
+            _toLoad.append((modName, ''))
+
+        mod = variationModulesDir + os.path.sep + dFile
+
+        for alias, args in _toLoad:
+            if alias in variationModules:
+                log.msg('WARNING: ignoring duplicate module %s at %s\r\n' %  (alias, mod))
+                continue
+
+            ctx = { 'path': mod,
+                    'alias': alias,
+                    'args': args }
+
+            try:
+                if sys.version_info[0] > 2:
+                    exec(compile(open(mod).read(), mod, 'exec'), ctx)
+                else:
+                    execfile(mod, ctx)
+            except Exception:
+                log.msg('Variation module %s execution failure: %s\r\n' %  (mod, sys.exc_info()[1]))
+                sys.exit(-1)
+            else:
+                variationModules[alias] = ctx
+
+    log.msg('A total of %s modules found in %s\r\n' % (len(variationModules), variationModulesDir))
+
+if variationModulesOptions:
+    log.msg('WARNING: unused options for variation modules: %s\r\n' %  ', '.join(variationModulesOptions.keys()))
+
+if not os.path.exists(confdir.cache):
+    try:
+        os.makedirs(confdir.cache)
+    except OSError:
+        log.msg('ERROR: failed to create cache directory %s: %s\r\n' % (confdir.cache, sys.exc_info()[1]))
+        sys.exit(-1)
+    else:
+        log.msg('Cache directory %s created\r\n' % confdir.cache)
+
 
 # Basic SNMP engine configuration
 
