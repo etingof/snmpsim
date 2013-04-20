@@ -6,7 +6,7 @@ if sys.version_info[0] < 3:
 else:
     import dbm
     whichdb = dbm.whichdb
-from snmpsim import confdir, log
+from snmpsim import confdir, log, error
 
 class RecordIndex:
     def __init__(self, textFile, textParser):
@@ -70,12 +70,18 @@ class RecordIndex:
                     db = dbm.open(self.__dbFile, open_flags)
                 except Exception:
                     open_flags = open_flags[:-1]
-                    if not open_flags:
-                        raise
+                    continue
                 else:
                     break
+            else:
+                log.msg('Failed to create %s for data file %s\r\n' % (self.__dbFile, self.__textFile))
+                raise error.SnmpsimError()
 
-            text = open(self.__textFile, 'rb')
+            try:
+                text = open(self.__textFile, 'rb')
+            except:
+                log.msg('Failed to open data file %s: %s\r\n' % (self.__dbFile, sys.exc_info()[0]))
+                raise error.SnmpsimError()
 
             log.msg('Building index %s for data file %s (open flags \"%s\")...\r\n' % (self.__dbFile, self.__textFile, open_flags))
             sys.stdout.flush()
@@ -99,7 +105,7 @@ class RecordIndex:
                         os.remove(self.__dbFile)
                     except OSError:
                         pass
-                    raise Exception(
+                    raise error.SnmpsimError(
                         'Data error at %s:%d: %s' % (
                             self.__textFile, lineNo, exc
                             )
@@ -115,7 +121,7 @@ class RecordIndex:
                             os.remove(self.__dbFile)
                         except OSError:
                             pass
-                        raise Exception(
+                        raise error.SnmpsimError(
                             'OID error at %s:%d: %s' % (
                                 self.__textFile, lineNo, exc
                                 )
