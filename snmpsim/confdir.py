@@ -19,21 +19,27 @@ elif sys.platform == 'darwin':
   variation = [
     os.path.join(os.environ['HOME'], '.snmpsim', 'variation'),
     os.path.join('/', 'usr', 'local', 'share', 'snmpsim', 'variation'),
-    os.path.join(os.path.split(__file__)[0], 'variation')
-  ]
-  data = [
-    os.path.join(os.environ['HOME'], '.snmpsim', 'data'),
-    os.path.join('/', 'usr', 'local', 'share', 'snmpsim', 'data'),
-    os.path.join(os.path.split(__file__)[0], 'data')
-  ]
-else:
-  variation = [
-    os.path.join(os.environ['HOME'], '.snmpsim', 'variation'),
+    os.path.join(sys.prefix, 'snmpsim', 'variation'),
     os.path.join(sys.prefix, 'share', 'snmpsim', 'variation'),
     os.path.join(os.path.split(__file__)[0], 'variation')
   ]
   data = [
     os.path.join(os.environ['HOME'], '.snmpsim', 'data'),
+    os.path.join('/', 'usr', 'local', 'share', 'snmpsim', 'data'),
+    os.path.join(sys.prefix, 'snmpsim', 'data'),
+    os.path.join(sys.prefix, 'share', 'snmpsim', 'data'),
+    os.path.join(os.path.split(__file__)[0], 'data')
+  ]
+else:
+  variation = [
+    os.path.join(os.environ['HOME'], '.snmpsim', 'variation'),
+    os.path.join(sys.prefix, 'snmpsim', 'variation'),
+    os.path.join(sys.prefix, 'share', 'snmpsim', 'variation'),
+    os.path.join(os.path.split(__file__)[0], 'variation')
+  ]
+  data = [
+    os.path.join(os.environ['HOME'], '.snmpsim', 'data'),
+    os.path.join(sys.prefix, 'snmpsim', 'data'),
     os.path.join(sys.prefix, 'share', 'snmpsim', 'data'),
     os.path.join(os.path.split(__file__)[0], 'data')
   ]
