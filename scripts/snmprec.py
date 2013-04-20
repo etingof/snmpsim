@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 #
 # SNMP Snapshot Data Recorder
 #

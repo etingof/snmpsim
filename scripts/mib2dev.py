@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 #
 # SNMP Simulator MIB to data file converter
 #
