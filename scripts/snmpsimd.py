@@ -40,18 +40,16 @@ from snmpsim.record import dump, mvc, sap, walk, snmprec
 from snmpsim.record.search.file import searchRecordByOid
 from snmpsim.record.search.database import RecordIndex
 
-# Process command-line options
-
-# Defaults
+# Settings
 forceIndexBuild = False
 validateData = False
 v2cArch = False
 v3Only = False
-v3User = 'simulator'
-v3AuthKey = 'auctoritas'
-v3AuthProto = 'MD5'
-v3PrivKey = 'privatus'
-v3PrivProto = 'DES'
+v3Users = []
+v3AuthKeys = {}
+v3AuthProtos = {}
+v3PrivKeys = {}
+v3PrivProtos = {}
 pidFile = '/var/run/snmpsim/snmpsimd.pid'
 foregroundFlag = True
 procUser = procGroup = None
@@ -340,6 +338,8 @@ class DataIndexInstrumController:
         self.__indexOid = baseOid + self.indexSubOid
         self.__idx = 1
 
+    def __str__(self): return 'DataIndexInstrumController'
+
     def readVars(self, varBinds, acInfo=None):
         return [ (vb[0], self.__db.get(vb[0], exval.noSuchInstance)) for vb in varBinds ]
 
@@ -552,26 +552,46 @@ for opt in opts:
     elif opt[0] == '--v3-only':
         v3Only = True
     elif opt[0] == '--v3-user':
-        v3User = opt[1]
+        v3Users.append(opt[1])
     elif opt[0] == '--v3-auth-key':
-        v3AuthKey = opt[1]
+        v3AuthKeys[v3Users[-1]] = opt[1]
     elif opt[0] == '--v3-auth-proto':
-        v3AuthProto = opt[1].upper()
-        if v3AuthProto not in authProtocols:
-            sys.stderr.write('ERROR: bad v3 auth protocol %s\r\n%s\r\n' % (v3AuthProto, helpMessage))
+        v3AuthProtos[v3Users[-1]] = opt[1].upper()
+        if v3AuthProtos[v3Users[-1]] not in authProtocols:
+            sys.stderr.write('ERROR: bad v3 auth protocol %s\r\n%s\r\n' % (v3AuthProtos[v3Users[-1]], helpMessage))
             sys.exit(-1)
     elif opt[0] == '--v3-priv-key':
-        v3PrivKey = opt[1]
+        v3PrivKeys[v3Users[-1]] = opt[1]
     elif opt[0] == '--v3-priv-proto':
-        v3PrivProto = opt[1].upper()
-        if v3PrivProto not in privProtocols:
-            sys.stderr.write('ERROR: bad v3 privacy protocol %s\r\n%s\r\n' % (v3PrivProto, helpMessage))
+        v3PrivProtos[v3Users[-1]] = opt[1].upper()
+        if v3PrivProtos[v3Users[-1]] not in privProtocols:
+            sys.stderr.write('ERROR: bad v3 privacy protocol %s\r\n%s\r\n' % (v3PrivProtos[v3Users[-1]], helpMessage))
             sys.exit(-1)
 
-if authProtocols[v3AuthProto] == config.usmNoAuthProtocol and \
-    privProtocols[v3PrivProto] != config.usmNoPrivProtocol:
-        sys.stderr.write('ERROR: privacy impossible without authentication\r\n%s\r\n', helpMessage)
-        sys.exit(-1)
+for v3User in v3Users:
+    if v3User in v3AuthKeys:
+        if v3User not in v3AuthProtos:
+            v3AuthProtos[v3User] = 'MD5'
+    else:
+        v3AuthKeys[v3User] = None
+        v3AuthProtos[v3User] = 'NONE'
+    if v3User in v3PrivKeys:
+        if v3User not in v3PrivProtos:
+            v3PrivProtos[v3User] = 'DES'
+    else:
+        v3PrivKeys[v3User] = None
+        v3PrivProtos[v3User] = 'NONE'
+    if authProtocols[v3AuthProtos[v3User]] == config.usmNoAuthProtocol and \
+        privProtocols[v3PrivProtos[v3User]] != config.usmNoPrivProtocol:
+            sys.stderr.write('ERROR: privacy impossible without authentication\r for USM user %s\n%s\r\n', (v3User, helpMessage))
+            sys.exit(-1)
+
+if not v3Users:
+    v3Users = [ 'simulator' ]
+    v3AuthKeys[v3Users[0]] = 'auctoritas'
+    v3AuthProtos[v3Users[0]] = 'MD5'
+    v3PrivKeys[v3Users[0]] = 'privatus'
+    v3PrivProtos[v3Users[0]] = 'DES'
 
 if not agentUDPv4Endpoints and \
    not agentUDPv6Endpoints and \
@@ -658,11 +678,12 @@ else:
 
     snmpContext = context.SnmpContext(snmpEngine)
         
-    config.addV3User(
-        snmpEngine,
-        v3User,
-        authProtocols[v3AuthProto], v3AuthKey,
-        privProtocols[v3PrivProto], v3PrivKey
+    for v3User in v3Users:
+        config.addV3User(
+            snmpEngine,
+            v3User,
+            authProtocols[v3AuthProtos[v3User]], v3AuthKeys[v3User],
+            privProtocols[v3PrivProtos[v3User]], v3PrivKeys[v3User]
         )
 
 if variationModules:
@@ -862,11 +883,13 @@ if v2cArch:
         log.msg('Listening at UNIX domain endpoint %s, transport ID %s\r\n' % (agentUNIXEndpoints[idx][1], '.'.join([str(x) for x in unix.domainName + (idx,)])))
     transportDispatcher.registerRecvCbFun(commandResponderCbFun)
 else:
-    log.msg('SNMPv3 USM SecurityName: %s\r\n' % v3User)
-    if authProtocols[v3AuthProto] != config.usmNoAuthProtocol:
-        log.msg('SNMPv3 USM authentication key: %s, authentication protocol: %s\r\n' % (v3AuthKey, v3AuthProto))
-        if privProtocols[v3PrivProto] != config.usmNoPrivProtocol:
-            log.msg('SNMPv3 USM encryption (privacy) key: %s, encryption protocol: %s\r\n' % (v3PrivKey, v3PrivProto))
+    for v3User in v3Users:
+        log.msg('%s\r\n' % ('-'*66,))
+        log.msg('SNMPv3 USM SecurityName: %s\r\n' % v3User)
+        if authProtocols[v3AuthProtos[v3User]] != config.usmNoAuthProtocol:
+            log.msg('SNMPv3 USM authentication key: %s, authentication protocol: %s\r\n' % (v3AuthKeys[v3User], v3AuthProtos[v3User]))
+            if privProtocols[v3PrivProtos[v3User]] != config.usmNoPrivProtocol:
+                log.msg('SNMPv3 USM encryption (privacy) key: %s, encryption protocol: %s\r\n' % (v3PrivKeys[v3User], v3PrivProtos[v3User]))
 
     # Configure access to data index
 

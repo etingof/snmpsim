@@ -1,6 +1,8 @@
 0.2.2
 -----
 
+- Multiple USM user entries with potentially different auth&priv settings
+  can now be configured to snmpsimd.py.
 - Centralized logging facility added. Logging into syslog or file is
   now supported.
 - Simulator process daemonization and privileges drop implemented.
