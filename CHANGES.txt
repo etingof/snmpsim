@@ -13,6 +13,7 @@
 - Fix to community names '/'-normalization at transport address based
   variation logic. It appeared broken on Windows only since 0.2.1.
 - Fix to snmprec.py behaviour on missing variation module directory.
+- Fix to .snmpwalk grammar parser to support Network Address type tag.
 
 0.2.1
 -----

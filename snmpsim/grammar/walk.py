@@ -43,11 +43,15 @@ class WalkGrammar(abstract.AbstractGrammar):
     def __hexStringFilter(value):
         return [int(y, 16) for y in value.split(' ')]
 
+    def __netAddressFilter(value):
+        return [int(y, 16) for y in value.split(':')]
+
     filterMap = {
         'OPAQUE:': __opaqueFilter,
         'STRING:': __stringFilter,
         'BITS:': __bitsFilter,
-        'HEX-STRING:': __hexStringFilter
+        'HEX-STRING:': __hexStringFilter,
+        'NETWORK ADDRESS:': __netAddressFilter
     }
 
     def parse(self, line):
