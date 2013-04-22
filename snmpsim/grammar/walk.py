@@ -44,14 +44,14 @@ class WalkGrammar(abstract.AbstractGrammar):
         return [int(y, 16) for y in value.split(' ')]
 
     def __netAddressFilter(value):
-        return [int(y, 16) for y in value.split(':')]
+        return '.'.join([str(int(y, 16)) for y in value.split(':')])
 
     filterMap = {
         'OPAQUE:': __opaqueFilter,
         'STRING:': __stringFilter,
         'BITS:': __bitsFilter,
         'HEX-STRING:': __hexStringFilter,
-        'NETWORK ADDRESS:': __netAddressFilter
+        'Network Address:': __netAddressFilter
     }
 
     def parse(self, line):
