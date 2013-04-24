@@ -11,7 +11,7 @@ import sys
 import math
 import time
 import random
-from pysnmp.proto import rfc1902
+from pysnmp.proto import rfc1902, rfc1905
 from snmpsim import log
 from snmpsim import error
 
@@ -110,7 +110,9 @@ def record(oid, tag, value, **context):
                                            rfc1902.Gauge32.tagSet,
                                            rfc1902.Integer.tagSet):
             tag += ':numeric'
-            settings = { 'initial': value }
+            settings = {
+                'initial': value
+            }
             if context['origValue'].tagSet not in (rfc1902.Gauge32.tagSet,
                                                    rfc1902.Integer.tagSet):
                 settings['increasing'] = 1
@@ -153,10 +155,9 @@ def record(oid, tag, value, **context):
                     moduleContext[oid]['value'] = context['origValue']
                 raise error.NoDataNotification()
         else:
-            if oid in moduleContext:
-                moduleContext[oid]['rate'] = \
-                    (context['origValue'] - moduleContext[oid]['value'])/\
-                    (time.time() - moduleContext[oid]['time'])
+            if oid in moduleContext and 'value' in moduleContext[oid]:
+                if not rfc1905.endOfMibView.isSameTypeWith(context['origValue']) and not rfc1905.endOfMibView.isSameTypeWith(moduleContext[oid]['value']):
+                    moduleContext[oid]['rate'] = (int(context['origValue']) - int(moduleContext[oid]['value'])) / (time.time() - moduleContext[oid]['time'])
 
                 del moduleContext[oid]['value'];
                 del moduleContext[oid]['time'];
