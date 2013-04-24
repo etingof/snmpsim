@@ -189,7 +189,9 @@ class DataFile(AbstractLayout):
         text, db = self.getHandles()
        
         varsRemaining = varsTotal = len(varBinds)
-         
+        
+        log.msg('Request var-binds: %s, flags: %s, %s\r\n' % (', '.join(['%s=<%s>' % (vb[0], vb[1].prettyPrint()) for vb in varBinds]), nextFlag and 'NEXT' or 'EXACT', setFlag and 'SET' or 'GET'))
+
         for oid, val in varBinds:
             textOid = str(
                 univ.OctetString('.'.join([ '%s' % x for x in oid ]))
@@ -276,9 +278,11 @@ class DataFile(AbstractLayout):
 
             rspVarBinds.append((_oid, _val))
 
+        log.msg('Response var-binds: %s\r\n' % (', '.join(['%s=<%s>' % (vb[0], vb[1].prettyPrint()) for vb in rspVarBinds])))
+
         return rspVarBinds
  
-    def __str__(self): return str(self.__recordIndex)
+    def __str__(self): return '%s controller' % self.__textFile
 
 # Collect data files
 
@@ -338,7 +342,7 @@ class DataIndexInstrumController:
         self.__indexOid = baseOid + self.indexSubOid
         self.__idx = 1
 
-    def __str__(self): return 'DataIndexInstrumController'
+    def __str__(self): return '<index> controller'
 
     def readVars(self, varBinds, acInfo=None):
         return [ (vb[0], self.__db.get(vb[0], exval.noSuchInstance)) for vb in varBinds ]
@@ -399,7 +403,7 @@ if not v2cArch:
             try:
                 mibInstrum = self.snmpContext.getMibInstrum(probedContextName)
             except error.PySnmpError:
-                log.msg('Candidate data file %s not registered\r\n' % candidate)
+                pass
             else:
                 log.msg('Using %s selected by candidate %s; transport ID %s, source address %s, community name "%s"\r\n' % (mibInstrum, candidate, univ.ObjectIdentifier(transportDomain), transportAddress[0], communityName))
                 return probedContextName
@@ -798,8 +802,6 @@ if v2cArch:
                     log.msg('Using %s selected by candidate %s; transport ID %s, source address %s, community name "%s"\r\n' % (contexts[candidate], candidate, univ.ObjectIdentifier(transportDomain), transportAddress[0], communityName))
                     communityName = candidate
                     break
-                else:
-                    log.msg('Candidate data file %s not registered\r\n' % candidate)
             else:
                 log.msg('No data file selected for transport ID %s, source address %s, community name "%s"\r\n' % (univ.ObjectIdentifier(transportDomain), transportAddress[0], communityName))
                 return wholeMsg
