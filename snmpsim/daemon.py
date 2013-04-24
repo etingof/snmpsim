@@ -15,7 +15,7 @@ else:
             pid = os.fork() 
             if pid > 0:
                 # exit first parent
-                sys.exit(0) 
+                os._exit(0) 
         except OSError:
             raise error.SnmpsimError('ERROR: fork #1 failed: %s' % sys.exc_info()[1])
             
@@ -29,10 +29,10 @@ else:
             pid = os.fork() 
             if pid > 0:
                 # exit from second parent
-                sys.exit(0) 
+                os._exit(0) 
         except OSError:
             raise error.SnmpsimError('ERROR: fork #2 failed: %s' % sys.exc_info()[1])
-            
+
         # redirect standard file descriptors
         sys.stdout.flush()
         sys.stderr.flush()
