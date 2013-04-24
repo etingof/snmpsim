@@ -54,7 +54,7 @@ def variate(oid, tag, value, **context):
         if 'min' not in settingsCache[oid]:
             settingsCache[oid]['min'] = 0
         if 'max' not in settingsCache[oid]:
-            if tag == '67':
+            if tag == '70':
                 settingsCache[oid]['max'] = 0xffffffffffffffff
             else:
                 settingsCache[oid]['max'] = 0xffffffff
