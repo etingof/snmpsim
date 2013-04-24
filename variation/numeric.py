@@ -51,9 +51,13 @@ def variate(oid, tag, value, **context):
 
     if oid not in settingsCache:
         settingsCache[oid] = dict([ x.split('=') for x in value.split(',') ])
-        if 'min' not in settingsCache[oid]:
+        if 'min' in settingsCache[oid]:
+            settingsCache[oid]['min'] = int(settingsCache[oid]['min'])
+        else:
             settingsCache[oid]['min'] = 0
-        if 'max' not in settingsCache[oid]:
+        if 'max' in settingsCache[oid]:
+            settingsCache[oid]['max'] = int(settingsCache[oid]['max'])
+        else:
             if tag == '70':
                 settingsCache[oid]['max'] = 0xffffffffffffffff
             else:
