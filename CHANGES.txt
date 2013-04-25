@@ -10,6 +10,7 @@
   to ease the understanding of their operation.
 - The --quiet flag of snmprec.py now depricated in favor of "null"
   logging method.
+- New 'cumulative' flag added to the numeric.py variation module.
 - Fix to community names '/'-normalization at transport address based
   variation logic. It appeared broken on Windows only since 0.2.1.
 - Fix to snmprec.py behaviour on missing variation module directory.

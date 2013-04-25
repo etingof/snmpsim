@@ -95,7 +95,7 @@ def variate(oid, tag, value, **context):
         else:
             v = settingsCache[oid]['max']
 
-    if 'increasing' in settingsCache[oid]:
+    if 'cumulative' in settingsCache[oid]:
         valuesCache[oid] = v, time.time()
 
     return oid, tag, v
