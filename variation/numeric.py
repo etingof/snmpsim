@@ -20,7 +20,7 @@ valuesCache = {}
 moduleOptions = {}
 moduleContext = {}
 
-booted = time.time()
+tboot = time.time()
 
 def init(snmpEngine, **context):
     if context['options']:
@@ -51,41 +51,58 @@ def variate(oid, tag, value, **context):
 
     if oid not in settingsCache:
         settingsCache[oid] = dict([ x.split('=') for x in value.split(',') ])
-        if 'min' in settingsCache[oid]:
-            settingsCache[oid]['min'] = int(settingsCache[oid]['min'])
-        else:
+        for k in settingsCache[oid]:
+            if k != 'function' and k in settingsCache[oid]:
+                settingsCache[oid][k] = float(settingsCache[oid][k])
+        if 'min' not in settingsCache[oid]:
             settingsCache[oid]['min'] = 0
-        if 'max' in settingsCache[oid]:
-            settingsCache[oid]['max'] = int(settingsCache[oid]['max'])
-        else:
+        if 'max' not in settingsCache[oid]:
             if tag == '70':
                 settingsCache[oid]['max'] = 0xffffffffffffffff
             else:
                 settingsCache[oid]['max'] = 0xffffffff
+        if settingsCache[oid]['min'] > settingsCache[oid]['max']:
+            settingsCache[oid]['max'] = settingsCache[oid]['min'] + 1
+        if 'rate' not in settingsCache[oid]:
+            settingsCache[oid]['rate'] = 1
+        if 'function' in settingsCache[oid]:
+            settingsCache[oid]['function'] = getattr(math, settingsCache[oid]['function'])
+        else:
+            settingsCache[oid]['function'] = lambda x: x
 
     if oid not in valuesCache:
-        valuesCache[oid] = float(settingsCache[oid].get('initial', settingsCache[oid]['min'])), booted
+        valuesCache[oid] = settingsCache[oid].get('initial', settingsCache[oid]['min']), tboot
 
-    v, t = valuesCache[oid]
+    vold, told = valuesCache[oid]
 
-    if 'function' in settingsCache[oid]:
-        f = getattr(math, settingsCache[oid]['function'])
+    tnow = time.time()
+
+    if 'atime' in settingsCache[oid]:
+        t = tnow
     else:
-        f = lambda x: x
+        t = tnow - tboot
 
-    v += f((time.time() - t) * float(settingsCache[oid].get('rate', 1)))
+    v = settingsCache[oid]['function'](
+        t * settingsCache[oid]['rate']
+    )
     
-    if 'increasing' in settingsCache[oid]:
-        v = abs(v)
-     
-    v *= float(settingsCache[oid].get('scale', 1)) + float(settingsCache[oid].get('offset', 0))
+    if 'scale' in settingsCache[oid]:
+        v *= settingsCache[oid]['scale']
 
-    d = int(settingsCache[oid].get('deviation', 0))
-    if d:
-        if 'increasing' in settingsCache[oid]:
-            v += random.randrange(0, d)
+    if 'offset' in settingsCache[oid]:
+        if 'cumulative' in settingsCache[oid]:
+            v += settingsCache[oid]['offset'] * (tnow - told)
         else:
-            v += random.randrange(-d, d)
+            v += settingsCache[oid]['offset']
+
+    if 'deviation' in settingsCache[oid]:
+        v += random.randrange(-settingsCache[oid]['deviation'], settingsCache[oid]['deviation'])
+
+    if 'cumulative' in settingsCache[oid]:
+        v += vold
+
+    if 'increasing' in settingsCache[oid]:
+        v = max(v, vold)
 
     if v < settingsCache[oid]['min']:
         v = settingsCache[oid]['min']
@@ -96,7 +113,7 @@ def variate(oid, tag, value, **context):
             v = settingsCache[oid]['max']
 
     if 'cumulative' in settingsCache[oid]:
-        valuesCache[oid] = v, time.time()
+        valuesCache[oid] = v, tnow
 
     return oid, tag, v
 
