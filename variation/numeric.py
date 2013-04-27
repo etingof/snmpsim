@@ -52,7 +52,7 @@ def variate(oid, tag, value, **context):
     if oid not in settingsCache:
         settingsCache[oid] = dict([ x.split('=') for x in value.split(',') ])
         for k in settingsCache[oid]:
-            if k != 'function' and k in settingsCache[oid]:
+            if k != 'function':
                 settingsCache[oid][k] = float(settingsCache[oid][k])
         if 'min' not in settingsCache[oid]:
             settingsCache[oid]['min'] = 0
@@ -61,19 +61,21 @@ def variate(oid, tag, value, **context):
                 settingsCache[oid]['max'] = 0xffffffffffffffff
             else:
                 settingsCache[oid]['max'] = 0xffffffff
-        if settingsCache[oid]['min'] > settingsCache[oid]['max']:
-            settingsCache[oid]['max'] = settingsCache[oid]['min'] + 1
         if 'rate' not in settingsCache[oid]:
             settingsCache[oid]['rate'] = 1
         if 'function' in settingsCache[oid]:
-            settingsCache[oid]['function'] = getattr(math, settingsCache[oid]['function'])
+            settingsCache[oid]['function'] = getattr(
+                math, settingsCache[oid]['function']
+            )
         else:
             settingsCache[oid]['function'] = lambda x: x
 
-    if oid not in valuesCache:
-        valuesCache[oid] = settingsCache[oid].get('initial', settingsCache[oid]['min']), tboot
+    vold, told = settingsCache[oid].get('initial', settingsCache[oid]['min']), tboot
 
-    vold, told = valuesCache[oid]
+    if 'cumulative' in settingsCache[oid]:
+        if oid not in valuesCache:
+            valuesCache[oid] = vold, told
+        vold, told = valuesCache[oid]
 
     tnow = time.time()
 
@@ -91,7 +93,7 @@ def variate(oid, tag, value, **context):
 
     if 'offset' in settingsCache[oid]:
         if 'cumulative' in settingsCache[oid]:
-            v += settingsCache[oid]['offset'] * (tnow - told)
+            v += settingsCache[oid]['offset'] * (tnow - told) * settingsCache[oid]['rate']
         else:
             v += settingsCache[oid]['offset']
 
@@ -99,16 +101,15 @@ def variate(oid, tag, value, **context):
         v += random.randrange(-settingsCache[oid]['deviation'], settingsCache[oid]['deviation'])
 
     if 'cumulative' in settingsCache[oid]:
-        v += vold
+        v = max(v, 0)
 
-    if 'increasing' in settingsCache[oid]:
-        v = max(v, vold)
+    v += vold
 
     if v < settingsCache[oid]['min']:
         v = settingsCache[oid]['min']
     elif v > settingsCache[oid]['max']:
         if 'wrap' in settingsCache[oid]:
-            v = settingsCache[oid]['min']
+            v -= settingsCache[oid]['max']
         else:
             v = settingsCache[oid]['max']
 
@@ -132,7 +133,7 @@ def record(oid, tag, value, **context):
             }
             if context['origValue'].tagSet not in (rfc1902.Gauge32.tagSet,
                                                    rfc1902.Integer.tagSet):
-                settings['increasing'] = 1
+                settings['cumulative'] = 1
             if context['origValue'].tagSet == rfc1902.TimeTicks.tagSet:
                 settings['rate'] = 100
             if context['origValue'].tagSet == rfc1902.Integer.tagSet:
