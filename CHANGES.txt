@@ -15,8 +15,7 @@
   variation logic. It appeared broken on Windows only since 0.2.1.
 - Fix to snmprec.py behaviour on missing variation module directory.
 - Fix to .snmpwalk grammar parser to support Network Address type tag.
-- Fix to numeric.py module Counter64 max value setting.
-- Fix to numeric.py module multiple-iterations value rate calculatiotn.
+- Multiple fixes and re-work of the numeric.py module
 
 0.2.1
 -----

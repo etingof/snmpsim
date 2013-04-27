@@ -121,71 +121,74 @@ def variate(oid, tag, value, **context):
 def record(oid, tag, value, **context):
     if 'started' not in moduleContext:
         moduleContext['started'] = time.time()
-    if 'taglist' in moduleOptions and tag in moduleOptions['taglist']:
-        if context['origValue'].tagSet in (rfc1902.Counter32.tagSet,
-                                           rfc1902.Counter64.tagSet,
-                                           rfc1902.TimeTicks.tagSet,
-                                           rfc1902.Gauge32.tagSet,
-                                           rfc1902.Integer.tagSet):
-            tag += ':numeric'
-            settings = {
-                'initial': value
-            }
-            if context['origValue'].tagSet not in (rfc1902.Gauge32.tagSet,
-                                                   rfc1902.Integer.tagSet):
-                settings['cumulative'] = 1
-            if context['origValue'].tagSet == rfc1902.TimeTicks.tagSet:
-                settings['rate'] = 100
-            if context['origValue'].tagSet == rfc1902.Integer.tagSet:
-                settings['rate'] = 0
-            if 'addon' in moduleOptions:
-                settings.update(
-                    dict([x.split('=') for x in moduleOptions['addon']])
-                )
 
-            value = ','.join([ '%s=%s' % (k,v) for k,v in settings.items() ])
+    if 'iterations' not in moduleContext:
+        moduleContext['iterations'] = min(1, moduleOptions.get('iterations',0))
 
-            if 'hextag' in context:
-                del context['hextag']
-            if 'hexvalue' in context:
-                del context['hexvalue']
+    # set out to variate
 
-            if 'iterations' in moduleOptions and oid not in moduleContext:
-                moduleContext[oid] = settings
+    if oid not in moduleContext:
+        settings = {
+            'initial': value
+        }
+        if context['origValue'].tagSet == rfc1902.TimeTicks.tagSet:
+            settings['rate'] = 100
+        elif context['origValue'].tagSet == rfc1902.Integer.tagSet:
+            settings['rate'] = 0  # may be constants
+        if 'addon' in moduleOptions:
+            settings.update(
+                dict([x.split('=') for x in moduleOptions['addon']])
+            )
 
-    if 'hextag' in context and context['hextag']:
-        tag = context['hextag']
-    if 'hexvalue' in context and context['hexvalue']:
-        value = context['hexvalue']
+        moduleContext[oid] = {}
 
-    if 'iterations' in moduleOptions:
-        if moduleOptions['iterations']:
-            if context['stopFlag']:
-                wait = max(0, float(moduleOptions['period']) - (time.time() - moduleContext['started']))
-                log.msg('numeric: waiting %.2f sec(s), %s OIDs dumped, %s iterations remaining...\r\n' % (wait, context['total']+context['count'], moduleOptions['iterations']))
-                time.sleep(wait)
-                moduleOptions['iterations'] -= 1
-                moduleContext['started'] = time.time()
-                raise error.MoreDataNotification()
-            else:
-                if oid in moduleContext:
-                    moduleContext[oid]['time'] = time.time()
-                    moduleContext[oid]['value'] = context['origValue']
-                raise error.NoDataNotification()
-        else:
-            if oid in moduleContext and 'value' in moduleContext[oid]:
-                if not rfc1905.endOfMibView.isSameTypeWith(context['origValue']) and not rfc1905.endOfMibView.isSameTypeWith(moduleContext[oid]['value']):
-                    moduleContext[oid]['rate'] = (int(context['origValue']) - int(moduleContext[oid]['value'])) / (time.time() - moduleContext[oid]['time'])
+        moduleContext[oid]['settings'] = settings
 
-                del moduleContext[oid]['value'];
-                del moduleContext[oid]['time'];
-
-                value = ','.join(
-                    [ '%s=%s' % (k,v) for k,v in moduleContext[oid].items() ]
-                )
-
-            return oid, tag, value
+    if moduleContext['iterations']:
+        if context['stopFlag']: # switching to final iteration
+            wait = max(0, float(moduleOptions['period']) - (time.time() - moduleContext['started']))
+            log.msg('numeric: waiting %.2f sec(s), %s OIDs dumped, %s iterations remaining...\r\n' % (wait, context['total']+context['count'], moduleOptions['iterations']))
+            time.sleep(wait)
+            moduleContext['iterations'] -= 1
+            moduleContext['started'] = time.time()
+            raise error.MoreDataNotification()
+        else:  # storing values on first iteration
+            moduleContext[oid]['time'] = time.time()
+            moduleContext[oid]['value'] = context['origValue']
+            if 'hexvalue' in moduleContext:
+                moduleContext[oid]['hexvalue'] = context['hexvalue']
+            if 'hextag' in moduleContext:
+                moduleContext[oid]['hextag'] = context['hextag']
+            raise error.NoDataNotification()
     else:
-        return oid, tag, value
+        if context['stopFlag']:
+            raise error.NoDataNotification()
+
+        if 'value' in moduleContext[oid]:
+            if context['origValue'].tagSet not in (
+                        rfc1902.Counter32.tagSet,
+                        rfc1902.Counter64.tagSet,
+                        rfc1902.TimeTicks.tagSet,
+                        rfc1902.Gauge32.tagSet,
+                        rfc1902.Integer.tagSet):
+                if 'hextag' in moduleContext[oid]:
+                    tag = moduleContext[oid]['hextag']
+                if 'hexvalue' in moduleContext[oid]:
+                    value = moduleContext[oid]['hexvalue']
+                return oid, tag, value
+
+            if 'taglist' not in moduleOptions or \
+                    tag not in moduleOptions['taglist']:
+                return oid, tag, moduleContext[oid]['value']
+ 
+            moduleContext[oid]['rate'] = (int(context['origValue']) - int(moduleContext[oid]['value'])) / (time.time() - moduleContext[oid]['time'])
+
+            tag += ':numeric'
+            value = ','.join(
+                [ '%s=%s' % (k,v) for k,v in moduleContext[oid]['settings'].items() ]
+            )
+            return oid, tag, value
+        else:
+            raise error.NoDataNotification()
 
 def shutdown(snmpEngine, **context): pass 
