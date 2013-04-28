@@ -672,8 +672,10 @@ in .snmprec value field:
   max - the maximum value ever stored and returned by this module.
         Default is 2**32 or 2**64 (Counter64 type).
   initial - initial value. Default is min.
+  atime - if non-zero, uses current time for value generation, not Simulator
+          uptime.
   wrap - if zero, generated value will freeze when reaching 'max'. Otherwise
-         generated value is reset to 'min'.
+         generated value is reset to max's complement.
   function - defines elapsed-time-to-generated-value relationship. Can be
              any of reasonably suitable mathematical function from the
              math module such as sin, log, pow etc. The only requirement
@@ -685,20 +687,21 @@ in .snmprec value field:
            invocation. Default is 0.
   deviation - random deviation maximum. Default is 0 which means no
               deviation.
-  increasing - if non-zero, assures the produced value is never decreasing
-               (with possible exception of value wrapping on overflow).
+  cumulative - if non-zero sums up previous value with the newly generated one.
                This is important when simulating COUNTER values.
 
 This module generates values by execution of the following formula:
 
-  v = function(UPTIME * rate) * scale + offset + RAND(increasing ? 0 : -deviation, deviation)
+  TIME = atime ? TIMENOW : UPTIME
 
-  v = increasing ? abs(v) : v
+  v = function(TIME * rate) * scale + offset + RAND(-deviation, deviation)
+
+  v = cumulative ? v + prev_v : v
 
 Here's an example numeric module use for various types in a .snmprec file:
 
   # COUNTER object
-  1.3.6.1.2.1.2.2.1.13.1|65:numeric|initial=45,max=90,scale=0.6,deviation=1,function=cos,increasing=1,wrap=1
+  1.3.6.1.2.1.2.2.1.13.1|65:numeric|scale=10,deviation=1,function=cos,cumulative=1,wrap=1
 
   # GAUGE object
   1.3.6.1.2.1.2.2.1.14.1|66:numeric|min=5,max=50,initial=25
@@ -1119,10 +1122,10 @@ numeric: waiting 0.77 sec(s), 111 OIDs dumped, 1 iterations remaining...
 1.3.6.1.2.1.2.2.1.6.4|4x|008d120f4fa4
 1.3.6.1.2.1.2.2.1.7.1|2|1
 1.3.6.1.2.1.2.2.1.9.2|67|0
-1.3.6.1.2.1.2.2.1.10.1|65:numeric|rate=3374,initial=641734,increasing=1
-1.3.6.1.2.1.2.2.1.10.2|65:numeric|rate=0,initial=0,increasing=1
-1.3.6.1.2.1.2.2.1.10.4|65:numeric|rate=1159,initial=32954879,increasing=1
-1.3.6.1.2.1.2.2.1.11.1|65:numeric|rate=86,initial=12238,increasing=1
+1.3.6.1.2.1.2.2.1.10.1|65:numeric|rate=3374,initial=641734,cumulative=1
+1.3.6.1.2.1.2.2.1.10.2|65:numeric|rate=0,initial=0,cumulative=1
+1.3.6.1.2.1.2.2.1.10.4|65:numeric|rate=1159,initial=32954879,cumulative=1
+1.3.6.1.2.1.2.2.1.11.1|65:numeric|rate=86,initial=12238,cumulative=1
 1.3.6.1.2.1.2.2.1.21.1|66|0
 ...
 Shutting down variation modules:
