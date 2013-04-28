@@ -5,7 +5,6 @@ try:
     import syslog
 except ImportError:
     syslog = None
-import error
 from snmpsim import error
 
 class AbstractLogger:
