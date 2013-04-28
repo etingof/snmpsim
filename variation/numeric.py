@@ -143,6 +143,13 @@ def record(oid, tag, value, **context):
         if 'taglist' not in moduleOptions or \
                 tag not in moduleOptions['taglist']:
             return oid, tag, value
+
+        value = 'initial=%s' % value 
+
+        if context['origValue'].tagSet == rfc1902.TimeTicks.tagSet:
+            value += ',rate=100'
+        elif context['origValue'].tagSet == rfc1902.Integer.tagSet:
+            value += ',rate=0'
  
         return oid, tag + ':numeric', value
             
