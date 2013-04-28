@@ -30,14 +30,14 @@ def variate(oid, tag, value, **context):
              .replace('@SUBTREEFLAG@', str(int(context['subtreeFlag'])))\
              for x in value.split(' ') ]
 
-    log.msg('subprocess: executing external process "%s"\r\n' % ' '.join(args))
+    log.msg('subprocess: executing external process "%s"' % ' '.join(args))
 
     try:
         return oid, tag, subprocess.check_output(
             args, shell=moduleOptions['shell']
         )
     except subprocess.CalledProcessError:
-        log.msg('subprocess: external program execution failed\r\n')
+        log.msg('subprocess: external program execution failed')
         return context['origOid'], tag, context['errorStatus']
 
 def shutdown(snmpEngine, **context): pass 

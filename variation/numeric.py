@@ -147,7 +147,7 @@ def record(oid, tag, value, **context):
     if moduleContext['iterations']:
         if context['stopFlag']: # switching to final iteration
             wait = max(0, float(moduleOptions['period']) - (time.time() - moduleContext['started']))
-            log.msg('numeric: waiting %.2f sec(s), %s OIDs dumped, %s iterations remaining...\r\n' % (wait, context['total']+context['count'], moduleOptions['iterations']))
+            log.msg('numeric: waiting %.2f sec(s), %s OIDs dumped, %s iterations remaining...' % (wait, context['total']+context['count'], moduleOptions['iterations']))
             time.sleep(wait)
             moduleContext['iterations'] -= 1
             moduleContext['started'] = time.time()

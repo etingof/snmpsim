@@ -29,10 +29,7 @@ class SyslogLogger(AbstractLogger):
 
         syslog.openlog(self.progId, 0, self.facility)
 
-    def __call__(self, s):
-        for l in [ x for x in s.split('\r\n') if x ]:
-            syslog.syslog(self.priority, l)
-
+    def __call__(self, s): syslog.syslog(self.priority, s)
 
 class FileLogger(AbstractLogger):
     def init(self, *priv):
@@ -50,7 +47,7 @@ class FileLogger(AbstractLogger):
                '.%.3d' % int((time.time() % 1) * 1000)
 
     def __call__(self, s):
-        self._fileobj.write('%s %s[%s]: %s' % (self.timestamp(), self.progId, getattr(os, 'getpid', lambda x: 0)(), s))
+        self._fileobj.write('%s %s[%s]: %s\r\n' % (self.timestamp(), self.progId, getattr(os, 'getpid', lambda x: 0)(), s))
         self._fileobj.flush()
 
 class ProtoStdLogger(FileLogger):
@@ -58,7 +55,7 @@ class ProtoStdLogger(FileLogger):
     def init(self, *priv):
         self._fileobj = self.stdfile
 
-    def __call__(self, s): self._fileobj.write(s)
+    def __call__(self, s): self._fileobj.write(s + '\r\n')
 
 class StdoutLogger(ProtoStdLogger):
     stdfile = sys.stdout

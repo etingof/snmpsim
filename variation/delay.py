@@ -48,7 +48,7 @@ def variate(oid, tag, value, **context):
                 elif o in ('lt', 'gt'):
                     vlist[o] = v,d
                 else:
-                    log.msg('delay: bad vlist syntax: %s\r\n' % settingsCache[oid]['vlist'])
+                    log.msg('delay: bad vlist syntax: %s' % settingsCache[oid]['vlist'])
             settingsCache[oid]['vlist'] = vlist
 
         if 'tlist' in settingsCache[oid]:
@@ -65,7 +65,7 @@ def variate(oid, tag, value, **context):
                 elif o in ('lt', 'gt'):
                     tlist[o] = v,d
                 else:
-                    log.msg('delay: bad tlist syntax: %s\r\n' % settingsCache[oid]['tlist'])
+                    log.msg('delay: bad tlist syntax: %s' % settingsCache[oid]['tlist'])
             settingsCache[oid]['tlist'] = tlist
 
     if context['setFlag'] and 'vlist' in settingsCache[oid]:
@@ -105,10 +105,10 @@ def variate(oid, tag, value, **context):
     if delay < 0:
         delay = 0
     elif delay > 99999:
-        log.msg('delay: dropping response for %s\r\n' % oid)
+        log.msg('delay: dropping response for %s' % oid)
         raise error.NoDataNotification()
 
-    log.msg('delay: waiting %d milliseconds for %s\r\n' % (delay, oid))
+    log.msg('delay: waiting %d milliseconds for %s' % (delay, oid))
 
     time.sleep(delay/1000)  # ms
 

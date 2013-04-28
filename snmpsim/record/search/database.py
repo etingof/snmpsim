@@ -50,17 +50,17 @@ class RecordIndex:
             if os.path.exists(dbFile):
                 if textFileStamp < os.stat(dbFile)[8]:
                     if indexNeeded:
-                        log.msg('Forced index rebuild %s\r\n' % dbFile)
+                        log.msg('Forced index rebuild %s' % dbFile)
                     elif not whichdb(dbFile):
                         indexNeeded = True
-                        log.msg('Unsupported index format, rebuilding index %s\r\n' % dbFile)
+                        log.msg('Unsupported index format, rebuilding index %s' % dbFile)
                 else:
                     indexNeeded = True
-                    log.msg('Index %s out of date\r\n' % dbFile)
+                    log.msg('Index %s out of date' % dbFile)
                 break
         else:
             indexNeeded = True
-            log.msg('Index %s does not exist for data file %s\r\n' % (self.__dbFile, self.__textFile))
+            log.msg('Index %s does not exist for data file %s' % (self.__dbFile, self.__textFile))
             
         if indexNeeded:
             # these might speed-up indexing
@@ -74,16 +74,16 @@ class RecordIndex:
                 else:
                     break
             else:
-                log.msg('Failed to create %s for data file %s\r\n' % (self.__dbFile, self.__textFile))
+                log.msg('Failed to create %s for data file %s' % (self.__dbFile, self.__textFile))
                 raise error.SnmpsimError()
 
             try:
                 text = open(self.__textFile, 'rb')
             except:
-                log.msg('Failed to open data file %s: %s\r\n' % (self.__dbFile, sys.exc_info()[0]))
+                log.msg('Failed to open data file %s: %s' % (self.__dbFile, sys.exc_info()[0]))
                 raise error.SnmpsimError()
 
-            log.msg('Building index %s for data file %s (open flags \"%s\")...\r\n' % (self.__dbFile, self.__textFile, open_flags))
+            log.msg('Building index %s for data file %s (open flags \"%s\")...' % (self.__dbFile, self.__textFile, open_flags))
             sys.stdout.flush()
         
             lineNo = 0
@@ -132,7 +132,7 @@ class RecordIndex:
                         )
                     except Exception:
                         log.msg(
-                            'ERROR at line %s, value %r: %s\r\n' % \
+                            'ERROR at line %s, value %r: %s' % \
                             (lineNo, val, sys.exc_info()[1])
                         )
 
@@ -149,7 +149,7 @@ class RecordIndex:
             text.close()
             db.close()
         
-            log.msg('...%d entries indexed\r\n' % (lineNo - 1,))
+            log.msg('...%d entries indexed' % (lineNo - 1,))
 
         self.__dbType = whichdb(self.__dbFile)
 

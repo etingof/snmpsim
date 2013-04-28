@@ -59,7 +59,7 @@ def variate(oid, tag, value, **context):
                 elif o in ('lt', 'gt'):
                     vlist[o] = v, e
                 else:
-                    log.msg('writecache: bad vlist syntax: %s\r\n' % settingsCache[oid]['vlist'])
+                    log.msg('writecache: bad vlist syntax: %s' % settingsCache[oid]['vlist'])
             settingsCache[oid]['vlist'] = vlist
 
     textOid = str(oid)

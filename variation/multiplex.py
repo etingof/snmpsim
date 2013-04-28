@@ -34,7 +34,7 @@ def init(snmpEngine, **context):
         if 'dir' not in moduleOptions:
             raise error.SnmpsimError('SNMP snapshots directory not specified')
         if not os.path.exists(moduleOptions['dir']):
-            log.msg('multiplex: creating %s...\r\n' % moduleOptions['dir'])
+            log.msg('multiplex: creating %s...' % moduleOptions['dir'])
             os.makedirs(moduleOptions['dir'])
         if 'iterations' in moduleOptions:
             moduleOptions['iterations'] = int(moduleOptions['iterations'])
@@ -58,7 +58,7 @@ def variate(oid, tag, value, **context):
                     if os.path.exists(d):
                         break
                 else:
-                    log.msg('multiplex: directory %s not found\r\n' % settingsCache[oid]['dir'])
+                    log.msg('multiplex: directory %s not found' % settingsCache[oid]['dir'])
                     return context['origOid'], tag, context['errorStatus']
             else:
                 d = settingsCache[oid]['dir']
@@ -72,7 +72,7 @@ def variate(oid, tag, value, **context):
                 min(settingsCache[oid]['keys']), max(settingsCache[oid]['keys'])
             )
         else:
-            log.msg('multiplex: snapshot directory not specified\r\n')
+            log.msg('multiplex: snapshot directory not specified')
             return context['origOid'], tag, context['errorStatus']
         if 'period' in settingsCache[oid]:
             settingsCache[oid]['period'] = float(settingsCache[oid]['period'])
@@ -114,7 +114,7 @@ def variate(oid, tag, value, **context):
         ).create()
         moduleContext['datafile'] = datafile
 
-        log.msg('multiplex: switching to data file %s for %s\r\n' % (datafile, context['origOid']))
+        log.msg('multiplex: switching to data file %s for %s' % (datafile, context['origOid']))
         
     text, db = moduleContext['datafileobj'].getHandles()
 
@@ -163,7 +163,7 @@ def record(oid, tag, value, **context):
             moduleContext['filenum'] = 0
         if 'iterations' in moduleOptions and moduleOptions['iterations']:
             wait = max(0, moduleOptions['period'] - (time.time() - moduleContext['started']))
-            log.msg('multiplex: waiting %.2f sec(s), %s OIDs dumped, %s iterations remaining...\r\n' % (wait, context['total']+context['count'], moduleOptions['iterations']))
+            log.msg('multiplex: waiting %.2f sec(s), %s OIDs dumped, %s iterations remaining...' % (wait, context['total']+context['count'], moduleOptions['iterations']))
             time.sleep(wait)
             moduleContext['started'] = time.time()
             moduleOptions['iterations'] -= 1
@@ -179,7 +179,7 @@ def record(oid, tag, value, **context):
                                    '%.5d%ssnmprec' % (moduleContext['filenum'],
                                                       os.path.extsep))
         moduleContext['file'] = open(snmprecfile, 'wb')
-        log.msg('multiplex: writing into %s file...\r\n' % snmprecfile)
+        log.msg('multiplex: writing into %s file...' % snmprecfile)
 
     moduleContext['file'].write(
         SnmprecRecord().format(context['origOid'], context['origValue'])

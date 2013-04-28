@@ -166,13 +166,13 @@ class DataFile(AbstractLayout):
     def getHandles(self):
         if not self.__recordIndex.isOpen():
             if len(DataFile.openedQueue) > self.maxQueueEntries:
-                log.msg('Closing %s\r\n' % self)
+                log.msg('Closing %s' % self)
                 DataFile.openedQueue[0].close()
                 del DataFile.openedQueue[0]
 
             DataFile.openedQueue.append(self)
 
-            log.msg('Opening %s\r\n' % self)
+            log.msg('Opening %s' % self)
 
             self.__recordIndex.open()
 
@@ -190,7 +190,7 @@ class DataFile(AbstractLayout):
        
         varsRemaining = varsTotal = len(varBinds)
         
-        log.msg('Request var-binds: %s, flags: %s, %s\r\n' % (', '.join(['%s=<%s>' % (vb[0], vb[1].prettyPrint()) for vb in varBinds]), nextFlag and 'NEXT' or 'EXACT', setFlag and 'SET' or 'GET'))
+        log.msg('Request var-binds: %s, flags: %s, %s' % (', '.join(['%s=<%s>' % (vb[0], vb[1].prettyPrint()) for vb in varBinds]), nextFlag and 'NEXT' or 'EXACT', setFlag and 'SET' or 'GET'))
 
         for oid, val in varBinds:
             textOid = str(
@@ -225,7 +225,7 @@ class DataFile(AbstractLayout):
                             try:
                                 _, subtreeFlag, _ = self.__recordIndex.lookup(str(_nextOid)).split(str2octs(','))
                             except KeyError:
-                                log.msg('data error for %s at %s, index broken?\r\n' % (self, _nextOid))
+                                log.msg('data error for %s at %s, index broken?' % (self, _nextOid))
                                 line = ''  # fatal error
                                 break
                             subtreeFlag = int(subtreeFlag)
@@ -238,7 +238,7 @@ class DataFile(AbstractLayout):
                         try:
                             _, _, _prevOffset = self.__recordIndex.lookup(str(_oid)).split(str2octs(','))
                         except KeyError:
-                            log.msg('data error for %s at %s, index broken?\r\n' % (self, _oid))
+                            log.msg('data error for %s at %s, index broken?' % (self, _oid))
                             line = ''  # fatal error
                             break
                         _prevOffset = int(_prevOffset)
@@ -272,13 +272,13 @@ class DataFile(AbstractLayout):
                 except Exception:
                     _oid = oid
                     _val = errorStatus
-                    log.msg('data error at %s for %s: %s\r\n' % (self, textOid, sys.exc_info()[1]))
+                    log.msg('data error at %s for %s: %s' % (self, textOid, sys.exc_info()[1]))
 
                 break
 
             rspVarBinds.append((_oid, _val))
 
-        log.msg('Response var-binds: %s\r\n' % (', '.join(['%s=<%s>' % (vb[0], vb[1].prettyPrint()) for vb in rspVarBinds])))
+        log.msg('Response var-binds: %s' % (', '.join(['%s=<%s>' % (vb[0], vb[1].prettyPrint()) for vb in rspVarBinds])))
 
         return rspVarBinds
  
@@ -405,10 +405,10 @@ if not v2cArch:
             except error.PySnmpError:
                 pass
             else:
-                log.msg('Using %s selected by candidate %s; transport ID %s, source address %s, community name "%s"\r\n' % (mibInstrum, candidate, univ.ObjectIdentifier(transportDomain), transportAddress[0], communityName))
+                log.msg('Using %s selected by candidate %s; transport ID %s, source address %s, community name "%s"' % (mibInstrum, candidate, univ.ObjectIdentifier(transportDomain), transportAddress[0], communityName))
                 return probedContextName
         else:
-            log.msg('Using %s selected by contextName "%s", transport ID %s, source address %s\r\n' % (self.snmpContext.getMibInstrum(contextName), contextName, univ.ObjectIdentifier(transportDomain), transportAddress[0]))
+            log.msg('Using %s selected by contextName "%s", transport ID %s, source address %s' % (self.snmpContext.getMibInstrum(contextName), contextName, univ.ObjectIdentifier(transportDomain), transportAddress[0]))
 
         return contextName
 
@@ -617,9 +617,9 @@ if not foregroundFlag:
         sys.exit(-1)
 
 for variationModulesDir in confdir.variation:
-    log.msg('Scanning "%s" directory for variation modules...\r\n' % variationModulesDir)
+    log.msg('Scanning "%s" directory for variation modules...' % variationModulesDir)
     if not os.path.exists(variationModulesDir):
-        log.msg('Directory %s does not exist\r\n' % variationModulesDir)
+        log.msg('Directory %s does not exist' % variationModulesDir)
         continue
     for dFile in os.listdir(variationModulesDir):
         if dFile[-3:] != '.py':
@@ -638,7 +638,7 @@ for variationModulesDir in confdir.variation:
 
         for alias, args in _toLoad:
             if alias in variationModules:
-                log.msg('WARNING: ignoring duplicate module %s at %s\r\n' %  (alias, mod))
+                log.msg('WARNING: ignoring duplicate module %s at %s' %  (alias, mod))
                 continue
 
             ctx = { 'path': mod,
@@ -651,24 +651,24 @@ for variationModulesDir in confdir.variation:
                 else:
                     execfile(mod, ctx)
             except Exception:
-                log.msg('Variation module %s execution failure: %s\r\n' %  (mod, sys.exc_info()[1]))
+                log.msg('Variation module %s execution failure: %s' %  (mod, sys.exc_info()[1]))
                 sys.exit(-1)
             else:
                 variationModules[alias] = ctx
 
-    log.msg('A total of %s modules found in %s\r\n' % (len(variationModules), variationModulesDir))
+    log.msg('A total of %s modules found in %s' % (len(variationModules), variationModulesDir))
 
 if variationModulesOptions:
-    log.msg('WARNING: unused options for variation modules: %s\r\n' %  ', '.join(variationModulesOptions.keys()))
+    log.msg('WARNING: unused options for variation modules: %s' %  ', '.join(variationModulesOptions.keys()))
 
 if not os.path.exists(confdir.cache):
     try:
         os.makedirs(confdir.cache)
     except OSError:
-        log.msg('ERROR: failed to create cache directory %s: %s\r\n' % (confdir.cache, sys.exc_info()[1]))
+        log.msg('ERROR: failed to create cache directory %s: %s' % (confdir.cache, sys.exc_info()[1]))
         sys.exit(-1)
     else:
-        log.msg('Cache directory %s created\r\n' % confdir.cache)
+        log.msg('Cache directory %s created' % confdir.cache)
 
 
 # Basic SNMP engine configuration
@@ -691,20 +691,20 @@ else:
         )
 
 if variationModules:
-    log.msg('Initializing variation modules...\r\n')
+    log.msg('Initializing variation modules...')
     for name, body in variationModules.items():
         for x in ('init', 'variate', 'shutdown'):
             if x not in body:
-                log.msg('ERROR: missing %s handler in %s!\r\n' % (x, name))
+                log.msg('ERROR: missing %s handler in %s!' % (x, name))
                 sys.exit(-1)
         try:
             body['init'](not v2cArch and snmpEngine or None,
                          options=body['args'],
                          mode='variating')
         except Exception:
-            log.msg('Module %s load FAILED: %s\r\n' % (name,sys.exc_info()[1]))
+            log.msg('Module %s load FAILED: %s' % (name,sys.exc_info()[1]))
         else:
-            log.msg('Modile %s loaded OK\r\n' % name)
+            log.msg('Modile %s loaded OK' % name)
 
 # Build pysnmp Managed Objects base from data files information
 
@@ -712,19 +712,19 @@ _mibInstrums = {}
 _dataFiles = {}
 
 for dataDir in confdir.data:
-    log.msg('Scanning "%s" directory for %s data files...\r\n' % (dataDir, ','.join([' *%s%s' % (os.path.extsep, x.ext) for x in recordSet.values()]))
+    log.msg('Scanning "%s" directory for %s data files...' % (dataDir, ','.join([' *%s%s' % (os.path.extsep, x.ext) for x in recordSet.values()]))
     )
     if not os.path.exists(dataDir):
-        log.msg('Directory %s does not exist\r\n' % dataDir)
+        log.msg('Directory %s does not exist' % dataDir)
         continue
-    log.msg('%s\r\n' % ('='*66,))
+    log.msg('%s' % ('='*66,))
     for fullPath, textParser, communityName in getDataFiles(dataDir):
         if communityName in _dataFiles:
-            log.msg('WARNING: ignoring duplicate Community/ContextName "%s" for data file %s (%s already loaded)\r\n' % (communityName, fullPath, _dataFiles[communityName]))
+            log.msg('WARNING: ignoring duplicate Community/ContextName "%s" for data file %s (%s already loaded)' % (communityName, fullPath, _dataFiles[communityName]))
             continue
         elif fullPath in _mibInstrums:
             mibInstrum = _mibInstrums[fullPath]
-            log.msg('Shared %s\r\n' % (mibInstrum,))
+            log.msg('Configuring *shared* %s' % (mibInstrum,))
         else:
             dataFile = DataFile(fullPath, textParser).indexText(forceIndexBuild)
             mibInstrum = mibInstrumControllerSet[dataFile.layout](dataFile)
@@ -732,9 +732,9 @@ for dataDir in confdir.data:
             _mibInstrums[fullPath] = mibInstrum
             _dataFiles[communityName] = fullPath
 
-            log.msg('%s\r\n' % (mibInstrum,))
+            log.msg('Configuring %s' % (mibInstrum,))
 
-        log.msg('SNMPv1/2c community name: %s\r\n' % (communityName,))
+        log.msg('SNMPv1/2c community name: %s' % (communityName,))
 
         if v2cArch:
             contexts[univ.OctetString(communityName)] = mibInstrum
@@ -756,9 +756,9 @@ for dataDir in confdir.data:
                 fullPath, communityName, contextName
             )
                  
-            log.msg('SNMPv3 context name: %s\r\n' % (contextName,))
+            log.msg('SNMPv3 context name: %s' % (contextName,))
         
-        log.msg('%s\r\n' % ('-+' * 33,))
+        log.msg('%s' % ('-+' * 33,))
         
 del _mibInstrums
 del _dataFiles
@@ -790,7 +790,7 @@ if v2cArch:
             if msgVer in api.protoModules:
                 pMod = api.protoModules[msgVer]
             else:
-                log.msg('Unsupported SNMP version %s\r\n' % (msgVer,))
+                log.msg('Unsupported SNMP version %s' % (msgVer,))
                 return
             reqMsg, wholeMsg = decoder.decode(
                 wholeMsg, asn1Spec=pMod.Message(),
@@ -799,11 +799,11 @@ if v2cArch:
             communityName = reqMsg.getComponentByPosition(1)
             for candidate in probeContext(transportDomain, transportAddress, communityName):
                 if candidate in contexts:
-                    log.msg('Using %s selected by candidate %s; transport ID %s, source address %s, community name "%s"\r\n' % (contexts[candidate], candidate, univ.ObjectIdentifier(transportDomain), transportAddress[0], communityName))
+                    log.msg('Using %s selected by candidate %s; transport ID %s, source address %s, community name "%s"' % (contexts[candidate], candidate, univ.ObjectIdentifier(transportDomain), transportAddress[0], communityName))
                     communityName = candidate
                     break
             else:
-                log.msg('No data file selected for transport ID %s, source address %s, community name "%s"\r\n' % (univ.ObjectIdentifier(transportDomain), transportAddress[0], communityName))
+                log.msg('No data file selected for transport ID %s, source address %s, community name "%s"' % (univ.ObjectIdentifier(transportDomain), transportAddress[0], communityName))
                 return wholeMsg
             
             rspMsg = pMod.apiMessage.getResponse(reqMsg)
@@ -819,7 +819,7 @@ if v2cArch:
             elif hasattr(pMod, 'GetBulkRequestPDU') and \
                      reqPDU.isSameTypeWith(pMod.GetBulkRequestPDU()):
                 if not msgVer:
-                    log.msg('GETBULK over SNMPv1 from %s:%s\r\n' % (
+                    log.msg('GETBULK over SNMPv1 from %s:%s' % (
                         transportDomain, transportAddress
                         ))
                     return wholeMsg
@@ -828,7 +828,7 @@ if v2cArch:
                     pMod.apiBulkPDU.getMaxRepetitions(reqPDU),
                     contexts[communityName].readNextVars)
             else:
-                log.msg('Unsuppored PDU type %s from %s:%s\r\n' % (
+                log.msg('Unsuppored PDU type %s from %s:%s' % (
                     reqPDU.__class__.__name__, transportDomain,
                     transportAddress
                     ))
@@ -872,26 +872,26 @@ if v2cArch:
         transportDispatcher.registerTransport(
                 udp.domainName + (idx,), agentUDPv4Endpoints[idx][0]
             )
-        log.msg('Listening at UDP/IPv4 endpoint %s, transport ID %s\r\n' % (agentUDPv4Endpoints[idx][1], '.'.join([str(x) for x in udp.domainName + (idx,)]),))
+        log.msg('Listening at UDP/IPv4 endpoint %s, transport ID %s' % (agentUDPv4Endpoints[idx][1], '.'.join([str(x) for x in udp.domainName + (idx,)]),))
     for idx in range(len(agentUDPv6Endpoints)):
         transportDispatcher.registerTransport(
                 udp6.domainName + (idx,), agentUDPv6Endpoints[idx][0]
             )
-        log.msg('Listening at UDP/IPv6 endpoint %s, transport ID %s\r\n' % (agentUDPv6Endpoints[idx][1], '.'.join([str(x) for x in udp6.domainName + (idx,)]),))
+        log.msg('Listening at UDP/IPv6 endpoint %s, transport ID %s' % (agentUDPv6Endpoints[idx][1], '.'.join([str(x) for x in udp6.domainName + (idx,)]),))
     for idx in range(len(agentUNIXEndpoints)):
         transportDispatcher.registerTransport(
                 unix.domainName + (idx,), agentUNIXEndpoints[idx][0]
             )
-        log.msg('Listening at UNIX domain endpoint %s, transport ID %s\r\n' % (agentUNIXEndpoints[idx][1], '.'.join([str(x) for x in unix.domainName + (idx,)])))
+        log.msg('Listening at UNIX domain endpoint %s, transport ID %s' % (agentUNIXEndpoints[idx][1], '.'.join([str(x) for x in unix.domainName + (idx,)])))
     transportDispatcher.registerRecvCbFun(commandResponderCbFun)
 else:
     for v3User in v3Users:
-        log.msg('%s\r\n' % ('-'*66,))
-        log.msg('SNMPv3 USM SecurityName: %s\r\n' % v3User)
+        log.msg('%s' % ('-'*66,))
+        log.msg('SNMPv3 USM SecurityName: %s' % v3User)
         if authProtocols[v3AuthProtos[v3User]] != config.usmNoAuthProtocol:
-            log.msg('SNMPv3 USM authentication key: %s, authentication protocol: %s\r\n' % (v3AuthKeys[v3User], v3AuthProtos[v3User]))
+            log.msg('SNMPv3 USM authentication key: %s, authentication protocol: %s' % (v3AuthKeys[v3User], v3AuthProtos[v3User]))
             if privProtocols[v3PrivProtos[v3User]] != config.usmNoPrivProtocol:
-                log.msg('SNMPv3 USM encryption (privacy) key: %s, encryption protocol: %s\r\n' % (v3PrivKeys[v3User], v3PrivProtos[v3User]))
+                log.msg('SNMPv3 USM encryption (privacy) key: %s, encryption protocol: %s' % (v3PrivKeys[v3User], v3PrivProtos[v3User]))
 
     # Configure access to data index
 
@@ -909,19 +909,19 @@ else:
             snmpEngine,
             udp.domainName + (idx,), agentUDPv4Endpoints[idx][0]
         )
-        log.msg('Listening at UDP/IPv4 endpoint %s, transport ID %s\r\n' % (agentUDPv4Endpoints[idx][1], '.'.join([str(x) for x in udp.domainName + (idx,)]),))
+        log.msg('Listening at UDP/IPv4 endpoint %s, transport ID %s' % (agentUDPv4Endpoints[idx][1], '.'.join([str(x) for x in udp.domainName + (idx,)]),))
     for idx in range(len(agentUDPv6Endpoints)):
         config.addSocketTransport(
             snmpEngine,
             udp6.domainName + (idx,), agentUDPv6Endpoints[idx][0]
         )
-        log.msg('Listening at UDP/IPv6 endpoint %s, transport ID %s\r\n' % (agentUDPv6Endpoints[idx][1], '.'.join([str(x) for x in udp6.domainName + (idx,)]),))
+        log.msg('Listening at UDP/IPv6 endpoint %s, transport ID %s' % (agentUDPv6Endpoints[idx][1], '.'.join([str(x) for x in udp6.domainName + (idx,)]),))
     for idx in range(len(agentUNIXEndpoints)):
         config.addSocketTransport(
             snmpEngine,
             unix.domainName + (idx,), agentUNIXEndpoints[idx][0]
         )
-        log.msg('Listening at UNIX domain endpoint %s, transport ID %s\r\n' % (agentUNIXEndpoints[idx][1], '.'.join([str(x) for x in unix.domainName + (idx,)])))
+        log.msg('Listening at UNIX domain endpoint %s, transport ID %s' % (agentUNIXEndpoints[idx][1], '.'.join([str(x) for x in unix.domainName + (idx,)])))
 
     # SNMP applications
 
@@ -943,22 +943,24 @@ exc_info = None
 try:
     transportDispatcher.runDispatcher()
 except KeyboardInterrupt:
-    log.msg('Process terminated\r\n')
+    log.msg('Shutting down process...')
 except Exception:
     exc_info = sys.exc_info()
 
 if variationModules:
-    log.msg('Shutting down variation modules:\r\n')
+    log.msg('Shutting down variation modules:')
     for name, body in variationModules.items():
         try:
             body['shutdown'](not v2cArch and snmpEngine or None,
                              options=body['args'], mode='variation')
         except Exception:
-            log.msg('Module %s shutdown FAILED: %s\r\n' % (name, sys.exc_info()[1]))
+            log.msg('Module %s shutdown FAILED: %s' % (name, sys.exc_info()[1]))
         else:
-            log.msg('Module %s shutdown OK\r\n' % name)
+            log.msg('Module %s shutdown OK' % name)
 
 transportDispatcher.closeDispatcher()
+
+log.msg('Process terminated')
 
 if exc_info:
     e = exc_info[0](exc_info[1])

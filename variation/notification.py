@@ -36,7 +36,7 @@ def _cbFun(sendRequestHandle,
           cbCtx):
     if errorIndication or errorStatus:
         oid, value = cbCtx
-        log.msg('notification: for %s=%r failed with errorIndication %s, errorStatus %s\r\n' % (oid, value, errorIndication, errorStatus))
+        log.msg('notification: for %s=%r failed with errorIndication %s, errorStatus %s' % (oid, value, errorIndication, errorStatus))
 
 def variate(oid, tag, value, **context):
     if ntfOrg is None:
@@ -76,7 +76,7 @@ def variate(oid, tag, value, **context):
                 elif o in ('lt', 'gt'):
                     vlist[o] = v
                 else:
-                    log.msg('notification: bad vlist syntax: %s\r\n' % settingsCache[oid]['vlist'])
+                    log.msg('notification: bad vlist syntax: %s' % settingsCache[oid]['vlist'])
             settingsCache[oid]['vlist'] = vlist
 
     args = settingsCache[oid]
@@ -95,7 +95,7 @@ def variate(oid, tag, value, **context):
             return oid, tag, context['origValue']
 
     if args['op'] not in ('get', 'set', 'any', '*'):
-        log.msg('notification: unknown SNMP request type configured: %s\r\n' % args['op'])
+        log.msg('notification: unknown SNMP request type configured: %s' % args['op'])
         return context['origOid'], tag, context['errorStatus']
 
     if args['op'] == 'get' and not context['setFlag'] or \
@@ -111,7 +111,7 @@ def variate(oid, tag, value, **context):
             elif args['authproto'] == 'none':
                 authProtocol = ntforg.usmNoAuthProtocol
             else:
-                log.msg('notification: unknown auth proto %s\r\n' % args['authproto'])
+                log.msg('notification: unknown auth proto %s' % args['authproto'])
                 return context['origOid'], tag, context['errorStatus']
             if args['privproto'] == 'des':
                 privProtocol = ntforg.usmDESPrivProtocol
@@ -120,15 +120,15 @@ def variate(oid, tag, value, **context):
             elif args['privproto'] == 'none':
                 privProtocol = ntforg.usmNoPrivProtocol
             else:
-                log.msg('notification: unknown privacy proto %s\r\n' % args['privproto'])
+                log.msg('notification: unknown privacy proto %s' % args['privproto'])
                 return context['origOid'], tag, context['errorStatus']
             authData = ntforg.UsmUserData(args['user'], args['authkey'], args['privkey'], authProtocol=authProtocol, privProtocol=privProtocol)
         else:
-            log.msg('notification: unknown SNMP version %s\r\n' % args['version'])
+            log.msg('notification: unknown SNMP version %s' % args['version'])
             return context['origOid'], tag, context['errorStatus']
 
         if 'host' not in args:
-            log.msg('notification: target hostname not configured for OID\r\n' % (oid,))
+            log.msg('notification: target hostname not configured for OID' % (oid,))
             return context['origOid'], tag, context['errorStatus']
 
         if args['proto'] == 'udp':
@@ -136,7 +136,7 @@ def variate(oid, tag, value, **context):
         elif args['proto'] == 'udp6':
             target = ntforg.Udp6TransportTarget((args['host'], int(args['port'])))
         else:
-            log.msg('notification: unknown transport %s\r\n' % args['proto'])
+            log.msg('notification: unknown transport %s' % args['proto'])
             return context['origOid'], tag, context['errorStatus']
 
         varBinds = []
@@ -173,7 +173,7 @@ def variate(oid, tag, value, **context):
             varBinds, cbInfo=(_cbFun, (oid, value))
         )
 
-        log.msg('notification: sending Notification to %s with credentials %s\r\n' % (authData, target))
+        log.msg('notification: sending Notification to %s with credentials %s' % (authData, target))
 
     if context['setFlag'] or 'value' not in args:
         return oid, tag, context['origValue']

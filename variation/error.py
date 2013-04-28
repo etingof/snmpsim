@@ -59,7 +59,7 @@ def variate(oid, tag, value, **context):
                 elif o in ('lt', 'gt'):
                     vlist[o] = v, e
                 else:
-                    log.msg('error: bad vlist syntax: %s\r\n' % settingsCache[oid]['vlist'])
+                    log.msg('error: bad vlist syntax: %s' % settingsCache[oid]['vlist'])
             settingsCache[oid]['vlist'] = vlist
 
     e = None
@@ -84,7 +84,7 @@ def variate(oid, tag, value, **context):
                 e = settingsCache[oid]['status']
 
     if e and e in errorTypes:
-        log.msg('error: reporting %s for %s\r\n' % (e, oid))
+        log.msg('error: reporting %s for %s' % (e, oid))
         raise errorTypes[e](
             name=oid, idx=context['varsTotal']-context['varsRemaining']
         )
