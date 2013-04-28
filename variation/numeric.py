@@ -125,7 +125,28 @@ def record(oid, tag, value, **context):
     if 'iterations' not in moduleContext:
         moduleContext['iterations'] = min(1, moduleOptions.get('iterations',0))
 
-    # set out to variate
+    # single-run recording
+
+    if 'iterations' not in moduleOptions or not moduleOptions['iterations']:
+        if context['origValue'].tagSet not in (
+                    rfc1902.Counter32.tagSet,
+                    rfc1902.Counter64.tagSet,
+                    rfc1902.TimeTicks.tagSet,
+                    rfc1902.Gauge32.tagSet,
+                    rfc1902.Integer.tagSet):
+            if 'hextag' in context:
+                tag = context['hextag']
+            if 'hexvalue' in context:
+                value = context['hexvalue']
+            return oid, tag, value
+
+        if 'taglist' not in moduleOptions or \
+                tag not in moduleOptions['taglist']:
+            return oid, tag, value
+ 
+        return oid, tag + ':numeric', value
+            
+    # multiple-iteration recording
 
     if oid not in moduleContext:
         settings = {
