@@ -9,6 +9,7 @@ import getopt
 import time
 import sys
 import os
+import socket
 from pyasn1.type import univ
 from pysnmp.proto import rfc1902, rfc1905
 from pysnmp.entity import engine, config
@@ -145,6 +146,11 @@ for opt in opts:
         except:
             sys.stderr.write('ERROR: improper IPv4/UDP endpoint %s\r\n%s\r\n' % (opt[1], helpMessage))
             sys.exit(-1)
+        try:
+            agentUDPv4Endpoint = socket.getaddrinfo(agentUDPv4Endpoint[0], agentUDPv4Endpoint[1], socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)[0][4][:2]
+        except socket.gaierror:
+            sys.stderr.write('ERROR: unknown hostname %s\r\n%s\r\n' % (agentUDPv4Endpoint[0], helpMessage))
+            sys.exit(-1)
     elif opt[0] == '--agent-udpv6-endpoint':
         if not udp6:
             sys.stderr.write('This system does not support UDP/IP6\r\n')
@@ -160,6 +166,11 @@ for opt in opts:
             agentUDPv6Endpoint = opt[1][1:-1], 161
         else:
             agentUDPv6Endpoint = opt[1], 161
+        try:
+            agentUDPv6Endpoint = socket.getaddrinfo(agentUDPv6Endpoint[0], agentUDPv6Endpoint[1], socket.AF_INET6, socket.SOCK_DGRAM, socket.IPPROTO_UDP)[0][4][:2]
+        except socket.gaierror:
+            sys.stderr.write('ERROR: unknown hostname %s\r\n%s\r\n' % (agentUDPv6Endpoint[0], helpMessage))
+            sys.exit(-1)
     elif opt[0] == '--agent-unix-endpoint':
         if not unix:
             sys.stderr.write('This system does not support UNIX domain sockets\r\n')
