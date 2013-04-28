@@ -17,6 +17,7 @@
 - Fix to snmprec.py behaviour on missing variation module directory.
 - Fix to .snmpwalk grammar parser to support Network Address type tag.
 - Multiple fixes and re-work of the numeric.py module
+- Fix to snmprec.py tool to write snmprec data to stderr in binary mode.
 
 0.2.1
 -----

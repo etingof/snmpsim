@@ -224,6 +224,14 @@ if getBulkFlag and not snmpVersion:
     log.msg('WARNING: will be using GETNEXT with SNMPv1!')
     getBulkFlag = False
 
+# Attempt to reopen std output stream in binary mode
+if outputFile is sys.stderr:
+    if sys.version_info[0] > 2:
+        outputFile = outputFile.buffer
+    elif sys.platform == "win32":
+        import msvcrt
+        msvcrt.setmode(outputFile.fileno(), os.O_BINARY)
+
 # Load variation module
 
 if variationModuleName:
