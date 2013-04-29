@@ -94,9 +94,20 @@ No other information or comments is allowed in the data file.
 Data file recording would look like this:
 
 $ snmprec.py  -h
-SNMP Simulator version 0.2.1, written by Ilya Etingof <ilya@glas.net>
+SNMP Simulator version 0.2.2, written by Ilya Etingof <ilya@glas.net>
 Software documentation and support at http://snmpsim.sf.net
-Usage: scripts/snmprec.py [--help] [--debug=<category>] [--quiet] [--version=<1|2c|3>] [--community=<string>] [--v3-user=<username>] [--v3-auth-key=<key>] [--v3-priv-key=<key>] [--v3-auth-proto=<SHA|MD5>] [--v3-priv-proto=<3DES|AES256|DES|AES|AES128|AES192>] [--context=<string>] [--use-getbulk] [--getbulk-repetitions=<number>] [--agent-udpv4-endpoint=<X.X.X.X:NNNNN>] [--agent-udpv6-endpoint=<[X:X:..X]:NNNNN>] [--agent-unix-endpoint=</path/to/named/pipe>] [--start-oid=<OID>] [--stop-oid=<OID>] [--output-file=<filename>] [--variation-modules-dir=<dir>] [--variation-module=<module>] [--variation-module-options=<args]>]
+Usage: scripts/snmprec.py [--help] [--debug=<category>] 
+  [--logging-method=<method|?>] [--version=<1|2c|3>] [--community=<string>]
+  [--v3-user=<username>] [--v3-auth-key=<key>] [--v3-priv-key=<key>] 
+  [--v3-auth-proto=<SHA|MD5>] 
+  [--v3-priv-proto=<3DES|AES256|DES|AES|AES128|AES192>] [--context=<string>]
+  [--use-getbulk] [--getbulk-repetitions=<number>] 
+  [--agent-udpv4-endpoint=<X.X.X.X:NNNNN>] 
+  [--agent-udpv6-endpoint=<[X:X:..X]:NNNNN>] 
+  [--agent-unix-endpoint=</path/to/named/pipe>] [--start-oid=<OID>] 
+  [--stop-oid=<OID>] [--output-file=<filename>] 
+  [--variation-modules-dir=<dir>] [--variation-module=<module>] 
+  [--variation-module-options=<args]>]
 $
 $ snmprec.py --agent-udpv4-endpoint=192.168.1.1 --start-oid=1.3.6.1.2.1 --stop-oid=1.3.6.1.2.1.5 --output-file=snmpsim/data/recorded/linksys-system.snmprec
 Scanning "/usr/local/share/snmpsim/variation" directory for variation modules...  none requested
@@ -160,9 +171,12 @@ tables.
 Device file generation from a MIB file would look like this:
 
 $ mib2dev.py
-SNMP Simulator version 0.2.1, written by Ilya Etingof <ilya@glas.net>
+SNMP Simulator version 0.2.2, written by Ilya Etingof <ilya@glas.net>
 Software documentation and support at http://snmpsim.sf.net
-Usage: scripts/mib2dev.py [--help] [--debug=<category>] [--quiet] [--pysnmp-mib-dir=<path>] [--mib-module=<name>] [--start-oid=<OID>] [--stop-oid=<OID>] [--manual-values] [--output-file=<filename>] [--string-pool=<words>] [--integer32-range=<min,max>]
+Usage: scripts/mib2dev.py [--help] [--debug=<category>] [--quiet] 
+  [--pysnmp-mib-dir=<path>] [--mib-module=<name>] [--start-oid=<OID>] 
+  [--stop-oid=<OID>] [--manual-values] [--output-file=<filename>] 
+  [--string-pool=<words>] [--integer32-range=<min,max>]
 
 Please note that to run mib2dev.py you would first have to convert an ASN.1
 (e.g. text) MIB into a pysnmp module (with the libsmi2pysnmp tool shipped
@@ -247,9 +261,19 @@ for fast OID lookup in a data file.
 Getting help:
 
 $ snmpsimd.py -h
-SNMP Simulator version 0.2.1, written by Ilya Etingof <ilya@glas.net>
+SNMP Simulator version 0.2.2, written by Ilya Etingof <ilya@glas.net>
 Software documentation and support at http://snmpsim.sf.net
-Usage: scripts/snmpsimd.py [--help] [--version ] [--debug=<category>] [--data-dir=<dir>] [--cache-dir=<dir>] [--force-index-rebuild] [--validate-data] [--variation-modules-dir=<dir>] [--variation-module-options=<module[=alias][:args]>] [--agent-udpv4-endpoint=<X.X.X.X:NNNNN>] [--agent-udpv6-endpoint=<[X:X:..X]:NNNNN>] [--agent-unix-endpoint=</path/to/named/pipe>] [--v2c-arch] [--v3-only] [--v3-user=<username>] [--v3-auth-key=<key>] [--v3-auth-proto=<SHA|NONE|MD5>] [--v3-priv-key=<key>] [--v3-priv-proto=<3DES|AES256|NONE|DES|AES|AES128|AES192>]
+Usage: scripts/snmpsimd.py [--help] [--version ] [--debug=<category>] 
+    [--daemonize] [--process-user=<uname>] [--process-group=<gname>] 
+    [--logging-method=<method|?>] [--data-dir=<dir>] [--cache-dir=<dir>] 
+    [--force-index-rebuild] [--validate-data] [--variation-modules-dir=<dir>]
+    [--variation-module-options=<module[=alias][:args]>]
+    [--agent-udpv4-endpoint=<X.X.X.X:NNNNN>] 
+    [--agent-udpv6-endpoint=<[X:X:..X]:NNNNN>] 
+    [--agent-unix-endpoint=</path/to/named/pipe>] [--v2c-arch] [--v3-only] 
+    [--v3-user=<username>] [--v3-auth-key=<key>] 
+    [--v3-auth-proto=<SHA|NONE|MD5>] [--v3-priv-key=<key>] 
+    [--v3-priv-proto=<3DES|AES256|NONE|DES|AES|AES128|AES192>]
 
 Running Simulator:
 
@@ -270,13 +294,13 @@ Scanning "/usr/local/share/snmpsim/data" directory for  *.snmpwalk, *.MVC, *.sap
 ==================================================================
 Index /tmp/snmpsim/usr_local_share_snmpsim_data_public.dbm does not exist for data file data/public.snmprec
 Building index /tmp/snmpsim/usr_local_share_snmpsim_data_public.dbm for data file /usr/local/share/snmpsim/data/public.snmprec (open flags "n")......133 entries indexed
-Data file /usr/local/share/snmpsim/data/public.snmprec, dbhash-indexed, closed
+Configuring /usr/local/share/snmpsim/data/public.snmprec controller
 SNMPv1/2c community name: public
 SNMPv3 context name: 4c9184f37cff01bcdc32dc486ec36961
 -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 Index /tmp/snmpsim/usr_local_share_snmpsim_data_recorded_linksys-system.dbm does not exist for data file /usr/local/share/snmpsim/data/recorded/linksys-system.snmprec
 Building index /tmp/snmpsim/usr_local_share_snmpsim_data_recorded_linksys-system.dbm for data file /usr/local/share/snmpsim/data/recorded/linksys-system.snmprec (open flags "n")......6 entries indexed
-Data file /usr/local/share/snmpsim/data/recorded/linksys-system.snmprec, dbhash-indexed, closed
+Configuring /usr/local/share/snmpsim/data/recorded/linksys-system.snmprec controller
 SNMPv1/2c community name: recorded/linksys-system
 SNMPv3 context name: 1a764f7fd0e7b0bf98bada8fe723e488
 -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
@@ -455,11 +479,11 @@ Initializing variation modules:
     writecache...  OK
 Scanning "/usr/local/share/snmpsim/data" directory for  *.snmpwalk, *.MVC, *.sapwalk, *.snmprec, *.dump data files...
 ==================================================================
-Data file /usr/local/share/snmpsim/data/public.snmprec, dbhash-indexed, closed
+Configuring /usr/local/share/snmpsim/data/public.snmprec controller
 SNMPv1/2c community name: public
 SNMPv3 context name: 4c9184f37cff01bcdc32dc486ec36961
 -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-Shared data file data/public.snmprec, dbhash-indexed, closed
+Configuring *shared* /usr/local/share/snmpsim/data/private.snmprec controller
 SNMPv1/2c community name: private
 SNMPv3 context name: 2c17c6393771ee3048ae34d6b380c5ec
 -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
