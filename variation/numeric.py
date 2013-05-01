@@ -97,7 +97,7 @@ def variate(oid, tag, value, **context):
         else:
             v += settingsCache[oid]['offset']
 
-    if 'deviation' in settingsCache[oid]:
+    if 'deviation' in settingsCache[oid] and settingsCache[oid]['deviation']:
         v += random.randrange(-settingsCache[oid]['deviation'], settingsCache[oid]['deviation'])
 
     if 'cumulative' in settingsCache[oid]:
