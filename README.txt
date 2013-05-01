@@ -914,11 +914,12 @@ parameters in .snmprec value field:
   wrap - if true, instructs the module to cycle through all available
          .snmprec files. If faulse, the system stops switching .snmprec
          files as it reaches the last one. Default is false.
+  control - defines a new OID to be used for switching .snmprec file via
+            SNMP SET command.
 
 Here's an example of multiplex module use:
  
 1.3.6.1.2.1.2|:multiplex|dir=variation/snapshots,period=10.0
-1.3.6.1.3.1.1|4|system
 
 The variation/snapshots/ directory contents is a name-ordered collectionof .snmprec files: 
 
@@ -930,6 +931,19 @@ $ ls -l /usr/local/share/snmpsim/data/variation/snapshots
 
 The .snmprec files served by the multiplex module can not include references
 to variation modules.
+
+In cases when automatic, time-based .snmprec multiplexing is not
+applicable for simulation purposes, .snmprec selection can be configured:
+
+1.3.6.1.2.1.2|:multiplex|dir=variation/snapshots,control=1.3.6.1.2.1.2.999
+
+The following command will switch multiplex module to use the first
+.snmprec file for simulation:
+
+$ snmpset -v2c -c variation/multiplex localhost 1.3.6.1.2.1.2.999 i 0
+
+Whenever 'control' OID is present in multiplex module options, time-based
+multiplexing will not be used.
 
 Subprocess module
 +++++++++++++++++

@@ -12,6 +12,8 @@
   logging method.
 - The snmprec.py tool now supports DNS names in c/l target parameter.
 - New 'cumulative' flag added to the numeric.py variation module.
+- The multiplex module improved to allow .snmprec file selection via
+  SNMP SET.
 - Fatal exceptions are now fully logged.
 - Fix to community names '/'-normalization at transport address based
   variation logic. It appeared broken on Windows only since 0.2.1.

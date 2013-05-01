@@ -5,8 +5,8 @@
 # a series of snapshots.
 #
 import os, sys, time, bisect
-from pyasn1.type import univ
 from pyasn1.compat.octets import str2octs
+from pysnmp.proto import rfc1902
 from snmpsim.record.snmprec import SnmprecRecord
 from snmpsim.record.search.file import searchRecordByOid
 from snmpsim.record.search.database import RecordIndex
@@ -48,32 +48,32 @@ def init(snmpEngine, **context):
 def variate(oid, tag, value, **context):
     if oid not in settingsCache:
         settingsCache[oid] = dict([ x.split('=') for x in value.split(',') ])
-        if 'dir' in settingsCache[oid]:
-            settingsCache[oid]['dir'] = settingsCache[oid]['dir'].replace(
-                '/', os.path.sep
-            )
-            if settingsCache[oid]['dir'][0] != os.path.sep:
-                for x in confdir.data:
-                    d = os.path.join(x, settingsCache[oid]['dir'])
-                    if os.path.exists(d):
-                        break
-                else:
-                    log.msg('multiplex: directory %s not found' % settingsCache[oid]['dir'])
-                    return context['origOid'], tag, context['errorStatus']
-            else:
-                d = settingsCache[oid]['dir']
-            settingsCache[oid]['dirmap'] = dict(
-                [ (int(os.path.basename(x).split(os.path.extsep)[0]), os.path.join(d, x)) for x in os.listdir(d) if x[-7:] == 'snmprec' ]
-            )
-            settingsCache[oid]['keys'] = list(
-                settingsCache[oid]['dirmap'].keys()
-            )
-            settingsCache[oid]['bounds'] = (
-                min(settingsCache[oid]['keys']), max(settingsCache[oid]['keys'])
-            )
-        else:
+        if 'dir' not in settingsCache[oid]:
             log.msg('multiplex: snapshot directory not specified')
             return context['origOid'], tag, context['errorStatus']
+
+        settingsCache[oid]['dir'] = settingsCache[oid]['dir'].replace(
+            '/', os.path.sep
+        )
+        if settingsCache[oid]['dir'][0] != os.path.sep:
+            for x in confdir.data:
+                d = os.path.join(x, settingsCache[oid]['dir'])
+                if os.path.exists(d):
+                    break
+            else:
+                log.msg('multiplex: directory %s not found' % settingsCache[oid]['dir'])
+                return context['origOid'], tag, context['errorStatus']
+        else:
+            d = settingsCache[oid]['dir']
+        settingsCache[oid]['dirmap'] = dict(
+            [ (int(os.path.basename(x).split(os.path.extsep)[0]), os.path.join(d, x)) for x in os.listdir(d) if x[-7:] == 'snmprec' ]
+        )
+        settingsCache[oid]['keys'] = list(
+            settingsCache[oid]['dirmap'].keys()
+        )
+        settingsCache[oid]['bounds'] = (
+            min(settingsCache[oid]['keys']), max(settingsCache[oid]['keys'])
+        )
         if 'period' in settingsCache[oid]:
             settingsCache[oid]['period'] = float(settingsCache[oid]['period'])
         else:
@@ -82,24 +82,46 @@ def variate(oid, tag, value, **context):
             settingsCache[oid]['wrap'] = bool(settingsCache[oid]['wrap'])
         else:
             settingsCache[oid]['wrap'] = False
+        if 'control' in settingsCache[oid]:
+            settingsCache[oid]['control'] = rfc1902.ObjectName(
+                settingsCache[oid]['control']
+            )
+            log.msg('multiplex: using control OID %s for subtree %s, time-based multiplexing disabled' % (settingsCache[oid]['control'], oid))
 
         settingsCache[oid]['ready'] = True
-
-    if context['setFlag']:
-        return context['origOid'], tag, context['errorStatus']
 
     if 'ready' not in settingsCache[oid]:
         return context['origOid'], tag, context['errorStatus']
 
-    timeslot = (time.time() - moduleContext['booted']) % (settingsCache[oid]['period'] * len(settingsCache[oid]['dirmap']))
-    fileslot = int(timeslot / settingsCache[oid]['period']) + settingsCache[oid]['bounds'][0]
+    if context['setFlag']:
+        if 'control' in settingsCache[oid] and \
+                settingsCache[oid]['control'] == context['origOid']:
+            fileno = int(context['origValue'])
+            if fileno >= len(settingsCache[oid]['keys']):
+                log.msg('multiplex: .snmprec file number %s over limit of %s' % (fileno, len(settingsCache[oid]['keys'])))
+                return context['origOid'], tag, context['errorStatus']
+            moduleContext['fileno'] = fileno
+            log.msg('multiplex: switched to file #%s (%s)' % (settingsCache[oid]['keys'][fileno], settingsCache[oid]['dirmap'][settingsCache[oid]['keys'][fileno]]))
+            return context['origOid'], tag, context['origValue']
+        else:
+            return context['origOid'], tag, context['errorStatus']
 
-    fileno = bisect.bisect(settingsCache[oid]['keys'], fileslot) - 1
+    if 'control' in settingsCache[oid]:
+        if 'fileno' not in moduleContext:
+            moduleContext['fileno'] = 0
+        if not context['nextFlag'] and \
+                settingsCache[oid]['control'] == context['origOid']:
+            return context['origOid'], tag, rfc1902.Integer32(moduleContext['fileno'])
+    else:
+        timeslot = (time.time() - moduleContext['booted']) % (settingsCache[oid]['period'] * len(settingsCache[oid]['dirmap']))
+        fileslot = int(timeslot / settingsCache[oid]['period']) + settingsCache[oid]['bounds'][0]
 
-    if 'fileno' not in moduleContext or \
-            moduleContext['fileno'] < fileno or \
-            settingsCache[oid]['wrap']:
-        moduleContext['fileno'] = fileno
+        fileno = bisect.bisect(settingsCache[oid]['keys'], fileslot) - 1
+
+        if 'fileno' not in moduleContext or \
+                moduleContext['fileno'] < fileno or \
+                settingsCache[oid]['wrap']:
+            moduleContext['fileno'] = fileno
 
     datafile = settingsCache[oid]['dirmap'][
         settingsCache[oid]['keys'][moduleContext['fileno']]
@@ -118,7 +140,7 @@ def variate(oid, tag, value, **context):
         
     text, db = moduleContext['datafileobj'].getHandles()
 
-    textOid = str(univ.OctetString('.'.join([ '%s' % x for x in context['origOid']])))
+    textOid = str(rfc1902.OctetString('.'.join([ '%s' % x for x in context['origOid']])))
 
     try:
         line = moduleContext['datafileobj'].lookup(textOid)
