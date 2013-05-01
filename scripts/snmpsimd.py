@@ -216,6 +216,17 @@ class DataFile(AbstractLayout):
             varsRemaining -= 1
 
             line = text.readline()  # matched line
+           
+            # case of a subtree on the last line 
+            if not exactMatch and not line:
+                offset -= 1
+                while offset > 0:
+                    offset -= 1
+                    text.seek(offset)
+                    if text.read(1) == '\n':
+                        break
+                text.seek(offset)
+                line = text.readline()  # last line
 
             while True:
                 if exactMatch:
