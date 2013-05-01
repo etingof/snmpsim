@@ -93,6 +93,9 @@ def variate(oid, tag, value, **context):
     if 'ready' not in settingsCache[oid]:
         return context['origOid'], tag, context['errorStatus']
 
+    if oid not in moduleContext:
+        moduleContext[oid] = {}
+
     if context['setFlag']:
         if 'control' in settingsCache[oid] and \
                 settingsCache[oid]['control'] == context['origOid']:
@@ -100,50 +103,50 @@ def variate(oid, tag, value, **context):
             if fileno >= len(settingsCache[oid]['keys']):
                 log.msg('multiplex: .snmprec file number %s over limit of %s' % (fileno, len(settingsCache[oid]['keys'])))
                 return context['origOid'], tag, context['errorStatus']
-            moduleContext['fileno'] = fileno
+            moduleContext[oid]['fileno'] = fileno
             log.msg('multiplex: switched to file #%s (%s)' % (settingsCache[oid]['keys'][fileno], settingsCache[oid]['dirmap'][settingsCache[oid]['keys'][fileno]]))
             return context['origOid'], tag, context['origValue']
         else:
             return context['origOid'], tag, context['errorStatus']
 
     if 'control' in settingsCache[oid]:
-        if 'fileno' not in moduleContext:
-            moduleContext['fileno'] = 0
+        if 'fileno' not in moduleContext[oid]:
+            moduleContext[oid]['fileno'] = 0
         if not context['nextFlag'] and \
                 settingsCache[oid]['control'] == context['origOid']:
-            return context['origOid'], tag, rfc1902.Integer32(moduleContext['fileno'])
+            return context['origOid'], tag, rfc1902.Integer32(moduleContext[oid]['fileno'])
     else:
         timeslot = (time.time() - moduleContext['booted']) % (settingsCache[oid]['period'] * len(settingsCache[oid]['dirmap']))
         fileslot = int(timeslot / settingsCache[oid]['period']) + settingsCache[oid]['bounds'][0]
 
         fileno = bisect.bisect(settingsCache[oid]['keys'], fileslot) - 1
 
-        if 'fileno' not in moduleContext or \
-                moduleContext['fileno'] < fileno or \
+        if 'fileno' not in moduleContext[oid] or \
+                moduleContext[oid]['fileno'] < fileno or \
                 settingsCache[oid]['wrap']:
-            moduleContext['fileno'] = fileno
+            moduleContext[oid]['fileno'] = fileno
 
     datafile = settingsCache[oid]['dirmap'][
-        settingsCache[oid]['keys'][moduleContext['fileno']]
+        settingsCache[oid]['keys'][moduleContext[oid]['fileno']]
     ]
 
-    if 'datafile' not in moduleContext or \
-            moduleContext['datafile'] != datafile:
-        if 'datafileobj' in moduleContext:
-            moduleContext['datafileobj'].close()
-        moduleContext['datafileobj'] = RecordIndex(
+    if 'datafile' not in moduleContext[oid] or \
+            moduleContext[oid]['datafile'] != datafile:
+        if 'datafileobj' in moduleContext[oid]:
+            moduleContext[oid]['datafileobj'].close()
+        moduleContext[oid]['datafileobj'] = RecordIndex(
             datafile, SnmprecRecord()
         ).create()
-        moduleContext['datafile'] = datafile
+        moduleContext[oid]['datafile'] = datafile
 
         log.msg('multiplex: switching to data file %s for %s' % (datafile, context['origOid']))
         
-    text, db = moduleContext['datafileobj'].getHandles()
+    text, db = moduleContext[oid]['datafileobj'].getHandles()
 
     textOid = str(rfc1902.OctetString('.'.join([ '%s' % x for x in context['origOid']])))
 
     try:
-        line = moduleContext['datafileobj'].lookup(textOid)
+        line = moduleContext[oid]['datafileobj'].lookup(textOid)
     except KeyError:
         offset = searchRecordByOid(context['origOid'], text, SnmprecRecord())
         exactMatch = False

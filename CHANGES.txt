@@ -19,6 +19,8 @@
   variation logic. It appeared broken on Windows only since 0.2.1.
 - Fix to snmprec.py behaviour on missing variation module directory.
 - Fix to .snmpwalk grammar parser to support Network Address type tag.
+- Fix to multiplex.py module to let its multiple instances working
+  independently (each for a subtree).
 - Multiple fixes and re-work of the numeric.py module
 - Fix to snmprec.py tool to write snmprec data to stderr in binary mode.
 - Fix to OID search in a .snmprec in case of a subtree configured
