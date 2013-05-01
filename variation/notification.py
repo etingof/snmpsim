@@ -6,7 +6,7 @@ import sys
 from pysnmp.entity.rfc3413.oneliner import ntforg
 from pysnmp.proto import rfc1902
 from snmpsim.grammar.snmprec import SnmprecGrammar
-from snmpsim import log
+from snmpsim import error, log
 
 settingsCache = {}
 
@@ -40,7 +40,7 @@ def _cbFun(sendRequestHandle,
 
 def variate(oid, tag, value, **context):
     if ntfOrg is None:
-        raise Exception('variation module not initialized')
+        raise error.SnmpsimError('variation module not initialized')
 
     if not context['nextFlag'] and not context['exactMatch']:
         return context['origOid'], tag, context['errorStatus']

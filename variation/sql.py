@@ -41,7 +41,7 @@ def init(snmpEngine, **context):
 
 def variate(oid, tag, value, **context):
     if dbConn is None:
-        raise Exception('variation module not initialized')
+        raise error.SnmpsimError('variation module not initialized')
 
     cursor = dbConn.cursor()
 
@@ -99,6 +99,9 @@ def variate(oid, tag, value, **context):
             return origOid, tag, context['errorStatus']
 
 def record(oid, tag, value, **context):
+    if dbConn is None:
+        raise error.SnmpsimError('variation module not initialized')
+
     if context['stopFlag']:
         raise error.NoDataNotification()
 
