@@ -10,6 +10,7 @@ import time
 import sys
 import os
 import socket
+import traceback
 from pyasn1.type import univ
 from pysnmp.proto import rfc1902, rfc1905
 from pysnmp.entity import engine, config
@@ -504,6 +505,5 @@ cbCtx['total'] += cbCtx['count']
 log.msg('OIDs dumped: %s, elapsed: %.2f sec, rate: %.2f OIDs/sec' % (cbCtx['total'], t, t and cbCtx['count']//t or 0))
 
 if exc_info:
-    e = exc_info[0](exc_info[1])
-    e.__traceback__ = exc_info[2]
-    raise e
+    for line in traceback.format_exception(*exc_info):
+        log.msg(line.replace('\n', ';'))

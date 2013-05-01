@@ -8,6 +8,7 @@ import os
 import stat
 import sys
 import getopt
+import traceback
 if sys.version_info[0] < 3 and sys.version_info[1] < 5:
     from md5 import md5
 else:
@@ -963,6 +964,5 @@ transportDispatcher.closeDispatcher()
 log.msg('Process terminated')
 
 if exc_info:
-    e = exc_info[0](exc_info[1])
-    e.__traceback__ = exc_info[2]
-    raise e
+    for line in traceback.format_exception(*exc_info):
+        log.msg(line.replace('\n', ';'))
