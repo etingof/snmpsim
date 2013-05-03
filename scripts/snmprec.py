@@ -66,7 +66,7 @@ privProtocols = {
   'NONE': config.usmNoPrivProtocol
 }
 
-helpMessage = 'Usage: %s [--help] [--debug=<category>] [--logging-method=<method|?>] [--version=<1|2c|3>] [--community=<string>] [--v3-user=<username>] [--v3-auth-key=<key>] [--v3-priv-key=<key>] [--v3-auth-proto=<%s>] [--v3-priv-proto=<%s>] [--context=<string>] [--use-getbulk] [--getbulk-repetitions=<number>] [--agent-udpv4-endpoint=<X.X.X.X:NNNNN>] [--agent-udpv6-endpoint=<[X:X:..X]:NNNNN>] [--agent-unix-endpoint=</path/to/named/pipe>] [--start-oid=<OID>] [--stop-oid=<OID>] [--output-file=<filename>] [--variation-modules-dir=<dir>] [--variation-module=<module>] [--variation-module-options=<args]>]' % (sys.argv[0], '|'.join([ x for x in authProtocols if x != 'NONE' ]), '|'.join([ x for x in privProtocols if x != 'NONE' ]))
+helpMessage = 'Usage: %s [--help] [--debug=<category>] [--logging-method=<method|?>] [--version=<1|2c|3>] [--community=<string>] [--v3-user=<username>] [--v3-auth-key=<key>] [--v3-priv-key=<key>] [--v3-auth-proto=<%s>] [--v3-priv-proto=<%s>] [--context=<string>] [--use-getbulk] [--getbulk-repetitions=<number>] [--agent-udpv4-endpoint=<X.X.X.X:NNNNN>] [--agent-udpv6-endpoint=<[X:X:..X]:NNNNN>] [--agent-unix-endpoint=</path/to/named/pipe>] [--start-oid=<OID>] [--stop-oid=<OID>] [--output-file=<filename>] [--variation-modules-dir=<dir>] [--variation-module=<module>] [--variation-module-options=<args>]' % (sys.argv[0], '|'.join([ x for x in authProtocols if x != 'NONE' ]), '|'.join([ x for x in privProtocols if x != 'NONE' ]))
 
 log.setLogger('snmprec', 'stdout')
 
