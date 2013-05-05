@@ -15,6 +15,7 @@
 - The multiplex module improved to allow .snmprec file selection via
   SNMP SET.
 - Fatal exceptions are now fully logged.
+- Type checking is now performed on SET operation at writecache module.
 - Fix to community names '/'-normalization at transport address based
   variation logic. It appeared broken on Windows only since 0.2.1.
 - Fix to snmprec.py behaviour on missing variation module directory.

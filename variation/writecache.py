@@ -62,6 +62,10 @@ def variate(oid, tag, value, **context):
                     log.msg('writecache: bad vlist syntax: %s' % settingsCache[oid]['vlist'])
             settingsCache[oid]['vlist'] = vlist
 
+    if oid not in moduleContext:
+        moduleContext[oid] = {}
+        moduleContext[oid]['type'] = SnmprecGrammar().tagMap[tag]()
+
     textOid = str(oid)
 
     if context['setFlag']:
@@ -83,15 +87,17 @@ def variate(oid, tag, value, **context):
                     name=oid, idx=context['varsTotal']-context['varsRemaining']
                 )
 
-        moduleContext['cache'][textOid] = context['origValue']
-        moduleContext['cache']['1'] = 1
+        if moduleContext[oid]['type'].isSameTypeWith(context['origValue']):
+            moduleContext['cache'][textOid] = context['origValue']
+        else:
+            return context['origOid'], tag, context['errorStatus']
 
     if textOid in moduleContext['cache']:
         return oid, tag, moduleContext['cache'][textOid]
     elif 'hexvalue' in settingsCache[oid]:
-        return oid, tag, SnmprecGrammar().tagMap[tag](hexValue=settingsCache[oid]['hexvalue'])
+        return oid, tag, moduleContext[oid]['type'].clone(hexValue=settingsCache[oid]['hexvalue'])
     elif 'value' in settingsCache[oid]:
-        return oid, tag, SnmprecGrammar().tagMap[tag](settingsCache[oid]['value'])
+        return oid, tag, moduleContext[oid]['type'].clone(settingsCache[oid]['value'])
     else:
         return oid, tag, context['errorStatus']
 
