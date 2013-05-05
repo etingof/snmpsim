@@ -109,7 +109,7 @@ def variate(oid, tag, value, **context):
         v = settingsCache[oid]['min']
     elif v > settingsCache[oid]['max']:
         if 'wrap' in settingsCache[oid]:
-            v -= settingsCache[oid]['max']
+            v %= settingsCache[oid]['max']
         else:
             v = settingsCache[oid]['max']
 
