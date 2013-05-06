@@ -46,7 +46,7 @@ class FileLogger(AbstractLogger):
                '.%.3d' % int((time.time() % 1) * 1000)
 
     def __call__(self, s):
-        self._fileobj.write('%s %s[%s]: %s\r\n' % (self.timestamp(), self.progId, getattr(os, 'getpid', lambda x: 0)(), s))
+        self._fileobj.write('%s %s[%s]: %s\n' % (self.timestamp(), self.progId, getattr(os, 'getpid', lambda x: 0)(), s))
         self._fileobj.flush()
 
 class ProtoStdLogger(FileLogger):
@@ -54,7 +54,7 @@ class ProtoStdLogger(FileLogger):
     def init(self, *priv):
         self._fileobj = self.stdfile
 
-    def __call__(self, s): self._fileobj.write(s + '\r\n')
+    def __call__(self, s): self._fileobj.write(s + '\n')
 
 class StdoutLogger(ProtoStdLogger):
     stdfile = sys.stdout

@@ -26,6 +26,8 @@
 - Fix to snmprec.py tool to write snmprec data to stderr in binary mode.
 - Fix to OID search in a .snmprec in case of a subtree configured
   on the last line of .snmprec file.
+- Fix to line separator character used in file logger -- now it's
+  platform-dependent.
 
 0.2.1
 -----
