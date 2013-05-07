@@ -24,17 +24,14 @@ errorTypes = {
         'endofmib': error.EndOfMibViewError
 }
 
-settingsCache = {}
-moduleOptions = {}
-moduleContext = {}
-
 def init(snmpEngine, **context):
+    moduleContext['settings'] = {}
     if context['options']:
-        moduleOptions.update(
+        moduleContext['settings'].update(
             dict([x.split(':') for x in context['options'].split(',')])
         )
-    if 'file' in moduleOptions:
-        moduleContext['cache'] = shelve.open(moduleOptions['file'])
+    if 'file' in moduleContext['settings']:
+        moduleContext['cache'] = shelve.open(moduleContext['settings']['file'])
     else:
         moduleContext['cache'] = {}
 
@@ -42,15 +39,15 @@ def variate(oid, tag, value, **context):
     if not context['nextFlag'] and not context['exactMatch']:
         return context['origOid'], tag, context['errorStatus']
 
-    if oid not in settingsCache:
-        settingsCache[oid] = dict([x.split('=') for x in value.split(',')])
+    if 'settings' not in recordContext:
+        recordContext['settings'] = dict([x.split('=') for x in value.split(',')])
 
-        if 'vlist' in settingsCache[oid]:
+        if 'vlist' in recordContext['settings']:
             vlist = {}
-            settingsCache[oid]['vlist'] = settingsCache[oid]['vlist'].split(':')
-            while settingsCache[oid]['vlist']:
-                o,v,e = settingsCache[oid]['vlist'][:3]
-                settingsCache[oid]['vlist'] = settingsCache[oid]['vlist'][3:]
+            recordContext['settings']['vlist'] = recordContext['settings']['vlist'].split(':')
+            while recordContext['settings']['vlist']:
+                o,v,e = recordContext['settings']['vlist'][:3]
+                recordContext['settings']['vlist'] = recordContext['settings']['vlist'][3:]
                 v = SnmprecGrammar.tagMap[tag](v)
                 if o not in vlist:
                     vlist[o] = {}
@@ -59,8 +56,8 @@ def variate(oid, tag, value, **context):
                 elif o in ('lt', 'gt'):
                     vlist[o] = v, e
                 else:
-                    log.msg('writecache: bad vlist syntax: %s' % settingsCache[oid]['vlist'])
-            settingsCache[oid]['vlist'] = vlist
+                    log.msg('writecache: bad vlist syntax: %s' % recordContext['settings']['vlist'])
+            recordContext['settings']['vlist'] = vlist
 
     if oid not in moduleContext:
         moduleContext[oid] = {}
@@ -69,16 +66,16 @@ def variate(oid, tag, value, **context):
     textOid = str(oid)
 
     if context['setFlag']:
-        if 'vlist' in settingsCache[oid]:
-            if 'eq' in settingsCache[oid]['vlist'] and  \
-                     context['origValue'] in settingsCache[oid]['vlist']['eq']:
-                e = settingsCache[oid]['vlist']['eq'][context['origValue']]
-            elif 'lt' in settingsCache[oid]['vlist'] and  \
-                     context['origValue']<settingsCache[oid]['vlist']['lt'][0]:
-                e = settingsCache[oid]['vlist']['lt'][1]
-            elif 'gt' in settingsCache[oid]['vlist'] and  \
-                     context['origValue']>settingsCache[oid]['vlist']['gt'][0]:
-                e = settingsCache[oid]['vlist']['gt'][1]
+        if 'vlist' in recordContext['settings']:
+            if 'eq' in recordContext['settings']['vlist'] and  \
+                     context['origValue'] in recordContext['settings']['vlist']['eq']:
+                e = recordContext['settings']['vlist']['eq'][context['origValue']]
+            elif 'lt' in recordContext['settings']['vlist'] and  \
+                     context['origValue']<recordContext['settings']['vlist']['lt'][0]:
+                e = recordContext['settings']['vlist']['lt'][1]
+            elif 'gt' in recordContext['settings']['vlist'] and  \
+                     context['origValue']>recordContext['settings']['vlist']['gt'][0]:
+                e = recordContext['settings']['vlist']['gt'][1]
             else:
                 e = None
 
@@ -94,13 +91,13 @@ def variate(oid, tag, value, **context):
 
     if textOid in moduleContext['cache']:
         return oid, tag, moduleContext['cache'][textOid]
-    elif 'hexvalue' in settingsCache[oid]:
-        return oid, tag, moduleContext[oid]['type'].clone(hexValue=settingsCache[oid]['hexvalue'])
-    elif 'value' in settingsCache[oid]:
-        return oid, tag, moduleContext[oid]['type'].clone(settingsCache[oid]['value'])
+    elif 'hexvalue' in recordContext['settings']:
+        return oid, tag, moduleContext[oid]['type'].clone(hexValue=recordContext['settings']['hexvalue'])
+    elif 'value' in recordContext['settings']:
+        return oid, tag, moduleContext[oid]['type'].clone(recordContext['settings']['value'])
     else:
         return oid, tag, context['errorStatus']
 
 def shutdown(snmpEngine, **context):
-    if 'file' in moduleOptions:
+    if 'file' in moduleContext['settings']:
         moduleContext['cache'].close()

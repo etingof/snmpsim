@@ -15,22 +15,22 @@ from snmpsim import error
 
 dbConn = None
 dbTable = 'snmprec'
-moduleOptions = {}
 
 def init(snmpEngine, **context):
     global dbConn, dbTable
+    options = {}
     if context['options']:
-        moduleOptions.update(
+        options.update(
             dict([x.split(':') for x in context['options'].split(',')])
         )
-    if 'dbtype' not in moduleOptions:
+    if 'dbtype' not in options:
         raise error.SnmpsimError('database type not specified')
-    db = __import__(moduleOptions['dbtype'])
-    if 'dboptions' not in moduleOptions:
+    db = __import__(options['dbtype'])
+    if 'dboptions' not in options:
         raise error.SnmpsimError('database connect options not specified')
-    dbConn = db.connect(*moduleOptions['dboptions'].split('@'))
-    if 'dbtable' in moduleOptions:
-        dbTable = moduleOptions['dbtable']
+    dbConn = db.connect(*options['dboptions'].split('@'))
+    if 'dbtable' in options:
+        dbTable = options['dbtable']
     if 'mode' in context and context['mode'] == 'recording':
         cursor = dbConn.cursor()
         try:

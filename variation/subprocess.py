@@ -5,17 +5,16 @@ import sys
 import subprocess
 from snmpsim import log
 
-moduleOptions = {}
-
 def init(snmpEngine, **context):
+    moduleContext['settings'] = {}
     if context['options']:
-        moduleOptions.update(
+        moduleContext['settings'].update(
             dict([x.split(':') for x in context['options'].split(',')])
         )
-    if 'shell' not in moduleOptions:
-        moduleOptions['shell'] = sys.platform[:3] == 'win'
+    if 'shell' not in moduleContext['settings']:
+        moduleContext['settings']['shell'] = sys.platform[:3] == 'win'
     else:
-        moduleOptions['shell'] = int(moduleOptions['shell'])
+        moduleContext['settings']['shell'] = int(moduleContext['settings']['shell'])
  
 def variate(oid, tag, value, **context):
     args = [ x\
@@ -34,7 +33,7 @@ def variate(oid, tag, value, **context):
 
     try:
         return oid, tag, subprocess.check_output(
-            args, shell=moduleOptions['shell']
+            args, shell=moduleContext['settings']['shell']
         )
     except subprocess.CalledProcessError:
         log.msg('subprocess: external program execution failed')

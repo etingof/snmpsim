@@ -15,33 +15,30 @@ from pysnmp.proto import rfc1902, rfc1905
 from snmpsim import log
 from snmpsim import error
 
-settingsCache = {}
-valuesCache = {}
-moduleOptions = {}
-moduleContext = {}
-
 tboot = time.time()
 
 def init(snmpEngine, **context):
-    if context['options']:
-        for k,v in [x.split(':') for x in context['options'].split(',')]:
-            if k == 'addon':
-                if k in moduleOptions:
-                    moduleOptions[k].append(v)
-                else:
-                    moduleOptions[k] = [v]
-            else:
-                moduleOptions[k] = v
+    if context['mode'] == 'variating':
+        random.seed()
     if context['mode'] == 'recording':
-        if 'iterations' in moduleOptions:
-            moduleOptions['iterations'] = int(moduleOptions['iterations'])
-            if moduleOptions['iterations']:
-                moduleOptions['iterations'] = 1  # no reason for more
-        if 'period' in moduleOptions:
-            moduleOptions['period'] = float(moduleOptions['period'])
-        else:
-            moduleOptions['period'] = 10.0
-    random.seed()
+        moduleContext['settings'] = {}
+        if context['options']:
+            for k,v in [x.split(':') for x in context['options'].split(',')]:
+                if k == 'addon':
+                    if k in moduleContext['settings']:
+                        moduleContext['settings'][k].append(v)
+                    else:
+                        moduleContext['settings'][k] = [v]
+                else:
+                    moduleContext['settings'][k] = v
+            if 'iterations' in moduleContext['settings']:
+                moduleContext['settings']['iterations'] = int(moduleContext['settings']['iterations'])
+                if moduleContext['settings']['iterations']:
+                    moduleContext['settings']['iterations'] = 1  # no reason for more
+            if 'period' in moduleContext['settings']:
+                moduleContext['settings']['period'] = float(moduleContext['settings']['period'])
+            else:
+                moduleContext['settings']['period'] = 10.0
 
 def variate(oid, tag, value, **context):
     if not context['nextFlag'] and not context['exactMatch']:
@@ -49,72 +46,72 @@ def variate(oid, tag, value, **context):
     if context['setFlag']:
         return context['origOid'], tag, context['errorStatus']
 
-    if oid not in settingsCache:
-        settingsCache[oid] = dict([ x.split('=') for x in value.split(',') ])
-        for k in settingsCache[oid]:
+    if 'settings' not in recordContext:
+        recordContext['settings'] = dict([ x.split('=') for x in value.split(',') ])
+        for k in recordContext['settings']:
             if k != 'function':
-                settingsCache[oid][k] = float(settingsCache[oid][k])
-        if 'min' not in settingsCache[oid]:
-            settingsCache[oid]['min'] = 0
-        if 'max' not in settingsCache[oid]:
+                recordContext['settings'][k] = float(recordContext['settings'][k])
+        if 'min' not in recordContext['settings']:
+            recordContext['settings']['min'] = 0
+        if 'max' not in recordContext['settings']:
             if tag == '70':
-                settingsCache[oid]['max'] = 0xffffffffffffffff
+                recordContext['settings']['max'] = 0xffffffffffffffff
             else:
-                settingsCache[oid]['max'] = 0xffffffff
-        if 'rate' not in settingsCache[oid]:
-            settingsCache[oid]['rate'] = 1
-        if 'function' in settingsCache[oid]:
-            settingsCache[oid]['function'] = getattr(
-                math, settingsCache[oid]['function']
+                recordContext['settings']['max'] = 0xffffffff
+        if 'rate' not in recordContext['settings']:
+            recordContext['settings']['rate'] = 1
+        if 'function' in recordContext['settings']:
+            recordContext['settings']['function'] = getattr(
+                math, recordContext['settings']['function']
             )
         else:
-            settingsCache[oid]['function'] = lambda x: x
+            recordContext['settings']['function'] = lambda x: x
 
-    vold, told = settingsCache[oid].get('initial', settingsCache[oid]['min']), tboot
+    vold, told = recordContext['settings'].get('initial', recordContext['settings']['min']), tboot
 
-    if 'cumulative' in settingsCache[oid]:
-        if oid not in valuesCache:
-            valuesCache[oid] = vold, told
-        vold, told = valuesCache[oid]
+    if 'cumulative' in recordContext['settings']:
+        if 'value' not in recordContext:
+            recordContext['value'] = vold, told
+        vold, told = recordContext['value']
 
     tnow = time.time()
 
-    if 'atime' in settingsCache[oid]:
+    if 'atime' in recordContext['settings']:
         t = tnow
     else:
         t = tnow - tboot
 
-    v = settingsCache[oid]['function'](
-        t * settingsCache[oid]['rate']
+    v = recordContext['settings']['function'](
+        t * recordContext['settings']['rate']
     )
     
-    if 'scale' in settingsCache[oid]:
-        v *= settingsCache[oid]['scale']
+    if 'scale' in recordContext['settings']:
+        v *= recordContext['settings']['scale']
 
-    if 'offset' in settingsCache[oid]:
-        if 'cumulative' in settingsCache[oid]:
-            v += settingsCache[oid]['offset'] * (tnow - told) * settingsCache[oid]['rate']
+    if 'offset' in recordContext['settings']:
+        if 'cumulative' in recordContext['settings']:
+            v += recordContext['settings']['offset'] * (tnow - told) * recordContext['settings']['rate']
         else:
-            v += settingsCache[oid]['offset']
+            v += recordContext['settings']['offset']
 
-    if 'deviation' in settingsCache[oid] and settingsCache[oid]['deviation']:
-        v += random.randrange(-settingsCache[oid]['deviation'], settingsCache[oid]['deviation'])
+    if 'deviation' in recordContext['settings'] and recordContext['settings']['deviation']:
+        v += random.randrange(-recordContext['settings']['deviation'], recordContext['settings']['deviation'])
 
-    if 'cumulative' in settingsCache[oid]:
+    if 'cumulative' in recordContext['settings']:
         v = max(v, 0)
 
     v += vold
 
-    if v < settingsCache[oid]['min']:
-        v = settingsCache[oid]['min']
-    elif v > settingsCache[oid]['max']:
-        if 'wrap' in settingsCache[oid]:
-            v %= settingsCache[oid]['max']
+    if v < recordContext['settings']['min']:
+        v = recordContext['settings']['min']
+    elif v > recordContext['settings']['max']:
+        if 'wrap' in recordContext['settings']:
+            v %= recordContext['settings']['max']
         else:
-            v = settingsCache[oid]['max']
+            v = recordContext['settings']['max']
 
-    if 'cumulative' in settingsCache[oid]:
-        valuesCache[oid] = v, tnow
+    if 'cumulative' in recordContext['settings']:
+        recordContext['value'] = v, tnow
 
     return oid, tag, v
 
@@ -123,11 +120,11 @@ def record(oid, tag, value, **context):
         moduleContext['started'] = time.time()
 
     if 'iterations' not in moduleContext:
-        moduleContext['iterations'] = min(1, moduleOptions.get('iterations',0))
+        moduleContext['iterations'] = min(1, moduleContext['settings'].get('iterations',0))
 
     # single-run recording
 
-    if 'iterations' not in moduleOptions or not moduleOptions['iterations']:
+    if 'iterations' not in moduleContext['settings'] or not moduleContext['settings']['iterations']:
         if context['origValue'].tagSet not in (
                     rfc1902.Counter32.tagSet,
                     rfc1902.Counter64.tagSet,
@@ -140,8 +137,8 @@ def record(oid, tag, value, **context):
                 value = context['hexvalue']
             return oid, tag, value
 
-        if 'taglist' not in moduleOptions or \
-                tag not in moduleOptions['taglist']:
+        if 'taglist' not in moduleContext['settings'] or \
+                tag not in moduleContext['settings']['taglist']:
             return oid, tag, value
 
         value = 'initial=%s' % value 
@@ -163,9 +160,9 @@ def record(oid, tag, value, **context):
             settings['rate'] = 100
         elif context['origValue'].tagSet == rfc1902.Integer.tagSet:
             settings['rate'] = 0  # may be constants
-        if 'addon' in moduleOptions:
+        if 'addon' in moduleContext['settings']:
             settings.update(
-                dict([x.split('=') for x in moduleOptions['addon']])
+                dict([x.split('=') for x in moduleContext['settings']['addon']])
             )
 
         moduleContext[oid] = {}
@@ -174,8 +171,8 @@ def record(oid, tag, value, **context):
 
     if moduleContext['iterations']:
         if context['stopFlag']: # switching to final iteration
-            wait = max(0, float(moduleOptions['period']) - (time.time() - moduleContext['started']))
-            log.msg('numeric: waiting %.2f sec(s), %s OIDs dumped, %s iterations remaining...' % (wait, context['total']+context['count'], moduleOptions['iterations']))
+            wait = max(0, float(moduleContext['settings']['period']) - (time.time() - moduleContext['started']))
+            log.msg('numeric: waiting %.2f sec(s), %s OIDs dumped, %s iterations remaining...' % (wait, context['total']+context['count'], moduleContext['settings']['iterations']))
             time.sleep(wait)
             moduleContext['iterations'] -= 1
             moduleContext['started'] = time.time()
@@ -205,8 +202,8 @@ def record(oid, tag, value, **context):
                     value = moduleContext[oid]['hexvalue']
                 return oid, tag, value
 
-            if 'taglist' not in moduleOptions or \
-                    tag not in moduleOptions['taglist']:
+            if 'taglist' not in moduleContext['settings'] or \
+                    tag not in moduleContext['settings']['taglist']:
                 return oid, tag, moduleContext[oid]['value']
  
             moduleContext[oid]['rate'] = (int(context['origValue']) - int(moduleContext[oid]['value'])) / (time.time() - moduleContext[oid]['time'])

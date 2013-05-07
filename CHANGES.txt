@@ -10,6 +10,10 @@
   to ease the understanding of their operation.
 - The --quiet flag of snmprec.py now depricated in favor of "null"
   logging method.
+- Variation modules execution environment extended to provide contexts
+  for three scopes: record, agent and module. This simplifies modules
+  implementation in terms of storing and managing state/configuration
+  informaton on per-OID/per-Agent and global basis.
 - The snmprec.py tool now supports DNS names in c/l target parameter.
 - New 'cumulative' flag added to the numeric.py variation module.
 - The multiplex module improved to allow .snmprec file selection via

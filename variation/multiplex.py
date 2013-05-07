@@ -14,120 +14,116 @@ from snmpsim import confdir
 from snmpsim import log
 from snmpsim import error
 
-settingsCache = {}
-moduleOptions = {}
-moduleContext = { 'ready': False }
-
 def init(snmpEngine, **context):
     if context['options']:
         for k,v in [x.split(':') for x in context['options'].split(',')]:
             if k == 'addon':
-                if k in moduleOptions:
-                    moduleOptions[k].append(v)
+                if k in moduleContext:
+                    moduleContext[k].append(v)
                 else:
-                    moduleOptions[k] = [v]
+                    moduleContext[k] = [v]
             else:
-                moduleOptions[k] = v
+                moduleContext[k] = v
     if context['mode'] == 'variating':
         moduleContext['booted'] = time.time()
     elif context['mode'] == 'recording':
-        if 'dir' not in moduleOptions:
+        if 'dir' not in moduleContext:
             raise error.SnmpsimError('SNMP snapshots directory not specified')
-        if not os.path.exists(moduleOptions['dir']):
-            log.msg('multiplex: creating %s...' % moduleOptions['dir'])
-            os.makedirs(moduleOptions['dir'])
-        if 'iterations' in moduleOptions:
-            moduleOptions['iterations'] = int(moduleOptions['iterations'])
-        if 'period' in moduleOptions:
-            moduleOptions['period'] = float(moduleOptions['period'])
+        if not os.path.exists(moduleContext['dir']):
+            log.msg('multiplex: creating %s...' % moduleContext['dir'])
+            os.makedirs(moduleContext['dir'])
+        if 'iterations' in moduleContext:
+            moduleContext['iterations'] = int(moduleContext['iterations'])
+        if 'period' in moduleContext:
+            moduleContext['period'] = float(moduleContext['period'])
         else:
-            moduleOptions['period'] = 10.0
+            moduleContext['period'] = 10.0
 
     moduleContext['ready'] = True
 
 def variate(oid, tag, value, **context):
-    if oid not in settingsCache:
-        settingsCache[oid] = dict([ x.split('=') for x in value.split(',') ])
-        if 'dir' not in settingsCache[oid]:
+    if 'settings' not in recordContext:
+        recordContext['settings'] = dict([ x.split('=') for x in value.split(',') ])
+        if 'dir' not in recordContext['settings']:
             log.msg('multiplex: snapshot directory not specified')
             return context['origOid'], tag, context['errorStatus']
 
-        settingsCache[oid]['dir'] = settingsCache[oid]['dir'].replace(
+        recordContext['settings']['dir'] = recordContext['settings']['dir'].replace(
             '/', os.path.sep
         )
-        if settingsCache[oid]['dir'][0] != os.path.sep:
+        if recordContext['settings']['dir'][0] != os.path.sep:
             for x in confdir.data:
-                d = os.path.join(x, settingsCache[oid]['dir'])
+                d = os.path.join(x, recordContext['settings']['dir'])
                 if os.path.exists(d):
                     break
             else:
-                log.msg('multiplex: directory %s not found' % settingsCache[oid]['dir'])
+                log.msg('multiplex: directory %s not found' % recordContext['settings']['dir'])
                 return context['origOid'], tag, context['errorStatus']
         else:
-            d = settingsCache[oid]['dir']
-        settingsCache[oid]['dirmap'] = dict(
+            d = recordContext['settings']['dir']
+        recordContext['dirmap'] = dict(
             [ (int(os.path.basename(x).split(os.path.extsep)[0]), os.path.join(d, x)) for x in os.listdir(d) if x[-7:] == 'snmprec' ]
         )
-        settingsCache[oid]['keys'] = list(
-            settingsCache[oid]['dirmap'].keys()
+        recordContext['keys'] = list(
+            recordContext['dirmap'].keys()
         )
-        settingsCache[oid]['bounds'] = (
-            min(settingsCache[oid]['keys']), max(settingsCache[oid]['keys'])
+        recordContext['bounds'] = (
+            min(recordContext['keys']), max(recordContext['keys'])
         )
-        if 'period' in settingsCache[oid]:
-            settingsCache[oid]['period'] = float(settingsCache[oid]['period'])
+        if 'period' in recordContext['settings']:
+            recordContext['settings']['period'] = float(recordContext['settings']['period'])
         else:
-            settingsCache[oid]['period'] = 60.0
-        if 'wrap' in settingsCache[oid]:
-            settingsCache[oid]['wrap'] = bool(settingsCache[oid]['wrap'])
+            recordContext['settings']['period'] = 60.0
+        if 'wrap' in recordContext['settings']:
+            recordContext['settings']['wrap'] = bool(recordContext['settings']['wrap'])
         else:
-            settingsCache[oid]['wrap'] = False
-        if 'control' in settingsCache[oid]:
-            settingsCache[oid]['control'] = rfc1902.ObjectName(
-                settingsCache[oid]['control']
+            recordContext['settings']['wrap'] = False
+        if 'control' in recordContext['settings']:
+            recordContext['settings']['control'] = rfc1902.ObjectName(
+                recordContext['settings']['control']
             )
-            log.msg('multiplex: using control OID %s for subtree %s, time-based multiplexing disabled' % (settingsCache[oid]['control'], oid))
+            log.msg('multiplex: using control OID %s for subtree %s, time-based multiplexing disabled' % (recordContext['settings']['control'], oid))
 
-        settingsCache[oid]['ready'] = True
+        recordContext['ready'] = True
 
-    if 'ready' not in settingsCache[oid]:
+    if 'ready' not in recordContext:
         return context['origOid'], tag, context['errorStatus']
 
     if oid not in moduleContext:
         moduleContext[oid] = {}
 
     if context['setFlag']:
-        if 'control' in settingsCache[oid] and \
-                settingsCache[oid]['control'] == context['origOid']:
+        if 'control' in recordContext['settings'] and \
+                recordContext['settings']['control'] == context['origOid']:
             fileno = int(context['origValue'])
-            if fileno >= len(settingsCache[oid]['keys']):
-                log.msg('multiplex: .snmprec file number %s over limit of %s' % (fileno, len(settingsCache[oid]['keys'])))
+            if fileno >= len(recordContext['keys']):
+                log.msg('multiplex: .snmprec file number %s over limit of %s' % (fileno, len(recordContext['keys'])))
                 return context['origOid'], tag, context['errorStatus']
             moduleContext[oid]['fileno'] = fileno
-            log.msg('multiplex: switched to file #%s (%s)' % (settingsCache[oid]['keys'][fileno], settingsCache[oid]['dirmap'][settingsCache[oid]['keys'][fileno]]))
+            log.msg('multiplex: switched to file #%s (%s)' % (recordContext['keys'][fileno], recordContext['dirmap'][recordContext['keys'][fileno]]))
             return context['origOid'], tag, context['origValue']
         else:
             return context['origOid'], tag, context['errorStatus']
 
-    if 'control' in settingsCache[oid]:
+    if 'control' in recordContext['settings']:
         if 'fileno' not in moduleContext[oid]:
             moduleContext[oid]['fileno'] = 0
         if not context['nextFlag'] and \
-                settingsCache[oid]['control'] == context['origOid']:
+                recordContext['settings']['control'] == context['origOid']:
             return context['origOid'], tag, rfc1902.Integer32(moduleContext[oid]['fileno'])
     else:
-        timeslot = (time.time() - moduleContext['booted']) % (settingsCache[oid]['period'] * len(settingsCache[oid]['dirmap']))
-        fileslot = int(timeslot / settingsCache[oid]['period']) + settingsCache[oid]['bounds'][0]
+        timeslot = (time.time() - moduleContext['booted']) % (recordContext['settings']['period'] * len(recordContext['dirmap']))
+        fileslot = int(timeslot / recordContext['settings']['period']) + recordContext['bounds'][0]
 
-        fileno = bisect.bisect(settingsCache[oid]['keys'], fileslot) - 1
+        fileno = bisect.bisect(recordContext['keys'], fileslot) - 1
 
         if 'fileno' not in moduleContext[oid] or \
                 moduleContext[oid]['fileno'] < fileno or \
-                settingsCache[oid]['wrap']:
+                recordContext['settings']['wrap']:
             moduleContext[oid]['fileno'] = fileno
 
-    datafile = settingsCache[oid]['dirmap'][
-        settingsCache[oid]['keys'][moduleContext[oid]['fileno']]
+    datafile = recordContext['dirmap'][
+        recordContext['keys'][moduleContext[oid]['fileno']]
     ]
 
     if 'datafile' not in moduleContext[oid] or \
@@ -176,7 +172,7 @@ def variate(oid, tag, value, **context):
     return oid, tag, value
 
 def record(oid, tag, value, **context):
-    if not moduleContext['ready']:
+    if 'ready' not in moduleContext:
         raise error.SnmpsimError('module not initialized')
     if 'started' not in moduleContext:
         moduleContext['started'] = time.time()
@@ -186,12 +182,12 @@ def record(oid, tag, value, **context):
             del moduleContext['file']
         else:
             moduleContext['filenum'] = 0
-        if 'iterations' in moduleOptions and moduleOptions['iterations']:
-            wait = max(0, moduleOptions['period'] - (time.time() - moduleContext['started']))
-            log.msg('multiplex: waiting %.2f sec(s), %s OIDs dumped, %s iterations remaining...' % (wait, context['total']+context['count'], moduleOptions['iterations']))
+        if 'iterations' in moduleContext and moduleContext['iterations']:
+            wait = max(0, moduleContext['period'] - (time.time() - moduleContext['started']))
+            log.msg('multiplex: waiting %.2f sec(s), %s OIDs dumped, %s iterations remaining...' % (wait, context['total']+context['count'], moduleContext['iterations']))
             time.sleep(wait)
             moduleContext['started'] = time.time()
-            moduleOptions['iterations'] -= 1
+            moduleContext['iterations'] -= 1
             moduleContext['filenum'] += 1
             raise error.MoreDataNotification()
         else:
@@ -200,7 +196,7 @@ def record(oid, tag, value, **context):
     if 'file' not in moduleContext:
         if 'filenum' not in moduleContext:
             moduleContext['filenum'] = 0
-        snmprecfile = os.path.join(moduleOptions['dir'],
+        snmprecfile = os.path.join(moduleContext['dir'],
                                    '%.5d%ssnmprec' % (moduleContext['filenum'],
                                                       os.path.extsep))
         moduleContext['file'] = open(snmprecfile, 'wb')
@@ -212,13 +208,13 @@ def record(oid, tag, value, **context):
 
     if not context['count']:
         settings = {
-            'dir': moduleOptions['dir'].replace(os.path.sep, '/')
+            'dir': moduleContext['dir'].replace(os.path.sep, '/')
         }
-        if 'period' in moduleOptions:
-            settings['period'] = '%.2f' % float(moduleOptions['period'])
-        if 'addon' in moduleOptions:
+        if 'period' in moduleContext:
+            settings['period'] = '%.2f' % float(moduleContext['period'])
+        if 'addon' in moduleContext:
             settings.update(
-                dict([x.split('=') for x in moduleOptions['addon']])
+                dict([x.split('=') for x in moduleContext['addon']])
             )
         value = ','.join([ '%s=%s' % (k,v) for k,v in settings.items() ])
         return str(context['startOID']), ':multiplex', value

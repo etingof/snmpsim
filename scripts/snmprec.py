@@ -247,7 +247,7 @@ if variationModuleName:
             log.msg('Module %s not found' % mod)
             continue
 
-        ctx = { 'path': mod }
+        ctx = { 'path': mod, 'moduleContext': {} }
 
         try:
             if sys.version_info[0] > 2:

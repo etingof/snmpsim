@@ -97,8 +97,20 @@ class SnmprecRecord(snmprec.SnmprecRecord):
                         if hexvalue is not None:
                             context['hexvalue'] = hexvalue
                             context['hextag'] = self.grammar.getTagByType(context['origValue']) + 'x'
+
+                    # prepare agent and record contexts on first reference
+                    ( variationModule,
+                      agentContexts,
+                      recordContexts ) = context['variationModules'][modName]
+                    if context['dataFile'] not in agentContexts:
+                        agentContexts[context['dataFile']] = {}
+                    variationModule['agentContext'] = agentContexts[context['dataFile']]
+                    if oid not in recordContexts:
+                        recordContexts[oid] = {}
+                    variationModule['recordContext'] = recordContexts[oid]
+
                     # invoke variation module
-                    oid, tag, value = context['variationModules'][modName]['variate'](oid, tag, value, **context)
+                    oid, tag, value = variationModule['variate'](oid, tag, value, **context)
             else:
                 raise SnmpsimError('Variation module "%s" referenced but not loaded\r\n' % modName)
 
@@ -655,7 +667,8 @@ for variationModulesDir in confdir.variation:
 
             ctx = { 'path': mod,
                     'alias': alias,
-                    'args': args }
+                    'args': args,
+                    'moduleContext': {} }
 
             try:
                 if sys.version_info[0] > 2:
@@ -666,7 +679,8 @@ for variationModulesDir in confdir.variation:
                 log.msg('Variation module %s execution failure: %s' %  (mod, sys.exc_info()[1]))
                 sys.exit(-1)
             else:
-                variationModules[alias] = ctx
+                # moduleContext, agentContext, recordContext
+                variationModules[alias] = ctx, {}, {}
 
     log.msg('A total of %s modules found in %s' % (len(variationModules), variationModulesDir))
 
@@ -704,7 +718,8 @@ else:
 
 if variationModules:
     log.msg('Initializing variation modules...')
-    for name, body in variationModules.items():
+    for name, contexts in variationModules.items():
+        body = contexts[0]
         for x in ('init', 'variate', 'shutdown'):
             if x not in body:
                 log.msg('ERROR: missing %s handler in %s!' % (x, name))
@@ -961,7 +976,8 @@ except Exception:
 
 if variationModules:
     log.msg('Shutting down variation modules:')
-    for name, body in variationModules.items():
+    for name, contexts in variationModules.items():
+        body = contexts[0]
         try:
             body['shutdown'](not v2cArch and snmpEngine or None,
                              options=body['args'], mode='variation')

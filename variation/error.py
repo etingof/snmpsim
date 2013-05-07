@@ -25,32 +25,30 @@ errorTypes = {
         'endofmib': error.EndOfMibViewError
 }
 
-settingsCache = {}
-
 def init(snmpEngine, **context): pass
 
 def variate(oid, tag, value, **context):
     if not context['nextFlag'] and not context['exactMatch']:
         return context['origOid'], tag, context['errorStatus']
 
-    if oid not in settingsCache:
-        settingsCache[oid] = dict([x.split('=') for x in value.split(',')])
+    if 'settings' not in recordContext:
+        recordContext['settings'] = dict([x.split('=') for x in value.split(',')])
 
-        if 'hexvalue' in settingsCache[oid]:
-            settingsCache[oid]['value'] = [int(settingsCache[oid]['hexvalue'][x:x+2], 16) for x in range(0, len(settingsCache[oid]['hexvalue']), 2)]
+        if 'hexvalue' in recordContext['settings']:
+            recordContext['settings']['value'] = [int(recordContext['settings']['hexvalue'][x:x+2], 16) for x in range(0, len(recordContext['settings']['hexvalue']), 2)]
 
-        if 'status' in settingsCache[oid]:
-            settingsCache[oid]['status'] = settingsCache[oid]['status'].lower()
+        if 'status' in recordContext['settings']:
+            recordContext['settings']['status'] = recordContext['settings']['status'].lower()
 
-        if 'op' not in settingsCache[oid]:
-            settingsCache[oid]['op'] = 'any'
+        if 'op' not in recordContext['settings']:
+            recordContext['settings']['op'] = 'any'
 
-        if 'vlist' in settingsCache[oid]:
+        if 'vlist' in recordContext['settings']:
             vlist = {}
-            settingsCache[oid]['vlist'] = settingsCache[oid]['vlist'].split(':')
-            while settingsCache[oid]['vlist']:
-                o,v,e = settingsCache[oid]['vlist'][:3]
-                settingsCache[oid]['vlist'] = settingsCache[oid]['vlist'][3:]
+            recordContext['settings']['vlist'] = recordContext['settings']['vlist'].split(':')
+            while recordContext['settings']['vlist']:
+                o,v,e = recordContext['settings']['vlist'][:3]
+                recordContext['settings']['vlist'] = recordContext['settings']['vlist'][3:]
                 v = SnmprecGrammar.tagMap[tag](v)
                 if o not in vlist:
                     vlist[o] = {}
@@ -59,29 +57,29 @@ def variate(oid, tag, value, **context):
                 elif o in ('lt', 'gt'):
                     vlist[o] = v, e
                 else:
-                    log.msg('error: bad vlist syntax: %s' % settingsCache[oid]['vlist'])
-            settingsCache[oid]['vlist'] = vlist
+                    log.msg('error: bad vlist syntax: %s' % recordContext['settings']['vlist'])
+            recordContext['settings']['vlist'] = vlist
 
     e = None
 
     if context['setFlag']:
-        if 'vlist' in settingsCache[oid]:
-            if 'eq' in settingsCache[oid]['vlist'] and  \
-                  context['origValue'] in settingsCache[oid]['vlist']['eq']:
-                e = settingsCache[oid]['vlist']['eq'][context['origValue']]
-            elif 'lt' in settingsCache[oid]['vlist'] and  \
-                  context['origValue'] < settingsCache[oid]['vlist']['lt'][0]:
-                e = settingsCache[oid]['vlist']['lt'][1]
-            elif 'gt' in settingsCache[oid]['vlist'] and  \
-                  context['origValue'] > settingsCache[oid]['vlist']['gt'][0]:
-                e = settingsCache[oid]['vlist']['gt'][1]
-        elif settingsCache[oid]['op'] in ('set', 'any'):
-            if 'status' in settingsCache[oid]:
-                e = settingsCache[oid]['status']
+        if 'vlist' in recordContext['settings']:
+            if 'eq' in recordContext['settings']['vlist'] and  \
+                  context['origValue'] in recordContext['settings']['vlist']['eq']:
+                e = recordContext['settings']['vlist']['eq'][context['origValue']]
+            elif 'lt' in recordContext['settings']['vlist'] and  \
+                  context['origValue'] < recordContext['settings']['vlist']['lt'][0]:
+                e = recordContext['settings']['vlist']['lt'][1]
+            elif 'gt' in recordContext['settings']['vlist'] and  \
+                  context['origValue'] > recordContext['settings']['vlist']['gt'][0]:
+                e = recordContext['settings']['vlist']['gt'][1]
+        elif recordContext['settings']['op'] in ('set', 'any'):
+            if 'status' in recordContext['settings']:
+                e = recordContext['settings']['status']
     else:        
-        if settingsCache[oid]['op'] in ('get', 'any'):
-            if 'status' in settingsCache[oid]:
-                e = settingsCache[oid]['status']
+        if recordContext['settings']['op'] in ('get', 'any'):
+            if 'status' in recordContext['settings']:
+                e = recordContext['settings']['status']
 
     if e and e in errorTypes:
         log.msg('error: reporting %s for %s' % (e, oid))
@@ -90,8 +88,8 @@ def variate(oid, tag, value, **context):
         )
 
     if context['setFlag']:
-        settingsCache[oid]['value'] = context['origValue']
+        recordContext['settings']['value'] = context['origValue']
 
-    return oid, tag, settingsCache[oid].get('value', context['errorStatus'])
+    return oid, tag, recordContext['settings'].get('value', context['errorStatus'])
 
 def shutdown(snmpEngine, **context): pass 

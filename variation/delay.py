@@ -8,8 +8,6 @@ from snmpsim.grammar.snmprec import SnmprecGrammar
 from snmpsim import log
 from snmpsim import error
 
-settingsCache = {}
-
 def init(snmpEngine, **context):
     random.seed()
 
@@ -17,28 +15,28 @@ def variate(oid, tag, value, **context):
     if not context['nextFlag'] and not context['exactMatch']:
         return context['origOid'], tag, context['errorStatus']
 
-    if oid not in settingsCache:
-        settingsCache[oid] = dict([x.split('=') for x in value.split(',')])
+    if 'settings' not in recordContext:
+        recordContext['settings'] = dict([x.split('=') for x in value.split(',')])
 
-        if 'hexvalue' in settingsCache[oid]:
-            settingsCache[oid]['value'] = [int(settingsCache[oid]['hexvalue'][x:x+2], 16) for x in range(0, len(settingsCache[oid]['hexvalue']), 2)]
+        if 'hexvalue' in recordContext['settings']:
+            recordContext['settings']['value'] = [int(recordContext['settings']['hexvalue'][x:x+2], 16) for x in range(0, len(recordContext['settings']['hexvalue']), 2)]
 
-        if 'wait' in settingsCache[oid]:
-            settingsCache[oid]['wait'] = float(settingsCache[oid]['wait'])
+        if 'wait' in recordContext['settings']:
+            recordContext['settings']['wait'] = float(recordContext['settings']['wait'])
         else:
-            settingsCache[oid]['wait'] = 500.0
+            recordContext['settings']['wait'] = 500.0
 
-        if 'deviation' in settingsCache[oid]:
-            settingsCache[oid]['deviation'] = float(settingsCache[oid]['deviation'])
+        if 'deviation' in recordContext['settings']:
+            recordContext['settings']['deviation'] = float(recordContext['settings']['deviation'])
         else:
-            settingsCache[oid]['deviation'] = 0.0
+            recordContext['settings']['deviation'] = 0.0
 
-        if 'vlist' in settingsCache[oid]:
+        if 'vlist' in recordContext['settings']:
             vlist = {}
-            settingsCache[oid]['vlist'] = settingsCache[oid]['vlist'].split(':')
-            while settingsCache[oid]['vlist']:
-                o,v,d = settingsCache[oid]['vlist'][:3]
-                settingsCache[oid]['vlist'] = settingsCache[oid]['vlist'][3:]
+            recordContext['settings']['vlist'] = recordContext['settings']['vlist'].split(':')
+            while recordContext['settings']['vlist']:
+                o,v,d = recordContext['settings']['vlist'][:3]
+                recordContext['settings']['vlist'] = recordContext['settings']['vlist'][3:]
                 d = int(d)
                 v = SnmprecGrammar.tagMap[tag](v)
                 if o not in vlist:
@@ -48,15 +46,15 @@ def variate(oid, tag, value, **context):
                 elif o in ('lt', 'gt'):
                     vlist[o] = v,d
                 else:
-                    log.msg('delay: bad vlist syntax: %s' % settingsCache[oid]['vlist'])
-            settingsCache[oid]['vlist'] = vlist
+                    log.msg('delay: bad vlist syntax: %s' % recordContext['settings']['vlist'])
+            recordContext['settings']['vlist'] = vlist
 
-        if 'tlist' in settingsCache[oid]:
+        if 'tlist' in recordContext['settings']:
             tlist = {}
-            settingsCache[oid]['tlist'] = settingsCache[oid]['tlist'].split(':')
-            while settingsCache[oid]['tlist']:
-                o,v,d = settingsCache[oid]['tlist'][:3]
-                settingsCache[oid]['tlist'] = settingsCache[oid]['tlist'][3:]
+            recordContext['settings']['tlist'] = recordContext['settings']['tlist'].split(':')
+            while recordContext['settings']['tlist']:
+                o,v,d = recordContext['settings']['tlist'][:3]
+                recordContext['settings']['tlist'] = recordContext['settings']['tlist'][3:]
                 v = int(v); d = int(d)
                 if o not in tlist:
                     tlist[o] = {}
@@ -65,41 +63,41 @@ def variate(oid, tag, value, **context):
                 elif o in ('lt', 'gt'):
                     tlist[o] = v,d
                 else:
-                    log.msg('delay: bad tlist syntax: %s' % settingsCache[oid]['tlist'])
-            settingsCache[oid]['tlist'] = tlist
+                    log.msg('delay: bad tlist syntax: %s' % recordContext['settings']['tlist'])
+            recordContext['settings']['tlist'] = tlist
 
-    if context['setFlag'] and 'vlist' in settingsCache[oid]:
-        if 'eq' in settingsCache[oid]['vlist'] and  \
-                 context['origValue'] in settingsCache[oid]['vlist']['eq']:
-            delay = settingsCache[oid]['vlist']['eq'][context['origValue']]
-        elif 'lt' in settingsCache[oid]['vlist'] and  \
-                 context['origValue'] < settingsCache[oid]['vlist']['lt'][0]:
-            delay = settingsCache[oid]['vlist']['lt'][1]
-        elif 'gt' in settingsCache[oid]['vlist'] and  \
-                 context['origValue'] > settingsCache[oid]['vlist']['gt'][0]:
-            delay = settingsCache[oid]['vlist']['gt'][1]
+    if context['setFlag'] and 'vlist' in recordContext['settings']:
+        if 'eq' in recordContext['settings']['vlist'] and  \
+                 context['origValue'] in recordContext['settings']['vlist']['eq']:
+            delay = recordContext['settings']['vlist']['eq'][context['origValue']]
+        elif 'lt' in recordContext['settings']['vlist'] and  \
+                 context['origValue'] < recordContext['settings']['vlist']['lt'][0]:
+            delay = recordContext['settings']['vlist']['lt'][1]
+        elif 'gt' in recordContext['settings']['vlist'] and  \
+                 context['origValue'] > recordContext['settings']['vlist']['gt'][0]:
+            delay = recordContext['settings']['vlist']['gt'][1]
         else:
-            delay = settingsCache[oid]['wait']
+            delay = recordContext['settings']['wait']
 
-    elif 'tlist' in settingsCache[oid]:
+    elif 'tlist' in recordContext['settings']:
         now = int(time.time())
-        if 'eq' in settingsCache[oid]['tlist'] and \
-                now == settingsCache[oid]['tlist']['eq']:
-            delay = settingsCache[oid]['tlist']['eq'][now]
-        elif 'lt' in settingsCache[oid]['tlist'] and  \
-                now < settingsCache[oid]['tlist']['lt'][0]:
-            delay = settingsCache[oid]['tlist']['lt'][1]
-        elif 'gt' in settingsCache[oid]['tlist'] and  \
-                now > settingsCache[oid]['tlist']['gt'][0]:
-            delay = settingsCache[oid]['tlist']['gt'][1]
+        if 'eq' in recordContext['settings']['tlist'] and \
+                now == recordContext['settings']['tlist']['eq']:
+            delay = recordContext['settings']['tlist']['eq'][now]
+        elif 'lt' in recordContext['settings']['tlist'] and  \
+                now < recordContext['settings']['tlist']['lt'][0]:
+            delay = recordContext['settings']['tlist']['lt'][1]
+        elif 'gt' in recordContext['settings']['tlist'] and  \
+                now > recordContext['settings']['tlist']['gt'][0]:
+            delay = recordContext['settings']['tlist']['gt'][1]
         else:
-            delay = settingsCache[oid]['wait']
+            delay = recordContext['settings']['wait']
     else:
-        delay = settingsCache[oid]['wait']
+        delay = recordContext['settings']['wait']
 
-    if settingsCache[oid]['deviation']:
+    if recordContext['settings']['deviation']:
         delay += random.randrange(
-            -settingsCache[oid]['deviation'], settingsCache[oid]['deviation']
+            -recordContext['settings']['deviation'], recordContext['settings']['deviation']
         )
 
     if delay < 0:
@@ -112,10 +110,10 @@ def variate(oid, tag, value, **context):
 
     time.sleep(delay/1000)  # ms
 
-    if context['setFlag'] or 'value' not in settingsCache[oid]:
+    if context['setFlag'] or 'value' not in recordContext['settings']:
         return oid, tag, context['origValue']
     else:
-        return oid, tag, settingsCache[oid]['value']
+        return oid, tag, recordContext['settings']['value']
 
 def record(oid, tag, value, **context):
     if context['stopFlag']:

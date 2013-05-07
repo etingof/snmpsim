@@ -1,14 +1,11 @@
 # SNMP Simulator, http://snmpsim.sourceforge.net
 # Managed value variation module
 # Send SNMP Notification
-
 import sys
 from pysnmp.entity.rfc3413.oneliner import ntforg
 from pysnmp.proto import rfc1902
 from snmpsim.grammar.snmprec import SnmprecGrammar
 from snmpsim import error, log
-
-settingsCache = {}
 
 def init(snmpEngine, **context):
     global ntfOrg
@@ -45,8 +42,8 @@ def variate(oid, tag, value, **context):
     if not context['nextFlag'] and not context['exactMatch']:
         return context['origOid'], tag, context['errorStatus']
 
-    if oid not in settingsCache:
-        settingsCache[oid] = dict([ x.split('=') for x in value.split(',') ])
+    if 'settings' not in recordContext:
+        recordContext['settings'] = dict([ x.split('=') for x in value.split(',') ])
         for k,v in ( ('op', 'set'),
                      ('community', 'public'),
                      ('authkey', None),
@@ -57,17 +54,17 @@ def variate(oid, tag, value, **context):
                      ('port', '162'),
                      ('ntftype', 'trap'),
                      ('trapoid', '1.3.6.1.6.3.1.1.5.1') ):
-            settingsCache[oid].setdefault(k, v)
+            recordContext['settings'].setdefault(k, v)
 
-        if 'hexvalue' in settingsCache[oid]:
-            settingsCache[oid]['value'] = [int(settingsCache[oid]['hexvalue'][x:x+2], 16) for x in range(0, len(settingsCache[oid]['hexvalue']), 2)]
+        if 'hexvalue' in recordContext['settings']:
+            recordContext['settings']['value'] = [int(recordContext['settings']['hexvalue'][x:x+2], 16) for x in range(0, len(recordContext['settings']['hexvalue']), 2)]
 
-        if 'vlist' in settingsCache[oid]:
+        if 'vlist' in recordContext['settings']:
             vlist = {}
-            settingsCache[oid]['vlist'] = settingsCache[oid]['vlist'].split(':')
-            while settingsCache[oid]['vlist']:
-                o,v = settingsCache[oid]['vlist'][:2]
-                settingsCache[oid]['vlist'] = settingsCache[oid]['vlist'][2:]
+            recordContext['settings']['vlist'] = recordContext['settings']['vlist'].split(':')
+            while recordContext['settings']['vlist']:
+                o,v = recordContext['settings']['vlist'][:2]
+                recordContext['settings']['vlist'] = recordContext['settings']['vlist'][2:]
                 v = SnmprecGrammar.tagMap[tag](v)
                 if o not in vlist:
                     vlist[o] = set()
@@ -76,10 +73,10 @@ def variate(oid, tag, value, **context):
                 elif o in ('lt', 'gt'):
                     vlist[o] = v
                 else:
-                    log.msg('notification: bad vlist syntax: %s' % settingsCache[oid]['vlist'])
-            settingsCache[oid]['vlist'] = vlist
+                    log.msg('notification: bad vlist syntax: %s' % recordContext['settings']['vlist'])
+            recordContext['settings']['vlist'] = vlist
 
-    args = settingsCache[oid]
+    args = recordContext['settings']
    
     if context['setFlag'] and 'vlist' in args:
         if 'eq' in args['vlist'] and  \
