@@ -8,7 +8,7 @@
 - Simulator process daemonization and privileges drop implemented.
 - More logging added into snmpsimd.py, snmprec.py and variation modules
   to ease the understanding of their operation.
-- The --quiet flag of snmprec.py now depricated in favor of "null"
+- The --quiet flag of snmprec.py now deprecated in favor of "null"
   logging method.
 - Variation modules execution environment extended to provide contexts
   for three scopes: record, agent and module. This simplifies modules
