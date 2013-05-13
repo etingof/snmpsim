@@ -354,6 +354,24 @@ $ snmpwalk -On -n 1a764f7fd0e7b0bf98bada8fe723e488 -u simulator -A auctoritas -X
 Notice "-n <snmp-context>" parameter passed to snmpwalk to address particular
 simulated device at Simulator.
 
+To make Simulator listening on SNMP-standard UDP port 161 on a UNIX system,
+you have to invoke it as root but in the same time have to specify some
+non-privileged UNIX user and group to switch into upon port allocation:
+
+# snmpsimd.py --agent-udpv4-endpoint=127.0.0.1:161 --process-user=simulator 
+--process-group=simulator
+
+On UNIX systems Simulator can be run as a daemon. Make sure to re-direct
+its console output into syslog:
+
+# snmpsimd.py --agent-udpv4-endpoint=127.0.0.1:161 --process-user=simulator
+--process-group=simulator --daemonize --logging-method=syslog:local1:debug
+
+or a log file:
+
+# snmpsimd.py --agent-udpv4-endpoint=127.0.0.1:161 --process-user=simulator
+--process-group=simulator --daemonize --logging-method=file:/var/log/snmpsimd.log
+
 Listing simulated devices
 -------------------------
 
@@ -891,6 +909,9 @@ allows only values of 1 and 2 to be SET:
 
 Any other SET values will result in SNNP WrongValue error in response.
 
+An attempt to SET a value of incompatible type will also result in an
+error.
+
 Multiplex module
 ++++++++++++++++
 
@@ -931,6 +952,9 @@ $ ls -l /usr/local/share/snmpsim/data/variation/snapshots
 
 The .snmprec files served by the multiplex module can not include references
 to variation modules.
+
+Simulator can use each of these files only once through its
+configured timeline. To make it cycling over them, use 'wrap' option.
 
 In cases when automatic, time-based .snmprec multiplexing is not
 applicable for simulation purposes, .snmprec selection can be configured:
