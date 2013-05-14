@@ -718,8 +718,8 @@ else:
 
 if variationModules:
     log.msg('Initializing variation modules...')
-    for name, contexts in variationModules.items():
-        body = contexts[0]
+    for name, modulesContexts in variationModules.items():
+        body = modulesContexts[0]
         for x in ('init', 'variate', 'shutdown'):
             if x not in body:
                 log.msg('ERROR: missing %s handler in %s!' % (x, name))

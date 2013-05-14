@@ -1,3 +1,8 @@
+0.2.3rc1
+--------
+
+- Variable conflict fixed that broke --v2c-arch option operations.
+
 0.2.2
 -----
 
