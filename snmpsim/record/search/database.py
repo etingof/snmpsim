@@ -92,6 +92,8 @@ class RecordIndex:
             while 1:
                 line = text.readline()
                 if not line:
+                    # reference to last OID in data file
+                    db['last'] = '%d,%d,%d' % (offset, 0, prevOffset)
                     break
             
                 lineNo += 1

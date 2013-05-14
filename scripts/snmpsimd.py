@@ -228,18 +228,7 @@ class DataFile(AbstractLayout):
             varsRemaining -= 1
 
             line = text.readline()  # matched line
-           
-            # case of a subtree on the last line 
-            if not exactMatch and not line:
-                offset -= 1
-                while offset > 0:
-                    offset -= 1
-                    text.seek(offset)
-                    if text.read(1) == '\n':
-                        break
-                text.seek(offset)
-                line = text.readline()  # last line
-
+ 
             while True:
                 if exactMatch:
                     if nextFlag and not subtreeFlag:
@@ -251,23 +240,29 @@ class DataFile(AbstractLayout):
                             except KeyError:
                                 log.msg('data error for %s at %s, index broken?' % (self, _nextOid))
                                 line = ''  # fatal error
-                                break
-                            subtreeFlag = int(subtreeFlag)
-                        line = _nextLine
+                            else:
+                                subtreeFlag = int(subtreeFlag)
+                                line = _nextLine
+                        else:
+                            line = _nextLine
                 else: # search function above always rounds up to the next OID
                     if line:
                         _oid, _  = self.__textParser.evaluate(
                             line, oidOnly=True
                         )
-                        try:
-                            _, _, _prevOffset = self.__recordIndex.lookup(str(_oid)).split(str2octs(','))
-                        except KeyError:
-                            log.msg('data error for %s at %s, index broken?' % (self, _oid))
-                            line = ''  # fatal error
-                            break
+                    else:  # eom
+                        _oid = 'last'
+
+                    try:
+                        _, _, _prevOffset = self.__recordIndex.lookup(str(_oid)).split(str2octs(','))
+                    except KeyError:
+                        log.msg('data error for %s at %s, index broken?' % (self, _oid))
+                        line = ''  # fatal error
+                    else:
                         _prevOffset = int(_prevOffset)
 
-                        if _prevOffset >= 0:  # previous line serves a subtree
+                        # previous line serves a subtree?
+                        if _prevOffset >= 0:
                             text.seek(_prevOffset)
                             _prevLine = text.readline()
                             _prevOid, _ = self.__textParser.evaluate(
