@@ -20,16 +20,17 @@ verboseFlag = True
 startOID = stopOID = None
 outputFile = sys.stderr
 stringPool = 'Portez ce vieux whisky au juge blond qui fume!'.split()
-int32Range = (-2147483648, 2147483648)
+int32Range = (0, 16)  # these values are more likely to fit constraints
 automaticValues = True
+tableSize = 10
 modNames = []
 mibDirs = []
 
-helpMessage = 'Usage: %s [--help] [--debug=<category>] [--quiet] [--pysnmp-mib-dir=<path>] [--mib-module=<name>] [--start-oid=<OID>] [--stop-oid=<OID>] [--manual-values] [--output-file=<filename>] [--string-pool=<words>] [--integer32-range=<min,max>]' % sys.argv[0]
+helpMessage = 'Usage: %s [--help] [--debug=<category>] [--quiet] [--pysnmp-mib-dir=<path>] [--mib-module=<name>] [--start-oid=<OID>] [--stop-oid=<OID>] [--manual-values] [--table-size=<number>] [--output-file=<filename>] [--string-pool=<words>] [--integer32-range=<min,max>]' % sys.argv[0]
 
 try:
     opts, params = getopt.getopt(sys.argv[1:], 'h',
-        ['help', 'debug=', 'quiet', 'pysnmp-mib-dir=', 'mib-module=', 'start-oid=', 'stop-oid=', 'manual-values', 'output-file=', 'string-pool=', 'integer32-range=']
+        ['help', 'debug=', 'quiet', 'pysnmp-mib-dir=', 'mib-module=', 'start-oid=', 'stop-oid=', 'manual-values', 'table-size=', 'output-file=', 'string-pool=', 'integer32-range=']
         )
 except Exception:
     sys.stdout.write('ERROR: %s\r\n%s\r\n' % (sys.exc_info()[1], helpMessage))
@@ -57,6 +58,8 @@ for opt in opts:
         stopOID = univ.ObjectIdentifier(opt[1])
     if opt[0] == '--manual-values':
         automaticValues = False
+    if opt[0] == '--table-size':
+        tableSize = int(opt[1])
     if opt[0] == '--output-file':
         outputFile = open(opt[1], 'wb')
     if opt[0] == '--string-pool':
@@ -69,7 +72,7 @@ if not modNames:
     sys.stdout.write('ERROR: MIB modules not specified\r\n%s\r\n' % helpMessage)
     sys.exit(-1)    
 
-def getValue(syntax, hint=''):
+def getValue(syntax, hint='', automaticValues=automaticValues):
     # Pick a value
     if isinstance(syntax, rfc1902.IpAddress):
         val = '.'.join([ str(random.randrange(1, 256)) for x in range(4) ])
@@ -106,7 +109,15 @@ def getValue(syntax, hint=''):
         sys.stdout.flush()
         line = sys.stdin.readline().strip()
         if line:
-            val = line
+            if line[:2] == '0x':
+                if line[:4] == '0x0x':
+                    line = line[2:]
+                elif isinstance(syntax, univ.OctetString):
+                    val = syntax.clone(hexValue=line[2:])
+                else:
+                    val = int(line[2:], 16)
+            else:
+                val = line
         makeGuess = True
 
 # Data file builder
@@ -144,11 +155,39 @@ for modName in modNames:
     modOID = oid = univ.ObjectIdentifier(
         mibView.getFirstNodeName(modName)[0]
         )
+    rowOID = None
     while modOID.isPrefixOf(oid):
         try:
             oid, label, _ = mibView.getNextNodeName(oid)
         except error.NoSuchObjectError:
             break
+
+        if rowOID and not rowOID.isPrefixOf(oid):
+            if automaticValues:
+                if thisTableSize < tableSize:
+                    thisTableSize += 1
+                    oid = tuple(rowOID)
+                    sys.stdout.write('# Synthesizing row #%d of table %s\r\n' % (thisTableSize, rowOID))
+
+                else:
+                    rowOID = None
+                    sys.stdout.write('# Finished table %s (%d rows)\r\n' % (rowOID, thisTableSize))
+            else:
+                while 1:
+                    sys.stdout.write(
+                        '# Synthesize row #%d for table %s (y/n)? ' % (thisTableSize, rowOID)
+                    )
+                    sys.stdout.flush()
+                    line = sys.stdin.readline().strip()
+                    if line:
+                        if line[0] in ('y', 'Y'):
+                            oid = tuple(rowOID)
+                            thisTableSize += 1
+                            break
+                        elif line[0] in ('n', 'N'):
+                            rowOID = None
+                            sys.stdout.write('# Finished table %s (%d rows)\r\n' % (rowOID, thisTableSize))
+                            break
 
         modName, symName, _ = mibView.getNodeLocation(oid)
         node, = mibBuilder.importSymbols(modName, symName)
@@ -157,18 +196,24 @@ for modName in modNames:
             hint = '# Table %s::%s\r\n' % (modName, symName)
             continue
         elif isinstance(node, MibTableRow):
+            rowIndices = {}
             suffix = ()
-            hint += '# Row %s::%s\r\n' % (modName, symName)
+            rowHint = hint + '# Row %s::%s\r\n' % (modName, symName)
             for impliedFlag, idxModName, idxSymName in node.getIndexNames():
                 idxNode, = mibBuilder.importSymbols(idxModName, idxSymName)
-                hint += '# Index %s::%s (type %s)\r\n' % (idxModName, idxSymName, idxNode.syntax.__class__.__name__)
-                suffix = suffix + node.getAsName(
-                    getValue(idxNode.syntax, verboseFlag and hint or ''), impliedFlag
-                    )
+                rowHint += '# Index %s::%s (type %s)\r\n' % (idxModName, idxSymName, idxNode.syntax.__class__.__name__)
+                rowIndices[idxNode.name] = getValue(idxNode.syntax, verboseFlag and rowHint or '')
+                suffix = suffix + node.getAsName(rowIndices[idxNode.name], impliedFlag)
+            if rowOID is None:
+                thisTableSize = 0
+            rowOID = univ.ObjectIdentifier(oid)
             continue
         elif isinstance(node, MibTableColumn):
             oid = node.name
-            val = getValue(node.syntax, verboseFlag and hint + '# Column %s::%s (type %s)\r\n' % (modName, symName, node.syntax.__class__.__name__) or '')
+            if oid in rowIndices:
+                val = rowIndices[oid]
+            else:
+                val = getValue(node.syntax, verboseFlag and rowHint + '# Column %s::%s (type %s)\r\n' % (modName, symName, node.syntax.__class__.__name__) or '')
         elif isinstance(node, MibScalar):
             oid = node.name
             suffix = (0,)

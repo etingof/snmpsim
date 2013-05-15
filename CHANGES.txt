@@ -1,6 +1,13 @@
 0.2.3rc1
 --------
 
+- A number of improvement to the mib2dev.py tool:
+  * Colunmar objects for table indices are now automatically populated
+    from index values
+  * Tables are can now be populated with arbitrary number of rows
+  * Hex values can now be given at the prompt using the 0x syntax
+  * Default automatic value ranges for integers are now much smaller
+    to increase a chance of automatic selection.
 - Data file search code fixed (not to crash Simulator in corner cases)
   and simplified.
 - Variable conflict fixed that broke --v2c-arch option operations.
