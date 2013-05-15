@@ -168,12 +168,11 @@ for modName in modNames:
             break  # stop on out of range condition
  
         if rowOID and not rowOID.isPrefixOf(oid):
+            thisTableSize += 1
             if automaticValues:
                 if thisTableSize < tableSize:
-                    thisTableSize += 1
                     oid = tuple(rowOID)
                     sys.stdout.write('# Synthesizing row #%d of table %s\r\n' % (thisTableSize, rowOID))
-
                 else:
                     sys.stdout.write('# Finished table %s (%d rows)\r\n' % (rowOID, thisTableSize))
                     rowOID = None
@@ -187,7 +186,6 @@ for modName in modNames:
                     if line:
                         if line[0] in ('y', 'Y'):
                             oid = tuple(rowOID)
-                            thisTableSize += 1
                             break
                         elif line[0] in ('n', 'N'):
                             sys.stdout.write('# Finished table %s (%d rows)\r\n' % (rowOID, thisTableSize))
