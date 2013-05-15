@@ -8,6 +8,7 @@
   * Hex values can now be given at the prompt using the 0x syntax
   * Default automatic value ranges for integers are now much smaller
     to increase a chance of automatic selection.
+  * Fix to OID range checking when specified at the command-line.
 - Data file search code fixed (not to crash Simulator in corner cases)
   and simplified.
 - Variable conflict fixed that broke --v2c-arch option operations.

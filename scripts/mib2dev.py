@@ -162,6 +162,11 @@ for modName in modNames:
         except error.NoSuchObjectError:
             break
 
+        if startOID and oid < startOID:
+            continue # skip on premature OID
+        if stopOID and oid > stopOID:
+            break  # stop on out of range condition
+ 
         if rowOID and not rowOID.isPrefixOf(oid):
             if automaticValues:
                 if thisTableSize < tableSize:
@@ -170,8 +175,8 @@ for modName in modNames:
                     sys.stdout.write('# Synthesizing row #%d of table %s\r\n' % (thisTableSize, rowOID))
 
                 else:
-                    rowOID = None
                     sys.stdout.write('# Finished table %s (%d rows)\r\n' % (rowOID, thisTableSize))
+                    rowOID = None
             else:
                 while 1:
                     sys.stdout.write(
@@ -185,8 +190,8 @@ for modName in modNames:
                             thisTableSize += 1
                             break
                         elif line[0] in ('n', 'N'):
-                            rowOID = None
                             sys.stdout.write('# Finished table %s (%d rows)\r\n' % (rowOID, thisTableSize))
+                            rowOID = None
                             break
 
         modName, symName, _ = mibView.getNodeLocation(oid)
@@ -194,6 +199,7 @@ for modName in modNames:
     
         if isinstance(node, MibTable):
             hint = '# Table %s::%s\r\n' % (modName, symName)
+            sys.stdout.write('# Starting table %s::%s (%s)\r\n' % (modName, symName, univ.ObjectIdentifier(oid)))
             continue
         elif isinstance(node, MibTableRow):
             rowIndices = {}
@@ -221,11 +227,6 @@ for modName in modNames:
         else:
             continue
    
-        if startOID and oid < startOID:
-            continue # skip on premature OID
-        if stopOID and oid > stopOID:
-            break  # stop on out of range condition
-
         outputFile.write(
             dataFileHandler.format(oid + suffix, val)
         )
