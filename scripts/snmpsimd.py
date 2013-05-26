@@ -54,9 +54,6 @@ v3PrivProtos = {}
 pidFile = '/var/run/snmpsim/snmpsimd.pid'
 foregroundFlag = True
 procUser = procGroup = None
-agentUDPv4Endpoints = []
-agentUDPv6Endpoints = []
-agentUNIXEndpoints = []
 variationModulesOptions = {}
 variationModules = {}
 
@@ -75,7 +72,58 @@ privProtocols = {
   'AES256': config.usmAesCfb256Protocol,
   'NONE': config.usmNoPrivProtocol
 }
+
+# Transport endpoints collection
+
+class TransportEndpointsBase:
+    def __init__(self):
+        self.__endpoints = []
+
+    def add(self, addr):
+        self.__endpoints.append(
+            self._addEndpoint(addr)
+        )
+
+    def __len__(self): return len(self.__endpoints)
+    def __getitem__(self, i): return self.__endpoints[i]
+
+class IPv4TransportEndpoints(TransportEndpointsBase):
+    def _addEndpoint(self, addr):
+        f = lambda h,p=161: (h, int(p))
+        try:
+            h, p = f(*addr.split(':'))
+        except:
+            raise error.SnmpsimError('improper/busy IPv4/UDP endpoint %s' % addr)
+        return udp.UdpTransport().openServerMode((h, p)), addr
+
+agentUDPv4Endpoints = IPv4TransportEndpoints()
  
+class IPv6TransportEndpoints(TransportEndpointsBase):
+    def _addEndpoint(self, addr):
+        if not udp6:
+            raise error.SnmpsimError('This system does not support UDP/IP6')
+        if addr.find(']:') != -1 and addr[0] == '[':
+            h, p = addr.split(']:')
+            try:
+                h, p = h[1:], int(p)
+            except:
+                raise error.SnmpsimError('improper/busy IPv6/UDP endpoint %s' % addr)
+        elif addr[0] == '[' and addr[-1] == ']':
+            h, p = addr[1:-1], 161
+        else:
+            h, p = addr, 161
+        return udp6.Udp6Transport().openServerMode((h, p)), addr
+ 
+agentUDPv6Endpoints = IPv6TransportEndpoints()
+
+class UnixTransportEndpoints(TransportEndpointsBase):
+    def _addEndpoint(self, addr):
+        if not unix:
+            raise error.SnmpsimError('This system does not support UNIX domain sockets')
+        return unix.UnixTransport().openServerMode(addr), addr
+
+agentUNIXEndpoints = UnixTransportEndpoints()
+
 # Extended snmprec record handler
 
 class SnmprecRecord(snmprec.SnmprecRecord):
@@ -533,37 +581,23 @@ for opt in opts:
             variationModulesOptions[modName] = []
         variationModulesOptions[modName].append((alias, args))
     elif opt[0] == '--agent-udpv4-endpoint':
-        f = lambda h,p=161: (h, int(p))
         try:
-            agentUDPv4Endpoints.append((udp.UdpTransport().openServerMode(f(*opt[1].split(':'))), opt[1]))
+            agentUDPv4Endpoints.add(opt[1])
         except:
-            sys.stderr.write('ERROR: improper/busy IPv4/UDP endpoint %s\r\n%s\r\n' % (opt[1], helpMessage))
+            sys.stderr.write('ERROR: %s\r\n%s\r\n' % (sys.exc_info()[1], helpMessage))
             sys.exit(-1)
     elif opt[0] == '--agent-udpv6-endpoint':
-        if not udp6:
-            sys.stderr.write('This system does not support UDP/IP6\r\n')
+        try:
+            agentUDPv6Endpoints.add(opt[1])
+        except:
+            sys.stderr.write('ERROR: %s\r\n%s\r\n' % (sys.exc_info()[1], helpMessage))
             sys.exit(-1)
-        if opt[1].find(']:') != -1 and opt[1][0] == '[':
-            h, p = opt[1].split(']:')
-            try:
-                h, p = h[1:], int(p)
-            except:
-                sys.stderr.write('ERROR: improper/busy IPv6/UDP endpoint %s\r\n%s\r\n' % (opt[1], helpMessage))
-                sys.exit(-1)
-        elif opt[1][0] == '[' and opt[1][-1] == ']':
-            h, p = opt[1][1:-1], 161
-        else:
-            h, p = opt[1], 161
-        agentUDPv6Endpoints.append(
-            (udp6.Udp6Transport().openServerMode((h, p)), opt[1])
-        )
     elif opt[0] == '--agent-unix-endpoint':
-        if not unix:
-            sys.stderr.write('This system does not support UNIX domain sockets\r\n')
+        try:
+            agentUNIXEndpoints.add(opt[1])
+        except:
+            sys.stderr.write('ERROR: %s\r\n%s\r\n' % (sys.exc_info()[1], helpMessage))
             sys.exit(-1)
-        agentUNIXEndpoints.append(
-            (unix.UnixTransport().openServerMode(opt[1]), opt[1])
-        )
     elif opt[0] == '--agent-address':
         sys.stderr.write('ERROR: use --agent-udpv4-endpoint=%s option instead of --agent-address\r\n%s\r\n' % (opt[1], helpMessage))
         sys.exit(-1)
