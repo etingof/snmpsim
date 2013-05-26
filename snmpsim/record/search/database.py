@@ -75,7 +75,7 @@ class RecordIndex:
                     break
             else:
                 log.msg('Failed to create %s for data file %s' % (self.__dbFile, self.__textFile))
-                raise error.SnmpsimError()
+                raise error.SnmpsimError('Cant create data file %s' % self.__dbFile)
 
             try:
                 text = open(self.__textFile, 'rb')
