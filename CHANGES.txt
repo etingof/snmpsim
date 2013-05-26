@@ -1,6 +1,9 @@
 0.2.3rc1
 --------
 
+- Simulator now supports a list of interfaces to listen on through
+  the --agent-endpoint*-list=<file> family of options. It's intended
+  for simulation a very large pool of devices.
 - A number of improvement to the mib2dev.py tool:
   * Colunmar objects for table indices are now automatically populated
     from index values

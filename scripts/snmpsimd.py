@@ -84,6 +84,10 @@ class TransportEndpointsBase:
             self._addEndpoint(addr)
         )
 
+    def load(self, file):
+       for rec in open(file).read().split():
+           self.add(rec)
+        
     def __len__(self): return len(self.__endpoints)
     def __getitem__(self, i): return self.__endpoints[i]
 
@@ -521,11 +525,11 @@ if not v2cArch:
 
 # main script body starts here
 
-helpMessage = 'Usage: %s [--help] [--version ] [--debug=<category>] [--daemonize] [--process-user=<uname>] [--process-group=<gname>] [--logging-method=<method|?>] [--data-dir=<dir>] [--cache-dir=<dir>] [--force-index-rebuild] [--validate-data] [--variation-modules-dir=<dir>] [--variation-module-options=<module[=alias][:args]>] [--agent-udpv4-endpoint=<X.X.X.X:NNNNN>] [--agent-udpv6-endpoint=<[X:X:..X]:NNNNN>] [--agent-unix-endpoint=</path/to/named/pipe>] [--v2c-arch] [--v3-only] [--v3-user=<username>] [--v3-auth-key=<key>] [--v3-auth-proto=<%s>] [--v3-priv-key=<key>] [--v3-priv-proto=<%s>]' % (sys.argv[0], '|'.join(authProtocols), '|'.join(privProtocols))
+helpMessage = 'Usage: %s [--help] [--version ] [--debug=<category>] [--daemonize] [--process-user=<uname>] [--process-group=<gname>] [--logging-method=<method|?>] [--data-dir=<dir>] [--cache-dir=<dir>] [--force-index-rebuild] [--validate-data] [--variation-modules-dir=<dir>] [--variation-module-options=<module[=alias][:args]>] [--agent-udpv4-endpoint=<X.X.X.X:NNNNN>] [--agent-udpv6-endpoint=<[X:X:..X]:NNNNN>] [--agent-unix-endpoint=</path/to/named/pipe>] [--agent-udpv4-endpoints-list=<file>] [--agent-udpv6-endpoints-list=<file>] [--agent-unix-endpoints-list=<file>] [--v2c-arch] [--v3-only] [--v3-user=<username>] [--v3-auth-key=<key>] [--v3-auth-proto=<%s>] [--v3-priv-key=<key>] [--v3-priv-proto=<%s>]' % (sys.argv[0], '|'.join(authProtocols), '|'.join(privProtocols))
 
 try:
     opts, params = getopt.getopt(sys.argv[1:], 'h',
-        ['help', 'debug=', 'daemonize', 'process-user=', 'process-group=', 'logging-method=', 'device-dir=', 'data-dir=', 'cache-dir=', 'force-index-rebuild', 'validate-device-data', 'validate-data', 'variation-modules-dir=', 'variation-module-options=', 'agent-address=', 'agent-port=', 'agent-udpv4-endpoint=', 'agent-udpv6-endpoint=', 'agent-unix-endpoint=', 'v2c-arch', 'v3-only', 'v3-user=', 'v3-auth-key=', 'v3-auth-proto=', 'v3-priv-key=', 'v3-priv-proto=']
+        ['help', 'debug=', 'daemonize', 'process-user=', 'process-group=', 'logging-method=', 'device-dir=', 'data-dir=', 'cache-dir=', 'force-index-rebuild', 'validate-device-data', 'validate-data', 'variation-modules-dir=', 'variation-module-options=', 'agent-address=', 'agent-port=', 'agent-udpv4-endpoint=', 'agent-udpv6-endpoint=', 'agent-unix-endpoint=', 'agent-udpv4-endpoints-list=', 'agent-udpv6-endpoints-list=', 'agent-unix-endpoints-list=', 'v2c-arch', 'v3-only', 'v3-user=', 'v3-auth-key=', 'v3-auth-proto=', 'v3-priv-key=', 'v3-priv-proto=']
         )
 except Exception:
     sys.stderr.write('ERROR: %s\r\n%s\r\n' % (sys.exc_info()[1], helpMessage))
@@ -595,6 +599,24 @@ for opt in opts:
     elif opt[0] == '--agent-unix-endpoint':
         try:
             agentUNIXEndpoints.add(opt[1])
+        except:
+            sys.stderr.write('ERROR: %s\r\n%s\r\n' % (sys.exc_info()[1], helpMessage))
+            sys.exit(-1)
+    elif opt[0] == '--agent-udpv4-endpoints-list':
+        try:
+            agentUDPv4Endpoints.load(opt[1])
+        except:
+            sys.stderr.write('ERROR: %s\r\n%s\r\n' % (sys.exc_info()[1], helpMessage))
+            sys.exit(-1)
+    elif opt[0] == '--agent-udpv6-endpoints-list':
+        try:
+            agentUDPv6Endpoints.load(opt[1])
+        except:
+            sys.stderr.write('ERROR: %s\r\n%s\r\n' % (sys.exc_info()[1], helpMessage))
+            sys.exit(-1)
+    elif opt[0] == '--agent-unix-endpoints-list':
+        try:
+            agentUNIXEndpoints.load(opt[1])
         except:
             sys.stderr.write('ERROR: %s\r\n%s\r\n' % (sys.exc_info()[1], helpMessage))
             sys.exit(-1)
