@@ -88,4 +88,4 @@ else:
         except Exception:
             raise error.SnmpsimError('setgid()/setuid() failed for %s/%s: %s' % (runningGid, runningUid, sys.exc_info()[1]))
 
-        os.umask(0077)
+        os.umask(63)  # 0077
