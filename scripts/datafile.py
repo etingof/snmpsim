@@ -108,12 +108,14 @@ for inputFile in inputFiles:
         try:
             oid, value = recordsSet[srcRecordType].evaluate(line, backdoor=backdoor)
         except error.SnmpsimError:
-            if verboseFlag:
-                sys.stderr.write('ERROR: broken record <%s>\r\n' % line)
             if ignoreBrokenRecords:
+                if verboseFlag:
+                    sys.stderr.write('# Skipping broken record <%s>\r\n' % line)
                 brokenCount += 1
                 continue
             else:
+                if verboseFlag:
+                    sys.stderr.write('ERROR: broken record <%s>\r\n' % line)
                 sys.exit(-1)    
 
         if startOID and startOID > oid or \
@@ -132,7 +134,7 @@ for record in recordsList:
     if deduplicateRecords:
         if record[0] in uniqueIndices:
             if verboseFlag:
-                sys.stderr.write('# Skipping duplicate record <%s>\r\n' % '|'.join(record[1]))
+                sys.stderr.write('# Skipping duplicate record <%s>\r\n' % record[0])
             duplicateCount += 1
             continue
         else:
