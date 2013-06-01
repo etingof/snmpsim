@@ -13,7 +13,10 @@ class DumpRecord(abstract.AbstractRecord):
         return univ.ObjectIdentifier(oid)
 
     def evaluateValue(self, oid, tag, value, **context):
-        return oid, tag, self.grammar.tagMap[tag](value)
+        try:
+            return oid, tag, self.grammar.tagMap[tag](value)
+        except:
+            raise SnmpsimError('value evaluation error for tag %r, value %r' % (tag, value))
     
     def evaluate(self, line, **context):
         oid, tag, value = self.grammar.parse(line)
