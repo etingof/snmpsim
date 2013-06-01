@@ -1,6 +1,7 @@
 from pysnmp.proto import rfc1902
 from pyasn1.type import univ
 from snmpsim.grammar import abstract
+from snmpsim import error
 
 class DumpGrammar(abstract.AbstractGrammar):
     tagMap = {
@@ -32,6 +33,10 @@ class DumpGrammar(abstract.AbstractGrammar):
     }
 
     def parse(self, line):
-        oid, tag, value = octs2str(line).split('|', 2)
-        return oid, tag, self.filterMap.get(tag, lambda x: x)(value.strip())
+        try:
+            oid, tag, value = octs2str(line).split('|', 2)
+        except:
+            raise error.SnmpsimError('broken record <%s>' % line)
+        else:
+            return oid, tag, self.filterMap.get(tag, lambda x: x)(value.strip())
 

@@ -1,6 +1,7 @@
 from pysnmp.proto import rfc1902
 from pyasn1.compat.octets import octs2str
 from snmpsim.grammar import abstract
+from snmpsim import error
 
 class WalkGrammar(abstract.AbstractGrammar):
     # case-insensitive keys as snmpwalk output tend to vary
@@ -56,7 +57,10 @@ class WalkGrammar(abstract.AbstractGrammar):
 
     def parse(self, line):
         line = line.decode('ascii', 'ignore').encode() # drop possible 8-bits
-        oid, value = octs2str(line).strip().split(' = ', 1)
+        try:
+            oid, value = octs2str(line).strip().split(' = ', 1)
+        except:
+            raise error.SnmpsimError('broken record <%s>' % line)
         if oid and oid[0] == '.':
             oid = oid[1:]
         if value.startswith('Wrong Type (should be'):

@@ -1,8 +1,8 @@
-from snmpsim.grammar import dump
 from pysnmp.proto import rfc1902
 from pyasn1.type import univ
 from pyasn1.compat.octets import octs2str
-from snmpsim.grammar import abstract
+from snmpsim.grammar import abstract, dump
+from snmpsim import error
 
 class SapGrammar(abstract.AbstractGrammar):
     tagMap = {
@@ -27,5 +27,9 @@ class SapGrammar(abstract.AbstractGrammar):
     }
 
     def parse(self, line):
-        oid, tag, value = [ x.strip() for x in octs2str(line).split(',', 2) ]
-        return oid, tag, self.filterMap.get(tag, lambda x: x)(value.strip())
+        try:
+            oid, tag, value = [x.strip() for x in octs2str(line).split(',', 2)]
+        except:
+            raise error.SnmpsimError('broken record <%s>' % line)
+        else:
+            return oid, tag, self.filterMap.get(tag, lambda x: x)(value.strip())

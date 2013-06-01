@@ -2,6 +2,7 @@ from pysnmp.proto import rfc1902, rfc1905
 from pyasn1.compat.octets import octs2str, str2octs
 from pyasn1.type import univ
 from snmpsim.grammar.abstract import AbstractGrammar
+from snmpsim import error
 
 class SnmprecGrammar(AbstractGrammar):
     tagMap = {}
@@ -22,7 +23,13 @@ class SnmprecGrammar(AbstractGrammar):
 
     def build(self, oid, tag, val): return str2octs('%s|%s|%s\n' % (oid, tag, val))
 
-    def parse(self, line): return octs2str(line).strip().split('|', 2)
+    def parse(self, line):
+        try:
+            oid, tag, value = octs2str(line).strip().split('|', 2)
+        except:
+            raise error.SnmpsimError('broken record <%s>' % line)
+        else:
+            return oid, tag, value
 
     # helper functions
 
