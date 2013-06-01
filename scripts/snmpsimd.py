@@ -132,7 +132,7 @@ agentUNIXEndpoints = UnixTransportEndpoints()
 
 class SnmprecRecord(snmprec.SnmprecRecord):
     def evaluateValue(self, oid, tag, value, **context):
-        # Interpolation module reference
+        # Variation module reference
         if ':' in tag:
             modName, tag = tag[tag.index(':')+1:], tag[:tag.index(':')]
         else:
@@ -168,12 +168,12 @@ class SnmprecRecord(snmprec.SnmprecRecord):
 
         if not modName:
             if 'dataValidation' in context:
-                    snmprec.SnmprecRecord.evaluateValue(
-                        self, oid, tag, value, **context
-                    )
+                snmprec.SnmprecRecord.evaluateValue(
+                    self, oid, tag, value, **context
+                )
 
             if not context['nextFlag'] and not context['exactMatch'] or \
-               context['setFlag']:
+                   context['setFlag']:
                 return context['origOid'], tag, context['errorStatus']
 
         if not hasattr(value, 'tagSet'):  # not already a pyasn1 object
