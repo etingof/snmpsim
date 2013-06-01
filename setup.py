@@ -88,6 +88,7 @@ params.update( {
     'classifiers': [ x for x in classifiers.split('\n') if x ],
     'scripts': [ 'scripts/snmpsimd.py',
                  'scripts/snmprec.py',
+                 'scripts/datafile.py',
                  'scripts/mib2dev.py' ],
     'packages': [ 'snmpsim', 'snmpsim.grammar', 'snmpsim.record',
                   'snmpsim.record.search' ]
