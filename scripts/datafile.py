@@ -146,6 +146,8 @@ for record in recordsList:
     if record[2]:
         variationCount += 1
 
+outputFile.flush()
+
 if verboseFlag:
     sys.stderr.write(
         '# Records: written %s, filtered out %s, deduplicated %s, broken %s, variated %s\r\n' % (writtenCount, skippedCount, duplicateCount, brokenCount, variationCount)
