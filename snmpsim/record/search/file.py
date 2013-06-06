@@ -2,7 +2,7 @@ from pyasn1.compat.octets import str2octs
 
 # In-place, by-OID binary search
 def searchRecordByOid(oid, fileObj, textParser, eol=str2octs('\n')):
-    lo = mid = 0; prev_mid = -1;
+    lo = mid = 0; prev_mid = -1
     fileObj.seek(0, 2)
     hi = sz = fileObj.tell()
     while lo < hi:

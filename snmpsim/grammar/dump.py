@@ -1,5 +1,6 @@
 from pysnmp.proto import rfc1902
 from pyasn1.type import univ
+from pyasn1.compat.octets import octs2str
 from snmpsim.grammar import abstract
 from snmpsim import error
 

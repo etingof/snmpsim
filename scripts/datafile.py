@@ -119,9 +119,9 @@ for inputFile in inputFiles:
                 sys.exit(-1)    
 
         if startOID and startOID > oid or \
-               stopOID and stopOID < oid:
-           skippedCount += 1
-           continue
+                stopOID and stopOID < oid:
+            skippedCount += 1
+            continue
 
         recordsList.append((oid, value, backdoor))
 

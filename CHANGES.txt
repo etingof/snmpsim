@@ -18,6 +18,7 @@
 - Data file search code fixed (not to crash Simulator in corner cases)
   and simplified.
 - Variable conflict fixed that broke --v2c-arch option operations.
+- Source code linted and improved.
 
 0.2.2
 -----

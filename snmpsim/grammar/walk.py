@@ -64,7 +64,7 @@ class WalkGrammar(abstract.AbstractGrammar):
         if oid and oid[0] == '.':
             oid = oid[1:]
         if value.startswith('Wrong Type (should be'):
-            valjue = value[value.index(': ')+2:]
+            value = value[value.index(': ')+2:]
         if value.startswith('No more variables left in this MIB View'):
             value = 'STRING: '
         try:

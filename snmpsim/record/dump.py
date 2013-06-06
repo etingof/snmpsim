@@ -34,7 +34,7 @@ class DumpRecord(abstract.AbstractRecord):
         return univ.ObjectIdentifier(oid).prettyPrint()
 
     def formatValue(self, oid, value, **context):
-        return self.formatOid(oid), self.getTagByType(value), str(value)
+        return self.formatOid(oid), self.grammar.getTagByType(value), str(value)
 
     def format(self, oid, value, **context):
         textOid, textTag, textValue = self.formatValue(oid, value, **context)

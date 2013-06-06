@@ -15,7 +15,7 @@ else:
     from hashlib import md5
 from pyasn1.type import univ
 from pyasn1.codec.ber import encoder, decoder
-from pyasn1.compat.octets import octs2str, str2octs, int2oct
+from pyasn1.compat.octets import str2octs
 from pyasn1.error import PyAsn1Error
 from pysnmp.entity import engine, config
 from pysnmp.entity.rfc3413 import cmdrsp, context
@@ -84,10 +84,12 @@ class TransportEndpointsBase:
             self._addEndpoint(addr)
         )
 
-    def load(self, file):
-       for rec in open(file).read().split():
-           self.add(rec)
+    def load(self, filename):
+        for rec in open(filename).read().split():
+            self.add(rec)
         
+    def _addEndpoint(self, addr): raise NotImplementedError()
+
     def __len__(self): return len(self.__endpoints)
     def __getitem__(self, i): return self.__endpoints[i]
 
@@ -97,7 +99,7 @@ class IPv4TransportEndpoints(TransportEndpointsBase):
         try:
             h, p = f(*addr.split(':'))
         except:
-            raise error.SnmpsimError('improper/busy IPv4/UDP endpoint %s' % addr)
+            raise SnmpsimError('improper/busy IPv4/UDP endpoint %s' % addr)
         return udp.UdpTransport().openServerMode((h, p)), addr
 
 agentUDPv4Endpoints = IPv4TransportEndpoints()
@@ -105,13 +107,13 @@ agentUDPv4Endpoints = IPv4TransportEndpoints()
 class IPv6TransportEndpoints(TransportEndpointsBase):
     def _addEndpoint(self, addr):
         if not udp6:
-            raise error.SnmpsimError('This system does not support UDP/IP6')
+            raise SnmpsimError('This system does not support UDP/IP6')
         if addr.find(']:') != -1 and addr[0] == '[':
             h, p = addr.split(']:')
             try:
                 h, p = h[1:], int(p)
             except:
-                raise error.SnmpsimError('improper/busy IPv6/UDP endpoint %s' % addr)
+                raise SnmpsimError('improper/busy IPv6/UDP endpoint %s' % addr)
         elif addr[0] == '[' and addr[-1] == ']':
             h, p = addr[1:-1], 161
         else:
@@ -123,7 +125,7 @@ agentUDPv6Endpoints = IPv6TransportEndpoints()
 class UnixTransportEndpoints(TransportEndpointsBase):
     def _addEndpoint(self, addr):
         if not unix:
-            raise error.SnmpsimError('This system does not support UNIX domain sockets')
+            raise SnmpsimError('This system does not support UNIX domain sockets')
         return unix.UnixTransport().openServerMode(addr), addr
 
 agentUNIXEndpoints = UnixTransportEndpoints()
@@ -208,7 +210,7 @@ recordSet = {
 }
 
 class AbstractLayout:
-  layout = '?'
+    layout = '?'
 
 # Data text file and OID index
 
@@ -476,10 +478,10 @@ if not v2cArch:
             except error.PySnmpError:
                 pass
             else:
-                log.msg('Using %s selected by candidate %s; transport ID %s, source address %s, community name "%s"' % (mibInstrum, candidate, univ.ObjectIdentifier(transportDomain), transportAddress[0], communityName))
+                log.msg('Using %s selected by candidate %s; transport ID %s, source address %s, context name "%s"' % (mibInstrum, candidate, univ.ObjectIdentifier(transportDomain), transportAddress[0], probedContextName))
                 return probedContextName
-        else:
-            log.msg('Using %s selected by contextName "%s", transport ID %s, source address %s' % (self.snmpContext.getMibInstrum(contextName), contextName, univ.ObjectIdentifier(transportDomain), transportAddress[0]))
+
+        log.msg('Using %s selected by contextName "%s", transport ID %s, source address %s' % (self.snmpContext.getMibInstrum(contextName), contextName, univ.ObjectIdentifier(transportDomain), transportAddress[0]))
 
         return contextName
 
@@ -661,9 +663,9 @@ for v3User in v3Users:
         v3PrivKeys[v3User] = None
         v3PrivProtos[v3User] = 'NONE'
     if authProtocols[v3AuthProtos[v3User]] == config.usmNoAuthProtocol and \
-        privProtocols[v3PrivProtos[v3User]] != config.usmNoPrivProtocol:
-            sys.stderr.write('ERROR: privacy impossible without authentication\r for USM user %s\n%s\r\n', (v3User, helpMessage))
-            sys.exit(-1)
+            privProtocols[v3PrivProtos[v3User]] != config.usmNoPrivProtocol:
+        sys.stderr.write('ERROR: privacy impossible without authentication\r for USM user %s\n%s\r\n', (v3User, helpMessage))
+        sys.exit(-1)
 
 if not v3Users:
     v3Users = [ 'simulator' ]
@@ -673,10 +675,10 @@ if not v3Users:
     v3PrivProtos[v3Users[0]] = 'DES'
 
 if not agentUDPv4Endpoints and \
-   not agentUDPv6Endpoints and \
-   not agentUNIXEndpoints:
-        sys.stderr.write('ERROR: agent endpoint address(es) not specified\r\n%s\r\n' % helpMessage)
-        sys.exit(-1)
+        not agentUDPv6Endpoints and \
+        not agentUNIXEndpoints:
+    sys.stderr.write('ERROR: agent endpoint address(es) not specified\r\n%s\r\n' % helpMessage)
+    sys.exit(-1)
 
 try:
     daemon.dropPrivileges(procUser, procGroup)

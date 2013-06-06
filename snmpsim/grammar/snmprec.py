@@ -37,8 +37,7 @@ class SnmprecGrammar(AbstractGrammar):
         for tag, typ in self.tagMap.items():
             if typ.tagSet[0] == value.tagSet[0]:
                 return tag
-        else:
-            raise Exception('error: unknown type of %s' % (value,))
+        raise Exception('error: unknown type of %s' % (value,))
 
     def hexifyValue(self, value):
         if value.tagSet in (univ.OctetString.tagSet,

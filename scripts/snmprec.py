@@ -12,7 +12,7 @@ import os
 import socket
 import traceback
 from pyasn1.type import univ
-from pysnmp.proto import rfc1902, rfc1905
+from pysnmp.proto import rfc1905
 from pysnmp.entity import engine, config
 from pysnmp.carrier.asynsock.dgram import udp
 try:
@@ -95,7 +95,7 @@ for opt in opts:
             sys.stderr.write('%s\r\n%s\r\n' % (sys.exc_info()[1], helpMessage))
             sys.exit(-1)
     elif opt[0] == '--quiet':
-       log.setLogger('snmprec', 'null') 
+        log.setLogger('snmprec', 'null') 
     elif opt[0] == '--v1':
         snmpVersion = 0
     elif opt[0] == '--v2c':

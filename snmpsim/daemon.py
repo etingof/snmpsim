@@ -1,6 +1,6 @@
 # UNIX-specific process daemonization tools
 import sys
-from snmpsim import log, error
+from snmpsim import error
 
 if sys.platform[:3] == 'win':
     def daemonize(pidfile):
