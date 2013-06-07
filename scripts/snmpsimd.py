@@ -844,22 +844,24 @@ del _mibInstrums
 del _dataFiles
 
 if v2cArch:
-    def getBulkHandler(varBinds, nonRepeaters, maxRepetitions, readNextVars):
-        if nonRepeaters < 0: nonRepeaters = 0
-        if maxRepetitions < 0: maxRepetitions = 0
-        N = min(nonRepeaters, len(varBinds))
+    def getBulkHandler(reqVarBinds, nonRepeaters, maxRepetitions, readNextVars):
+        N = min(int(nonRepeaters), len(reqVarBinds))
         M = int(maxRepetitions)
-        R = max(len(varBinds)-N, 0)
-        if nonRepeaters:
-            rspVarBinds = readNextVars(varBinds[:int(nonRepeaters)])
+        R = max(len(reqVarBinds)-N, 0)
+        if R: M = min(M, 100/R)  # maxVarBinds
+
+        if N:
+            rspVarBinds = readNextVars(reqVarBinds[:N])
         else:
             rspVarBinds = []
-        if M and R:
-            for i in range(N,  R):
-                varBind = varBinds[i]
-                for r in range(1, M):
-                    rspVarBinds.extend(readNextVars((varBind,)))
-                    varBind = rspVarBinds[-1]
+
+        varBinds = reqVarBinds[-R:]
+        while M and R:
+            rspVarBinds.extend(
+                readNextVars(varBinds)
+            )
+            varBinds = rspVarBinds[-R:]
+            M = M - 1
 
         return rspVarBinds
  
