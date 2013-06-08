@@ -1,4 +1,4 @@
-0.2.3rc1
+0.2.3rc0
 --------
 
 - Simulator now supports a list of interfaces to listen on through
@@ -7,6 +7,7 @@
 - Introducing new command-line utility "datafile.py" designed to manage data
   files. Features include: merging, splitting, sorting, de-duplicating,
   convertion between data file formats.
+- Automatic log file rotation feature implemented.
 - A number of improvement to the mib2dev.py tool:
   * Columnar objects for table indices are now automatically populated
     from index values
