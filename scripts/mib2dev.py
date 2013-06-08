@@ -26,11 +26,24 @@ tableSize = 10
 modNames = []
 mibDirs = []
 
-helpMessage = 'Usage: %s [--help] [--debug=<category>] [--quiet] [--pysnmp-mib-dir=<path>] [--mib-module=<name>] [--start-oid=<OID>] [--stop-oid=<OID>] [--manual-values] [--table-size=<number>] [--output-file=<filename>] [--string-pool=<words>] [--integer32-range=<min,max>]' % sys.argv[0]
+helpMessage = """Usage: %s [--help]
+    [--version]
+    [--debug=<%s>]
+    [--quiet]
+    [--pysnmp-mib-dir=<path>] [--mib-module=<name>]
+    [--start-oid=<OID>] [--stop-oid=<OID>]
+    [--manual-values]
+    [--table-size=<number>]
+    [--output-file=<filename>]
+    [--string-pool=<words>]
+    [--integer32-range=<min,max>]""" % (
+        sys.argv[0], 
+        '|'.join([ x for x in debug.flagMap.keys() if x not in ('app', 'msgproc', 'proxy', 'io', 'secmod', 'dsp', 'acl') ])
+    )
 
 try:
-    opts, params = getopt.getopt(sys.argv[1:], 'h',
-        ['help', 'debug=', 'quiet', 'pysnmp-mib-dir=', 'mib-module=', 'start-oid=', 'stop-oid=', 'manual-values', 'table-size=', 'output-file=', 'string-pool=', 'integer32-range=']
+    opts, params = getopt.getopt(sys.argv[1:], 'hv',
+        ['help', 'version', 'debug=', 'quiet', 'pysnmp-mib-dir=', 'mib-module=', 'start-oid=', 'stop-oid=', 'manual-values', 'table-size=', 'output-file=', 'string-pool=', 'integer32-range=']
         )
 except Exception:
     sys.stdout.write('ERROR: %s\r\n%s\r\n' % (sys.exc_info()[1], helpMessage))
@@ -42,6 +55,9 @@ if params:
 
 for opt in opts:
     if opt[0] == '-h' or opt[0] == '--help':
+        sys.stderr.write('MIB modules into SNMP Simulator data files conversion tool.\r\nTakes MIB module in PySNMP format and produces data file for SNMP Simulator\r\nto playback. Chooses random values or can ask for them interactively.\r\nAble to fill SNMP conceptual tables with consistent indices.\r\nDocumentation: http://snmpsim.sourceforge.net/simulation-based-on-mibs.html\r\n%s\r\n' % helpMessage)
+        sys.exit(-1)
+    if opt[0] == '-v' or opt[0] == '--version':
         sys.stdout.write('SNMP Simulator version %s, written by Ilya Etingof <ilya@glas.net>\r\nSoftware documentation and support at http://snmpsim.sf.net\r\n%s\r\n' % (__version__, helpMessage))
         sys.exit(-1)
     if opt[0] == '--debug':

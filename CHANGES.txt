@@ -1,5 +1,5 @@
-0.2.3rc0
---------
+0.2.3
+-----
 
 - Simulator now supports a list of interfaces to listen on through
   the --agent-endpoint*-list=<file> family of options. It's intended
@@ -16,6 +16,7 @@
   * Default automatic value ranges for integers are now much smaller
     to increase a chance of automatic selection.
   * Fix to OID range checking when specified at the command-line.
+- Help messages made more readable and complete.
 - Data file search code fixed (not to crash Simulator in corner cases)
   and simplified.
 - Variable conflict fixed that broke --v2c-arch option operations.

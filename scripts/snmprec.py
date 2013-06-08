@@ -66,13 +66,39 @@ privProtocols = {
   'NONE': config.usmNoPrivProtocol
 }
 
-helpMessage = 'Usage: %s [--help] [--debug=<category>] [--logging-method=<method|?>] [--version=<1|2c|3>] [--community=<string>] [--v3-user=<username>] [--v3-auth-key=<key>] [--v3-priv-key=<key>] [--v3-auth-proto=<%s>] [--v3-priv-proto=<%s>] [--context=<string>] [--use-getbulk] [--getbulk-repetitions=<number>] [--agent-udpv4-endpoint=<X.X.X.X:NNNNN>] [--agent-udpv6-endpoint=<[X:X:..X]:NNNNN>] [--agent-unix-endpoint=</path/to/named/pipe>] [--start-oid=<OID>] [--stop-oid=<OID>] [--output-file=<filename>] [--variation-modules-dir=<dir>] [--variation-module=<module>] [--variation-module-options=<args>]' % (sys.argv[0], '|'.join([ x for x in authProtocols if x != 'NONE' ]), '|'.join([ x for x in privProtocols if x != 'NONE' ]))
+helpMessage = """Usage: %s [--help]
+    [--version]
+    [--debug=<%s>]
+    [--logging-method=<stdout|stderr|syslog|file>[:args>]]
+    [--version=<1|2c|3>]
+    [--community=<string>]
+    [--v3-user=<username>]
+    [--v3-auth-key=<key>]
+    [--v3-auth-proto=<%s>]
+    [--v3-priv-key=<key>]
+    [--v3-priv-proto=<%s>]
+    [--context=<string>]
+    [--use-getbulk]
+    [--getbulk-repetitions=<number>]
+    [--agent-udpv4-endpoint=<X.X.X.X:NNNNN>]
+    [--agent-udpv6-endpoint=<[X:X:..X]:NNNNN>]
+    [--agent-unix-endpoint=</path/to/named/pipe>]
+    [--start-oid=<OID>] [--stop-oid=<OID>]
+    [--output-file=<filename>]
+    [--variation-modules-dir=<dir>]
+    [--variation-module=<module>]
+    [--variation-module-options=<args>]""" % (
+        sys.argv[0],
+        '|'.join([ x for x in debug.flagMap.keys() if x != 'mibview' ]),
+        '|'.join([ x for x in authProtocols if x != 'NONE' ]),
+        '|'.join([ x for x in privProtocols if x != 'NONE' ])
+    )
 
 log.setLogger('snmprec', 'stdout')
 
 try:
-    opts, params = getopt.getopt(sys.argv[1:], 'h',
-        ['help', 'debug=', 'logging-method=', 'quiet', 'v1', 'v2c', 'v3', 'version=', 'community=', 'v3-user=', 'v3-auth-key=', 'v3-priv-key=', 'v3-auth-proto=', 'v3-priv-proto=', 'context=', 'use-getbulk', 'getbulk-repetitions=', 'agent-address=', 'agent-port=', 'agent-udpv4-endpoint=', 'agent-udpv6-endpoint=', 'agent-unix-endpoint=', 'start-oid=', 'stop-oid=', 'output-file=', 'variation-modules-dir=', 'variation-module=', 'variation-module-options=']
+    opts, params = getopt.getopt(sys.argv[1:], 'hv',
+        ['help', 'version', 'debug=', 'logging-method=', 'quiet', 'v1', 'v2c', 'v3', 'version=', 'community=', 'v3-user=', 'v3-auth-key=', 'v3-priv-key=', 'v3-auth-proto=', 'v3-priv-proto=', 'context=', 'use-getbulk', 'getbulk-repetitions=', 'agent-address=', 'agent-port=', 'agent-udpv4-endpoint=', 'agent-udpv6-endpoint=', 'agent-unix-endpoint=', 'start-oid=', 'stop-oid=', 'output-file=', 'variation-modules-dir=', 'variation-module=', 'variation-module-options=']
         )
 except Exception:
     sys.stderr.write('ERROR: %s\r\n%s\r\n' % (sys.exc_info()[1], helpMessage))
@@ -84,6 +110,9 @@ if params:
 
 for opt in opts:
     if opt[0] == '-h' or opt[0] == '--help':
+        sys.stderr.write('SNMP Agents Recording tool. Queries specified Agent, stores response\r\ndata in data files for subsequent playback by SNMP Simulation tool.\r\nCan store a series of recordings for a more dynamic playback.\r\nDocumentation: http://snmpsim.sourceforge.net/snapshotting.html\r\n%s\r\n' % helpMessage)
+        sys.exit(-1)
+    if opt[0] == '-v' or opt[0] == '--version':
         sys.stderr.write('SNMP Simulator version %s, written by Ilya Etingof <ilya@glas.net>\r\nSoftware documentation and support at http://snmpsim.sf.net\r\n%s\r\n' % (__version__, helpMessage))
         sys.exit(-1)
     elif opt[0] == '--debug':

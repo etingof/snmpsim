@@ -44,11 +44,21 @@ recordsSet = {
     SnmprecRecord.ext: SnmprecRecord()
 }
 
-helpMessage = 'Usage: %s [--help] [--quiet] [--sort-records] [--ignore-broken-records] [--deduplicate-records] [--start-oid=<OID>] [--stop-oid=<OID>] [--source-record-type=<type>] [--destination-record-type=<type>] [--input-file=<filename>] [--output-file=<filename>]' % sys.argv[0]
+helpMessage = """Usage: %s [--help]
+    [--version]
+    [--quiet]
+    [--sort-records]
+    [--ignore-broken-records]
+    [--deduplicate-records]
+    [--start-oid=<OID>] [--stop-oid=<OID>]
+    [--source-record-type=<type>]
+    [--destination-record-type=<type>]
+    [--input-file=<filename>]
+    [--output-file=<filename>]""" % sys.argv[0]
 
 try:
-    opts, params = getopt.getopt(sys.argv[1:], 'h',
-        ['help', 'quiet', 'sort-records', 
+    opts, params = getopt.getopt(sys.argv[1:], 'hv',
+        ['help', 'version', 'quiet', 'sort-records', 
          'ignore-broken-records', 'deduplicate-records',
          'start-oid=', 'stop-oid=',
          'source-record-type=', 'destination-record-type=',
@@ -66,6 +76,9 @@ if params:
 
 for opt in opts:
     if opt[0] == '-h' or opt[0] == '--help':
+        sys.stderr.write('SNMP Simulator data files management and repair tool.\r\n%s\r\n' % helpMessage)
+        sys.exit(-1)
+    if opt[0] == '-v' or opt[0] == '--version':
         sys.stderr.write('SNMP Simulator version %s, written by Ilya Etingof <ilya@glas.net>\r\nSoftware documentation and support at http://snmpsim.sf.net\r\n%s\r\n' % (__version__, helpMessage))
         sys.exit(-1)
     if opt[0] == '--quiet':
