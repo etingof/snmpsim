@@ -53,15 +53,16 @@ class FileLogger(AbstractLogger):
                 self._maxsize = int(priv[1][:-1]) * 1024 * 1024 * 1024
             elif priv[1][-1] in ('h', 'H'):
                 self._maxage = int(priv[1][:-1]) * 3600
-                self._lastrotate = time.mktime(localtime[:4]+(0,0)+localtime[6:]) % self._maxage
+                self._lastrotatefun = lambda: time.mktime(localtime[:4]+(0,0)+localtime[6:])
             elif priv[1][-1] in ('d', 'D'):
                 self._maxage = int(priv[1][:-1]) * 3600 * 24
-                self._lastrotate = time.mktime(localtime[:3]+(0,0,0)+localtime[6:]) % self._maxage
+                self._lastrotatefun = lambda: time.mktime(localtime[:3]+(0,0,0)+localtime[6:])
             else:
                 raise error.SnmpsimError(
                     'Unknown log rotation criteria %s, use K,M,G for size and H,M for time limits' % priv[1]
                 )
 
+            self._lastrotate = self._lastrotatefun()
             self._infomsg = 'Log file %s, rotation rules are: age: %s mins, size %sKB' % (self._file, self._maxage/60, self._maxsize/1024)
             self(self._infomsg)
 
@@ -77,7 +78,7 @@ class FileLogger(AbstractLogger):
             except:
                 size = 0
         if self._maxsize and size >= self._maxsize or \
-                self._maxage and (now % self._maxage) < self._lastrotate:
+                self._maxage and now - self._lastrotate >= self._maxage:
             newName = self._file + '.%d%.2d%.2d%.2d%.2d' % time.localtime()[:5]
             if not os.path.exists(newName):
                 self._fileobj.close()
@@ -93,7 +94,7 @@ class FileLogger(AbstractLogger):
                     else:
                         self(self._infomsg)
                         if self._maxage:
-                            self._lastrotate = int(now) % self._maxage
+                            self._lastrotate = self._lastrotatefun()
 
         try:
             self._fileobj.write('%s %s[%s]: %s\n' % (self.timestamp(now), self.progId, getattr(os, 'getpid', lambda x: 0)(), s))
