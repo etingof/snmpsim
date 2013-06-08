@@ -12,7 +12,6 @@ from pyasn1.error import PyAsn1Error
 from pysnmp.smi import builder, view, error
 from pysnmp.proto import rfc1902
 from pysnmp import debug
-from snmpsim import __version__
 from snmpsim.record import snmprec
 
 # Defaults
@@ -55,10 +54,25 @@ if params:
 
 for opt in opts:
     if opt[0] == '-h' or opt[0] == '--help':
-        sys.stderr.write('MIB modules into SNMP Simulator data files conversion tool.\r\nTakes MIB module in PySNMP format and produces data file for SNMP Simulator\r\nto playback. Chooses random values or can ask for them interactively.\r\nAble to fill SNMP conceptual tables with consistent indices.\r\nDocumentation: http://snmpsim.sourceforge.net/simulation-based-on-mibs.html\r\n%s\r\n' % helpMessage)
+        sys.stderr.write("""\
+Synopsis:
+  Converts MIB modules into SNMP Simulator data files.
+  Takes MIB module in PySNMP format and produces data file for SNMP Simulator
+  to playback. Chooses random values or can ask for them interactively.
+  Able to fill SNMP conceptual tables with consistent indices.
+Documentation:
+  http://snmpsim.sourceforge.net/simulation-based-on-mibs.html
+%s
+""" % helpMessage)
         sys.exit(-1)
     if opt[0] == '-v' or opt[0] == '--version':
-        sys.stdout.write('SNMP Simulator version %s, written by Ilya Etingof <ilya@glas.net>\r\nSoftware documentation and support at http://snmpsim.sf.net\r\n%s\r\n' % (__version__, helpMessage))
+        import snmpsim, pysnmp, pyasn1
+        sys.stderr.write("""\
+SNMP Simulator version %s, written by Ilya Etingof <ilya@glas.net>
+Using foundation libraries: pysnmp %s, pyasn1 %s.
+Software documentation and support at http://snmpsim.sf.net
+%s
+""" % (snmpsim.__version__, hasattr(pysnmp, '__version__') and pysnmp.__version__ or 'unknown', hasattr(pyasn1, '__version__') and pyasn1.__version__ or 'unknown', helpMessage))
         sys.exit(-1)
     if opt[0] == '--debug':
         debug.setLogger(debug.Debug(opt[1]))

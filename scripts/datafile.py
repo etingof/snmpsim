@@ -7,7 +7,6 @@
 import getopt
 import sys
 from pyasn1.type import univ
-from snmpsim import __version__
 from snmpsim.record import snmprec, dump, mvc, sap, walk
 from snmpsim import error
 
@@ -44,7 +43,8 @@ recordsSet = {
     SnmprecRecord.ext: SnmprecRecord()
 }
 
-helpMessage = """Usage: %s [--help]
+helpMessage = """\
+Usage: %s [--help]
     [--version]
     [--quiet]
     [--sort-records]
@@ -76,10 +76,20 @@ if params:
 
 for opt in opts:
     if opt[0] == '-h' or opt[0] == '--help':
-        sys.stderr.write('SNMP Simulator data files management and repair tool.\r\n%s\r\n' % helpMessage)
+        sys.stderr.write("""\
+Synopsis:
+  SNMP Simulator data files management and repair tool.
+%s
+""" % helpMessage)
         sys.exit(-1)
     if opt[0] == '-v' or opt[0] == '--version':
-        sys.stderr.write('SNMP Simulator version %s, written by Ilya Etingof <ilya@glas.net>\r\nSoftware documentation and support at http://snmpsim.sf.net\r\n%s\r\n' % (__version__, helpMessage))
+        import snmpsim, pysnmp, pyasn1
+        sys.stderr.write("""\
+SNMP Simulator version %s, written by Ilya Etingof <ilya@glas.net>
+Using foundation libraries: pysnmp %s, pyasn1 %s.
+Software documentation and support at http://snmpsim.sf.net
+%s
+""" % (snmpsim.__version__, hasattr(pysnmp, '__version__') and pysnmp.__version__ or 'unknown', hasattr(pyasn1, '__version__') and pyasn1.__version__ or 'unknown', helpMessage))
         sys.exit(-1)
     if opt[0] == '--quiet':
         verboseFlag = False
