@@ -19,7 +19,7 @@ verboseFlag = True
 startOID = stopOID = None
 outputFile = sys.stderr
 stringPool = 'Portez ce vieux whisky au juge blond qui fume!'.split()
-int32Range = (0, 16)  # these values are more likely to fit constraints
+int32Range = (0, 32)  # these values are more likely to fit constraints
 automaticValues = 50
 tableSize = 10
 modNames = []
@@ -200,9 +200,10 @@ mibBuilder.setMibSources(
 
 mibView = view.MibViewController(mibBuilder)
 
+output = []
+
 # MIBs walk
 for modName in modNames:
-    oidCount = 0
     if verboseFlag:
         sys.stdout.write('# MIB module: %s\r\n' % modName)
     mibBuilder.loadModules(modName)
@@ -221,9 +222,11 @@ for modName in modNames:
             if automaticValues:
                 if thisTableSize < tableSize:
                     oid = tuple(rowOID)
-                    sys.stdout.write('# Synthesizing row #%d of table %s\r\n' % (thisTableSize, rowOID))
+                    if verboseFlag:
+                        sys.stdout.write('# Synthesizing row #%d of table %s\r\n' % (thisTableSize, rowOID))
                 else:
-                    sys.stdout.write('# Finished table %s (%d rows)\r\n' % (rowOID, thisTableSize))
+                    if verboseFlag:
+                        sys.stdout.write('# Finished table %s (%d rows)\r\n' % (rowOID, thisTableSize))
                     rowOID = None
             else:
                 while 1:
@@ -237,7 +240,8 @@ for modName in modNames:
                             oid = tuple(rowOID)
                             break
                         elif line[0] in ('n', 'N'):
-                            sys.stdout.write('# Finished table %s (%d rows)\r\n' % (rowOID, thisTableSize))
+                            if verboseFlag:
+                                sys.stdout.write('# Finished table %s (%d rows)\r\n' % (rowOID, thisTableSize))
                             rowOID = None
                             break
 
@@ -251,7 +255,8 @@ for modName in modNames:
     
         if isinstance(node, MibTable):
             hint = '# Table %s::%s\r\n' % (modName, symName)
-            sys.stdout.write('# Starting table %s::%s (%s)\r\n' % (modName, symName, univ.ObjectIdentifier(oid)))
+            if verboseFlag:
+                sys.stdout.write('# Starting table %s::%s (%s)\r\n' % (modName, symName, univ.ObjectIdentifier(oid)))
             continue
         elif isinstance(node, MibTableRow):
             rowIndices = {}
@@ -278,14 +283,28 @@ for modName in modNames:
             val = getValue(node.syntax, verboseFlag and '# Scalar %s::%s (type %s)\r\n' % (modName, symName, node.syntax.__class__.__name__) or '')
         else:
             continue
-   
-        outputFile.write(
-            dataFileHandler.format(oid + suffix, val)
-        )
+  
+        output.append((oid + suffix, val))
+    
+    output.sort(
+        key=lambda x: univ.ObjectIdentifier(x[0])
+    )
 
-        oidCount += 1
+    unique = set()
+
+    for oid, val in output:
+        if oid in unique:
+            if verboseFlag:
+                sys.stdout.write(
+                    '# Dropping duplicate OID %s\r\n' % (univ.ObjectIdentifier(oid),)
+                )
+        else:
+            outputFile.write(
+                dataFileHandler.format(oid, val)
+            )
+            unique.add(oid)
 
     if verboseFlag:
         sys.stdout.write(
-            '# End of %s, %s OID(s) dumped\r\n' % (modName, oidCount)
+            '# End of %s, %s OID(s) dumped\r\n' % (modName, len(unique))
         )

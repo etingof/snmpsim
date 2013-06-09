@@ -17,6 +17,7 @@
     to increase a chance of automatic selection.
   * When generating values, make N probes choosing random values for 
     better automation
+  * Produced values are sorted and de-duplicated.
   * Fix to OID range checking when specified at the command-line.
 - Help messages made more readable and complete.
 - Data file search code fixed (not to crash Simulator in corner cases)
