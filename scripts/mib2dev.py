@@ -192,11 +192,6 @@ for modName in modNames:
         except error.NoSuchObjectError:
             break
 
-        if startOID and oid < startOID:
-            continue # skip on premature OID
-        if stopOID and oid > stopOID:
-            break  # stop on out of range condition
- 
         if rowOID and not rowOID.isPrefixOf(oid):
             thisTableSize += 1
             if automaticValues:
@@ -222,6 +217,11 @@ for modName in modNames:
                             rowOID = None
                             break
 
+        if startOID and oid < startOID:
+            continue # skip on premature OID
+        if stopOID and oid > stopOID:
+            break  # stop on out of range condition
+ 
         modName, symName, _ = mibView.getNodeLocation(oid)
         node, = mibBuilder.importSymbols(modName, symName)
     
