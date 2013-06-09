@@ -302,7 +302,32 @@ The range of values for automatic and random selection can be controlled
 on a per-type basis with the --counter-range, --counter64-range,
 --gauge-range, --timeticks-range, --unsigned-range,
 --integer32-range options. Words for strings generations can be passed
-via --string-pool option.
+via --string-pool option. For example:
+
+$ mib2dev.py --mib-module=UDP-MIB --table-size=1 --counter-range=0,100
+--unsigned-range=100,200
+# MIB module: UDP-MIB
+# Starting table UDP-MIB::udpTable (1.3.6.1.2.1.7.5)
+# Finished table 1.3.6.1.2.1.7.5.1 (1 rows)
+# Starting table UDP-MIB::udpEndpointTable (1.3.6.1.2.1.7.7)
+# Finished table 1.3.6.1.2.1.7.7.1 (1 rows)
+1.3.6.1.2.1.7.1.0|65|66
+1.3.6.1.2.1.7.2.0|65|49
+1.3.6.1.2.1.7.3.0|65|91
+1.3.6.1.2.1.7.4.0|65|14
+1.3.6.1.2.1.7.5.1.1.169.148.104.225.14|64x|a99468e1
+1.3.6.1.2.1.7.5.1.2.169.148.104.225.14|2|14
+1.3.6.1.2.1.7.7.1.1.4.0.127.2.0.137.182|2|4
+1.3.6.1.2.1.7.7.1.2.4.0.127.2.0.137.182|4|
+1.3.6.1.2.1.7.7.1.3.4.0.127.2.0.137.182|66|127
+1.3.6.1.2.1.7.7.1.4.4.0.127.2.0.137.182|2|2
+1.3.6.1.2.1.7.7.1.5.4.0.127.2.0.137.182|4|
+1.3.6.1.2.1.7.7.1.6.4.0.127.2.0.137.182|66|137
+1.3.6.1.2.1.7.7.1.7.4.0.127.2.0.137.182|66|182
+1.3.6.1.2.1.7.7.1.8.4.0.127.2.0.137.182|66|185
+1.3.6.1.2.1.7.8.0|70|9808059939656837207
+1.3.6.1.2.1.7.9.0|70|10931009272993024622
+# End of UDP-MIB, 16 OID(s) dumped
 
 If you wish to specify each value rather then rely on automatic random
 selection, use --manual-value command line switch. If you would rather
@@ -355,19 +380,37 @@ for fast OID lookup in a data file.
 Getting help:
 
 $ snmpsimd.py -h
-SNMP Simulator version 0.2.2, written by Ilya Etingof <ilya@glas.net>
-Software documentation and support at http://snmpsim.sf.net
-Usage: scripts/snmpsimd.py [--help] [--version ] [--debug=<category>] 
-    [--daemonize] [--process-user=<uname>] [--process-group=<gname>] 
-    [--logging-method=<method|?>] [--data-dir=<dir>] [--cache-dir=<dir>] 
-    [--force-index-rebuild] [--validate-data] [--variation-modules-dir=<dir>]
-    [--variation-module-options=<module[=alias][:args]>]
-    [--agent-udpv4-endpoint=<X.X.X.X:NNNNN>] 
-    [--agent-udpv6-endpoint=<[X:X:..X]:NNNNN>] 
-    [--agent-unix-endpoint=</path/to/named/pipe>] [--v2c-arch] [--v3-only] 
-    [--v3-user=<username>] [--v3-auth-key=<key>] 
-    [--v3-auth-proto=<SHA|NONE|MD5>] [--v3-priv-key=<key>] 
-    [--v3-priv-proto=<3DES|AES256|NONE|DES|AES|AES128|AES192>]
+Synopsis:
+  SNMP Agents Simulation tool. Responds to SNMP requests, variate responses
+  based on transport addresses, SNMP community name or SNMPv3 context name.
+  Can implement highly complex behavior through variation modules.
+Documentation:
+  http://snmpsim.sourceforge.net/simulating-agents.html
+Usage: scripts/snmpsimd.py [--help]
+  [--version ]
+  [--debug=<mibbuild|all|app|msgproc|proxy|io|secmod|dsp|acl|mibinstrum>]
+  [--daemonize]
+  [--process-user=<uname>] [--process-group=<gname>]
+  [--logging-method=<stdout|stderr|syslog|file>[:args>]]
+  [--data-dir=<dir>]
+  [--cache-dir=<dir>]
+  [--variation-modules-dir=<dir>]
+  [--variation-module-options=<module[=alias][:args]>] 
+  [--force-index-rebuild]
+  [--validate-data]
+  [--agent-udpv4-endpoint=<X.X.X.X:NNNNN>]
+  [--agent-udpv6-endpoint=<[X:X:..X]:NNNNN>]
+  [--agent-unix-endpoint=</path/to/named/pipe>]
+  [--agent-udpv4-endpoints-list=<file>]
+  [--agent-udpv6-endpoints-list=<file>]
+  [--agent-unix-endpoints-list=<file>]
+  [--v2c-arch]
+  [--v3-only]
+  [--v3-user=<username>]
+  [--v3-auth-key=<key>]
+  [--v3-auth-proto=<SHA|NONE|MD5>]
+  [--v3-priv-key=<key>]
+  [--v3-priv-proto=<3DES|AES256|NONE|DES|AES|AES128|AES192>]
 
 Running Simulator:
 
@@ -414,7 +457,11 @@ Listening at:
 
 Simulator can listen at multiple local IP interfaces and/or UDP ports. Just
 pass multiple --agent-udpv4-endpoint / --agent-udpv6-endpoint command
-line parameters carrying addresses to listen on.
+line parameters carrying addresses to listen on. Whenever you wish
+Simulator to listen on thousands of local interfaces and/or ports,
+use the --agent-udpv4-endpoints-list / --agent-udpv6-endpoints-list
+options. These options expect to refer to a plain text file containing
+newline-separated list of transport endpoints. 
 
 An unprivileged port is chosen in this example to avoid running as root.
 
@@ -1449,6 +1496,88 @@ used for building response.
 
 Alternatively, we could help you with this task. Just let us know your
 requirements.
+
+Managing data files
+-------------------
+
+Simulator family of tools includes a datafile.py utility which is designed
+to perform a few handy operations on data files.
+
+$ datafile.py -h
+Synopsis:
+  SNMP Simulator data files management and repair tool.
+Usage: scripts/datafile.py [--help]
+  [--version]
+  [--quiet]
+  [--sort-records]
+  [--ignore-broken-records]
+  [--deduplicate-records]
+  [--start-oid=<OID>] [--stop-oid=<OID>]
+  [--source-record-type=<snmpwalk|MVC|sapwalk|snmprec|dump>]
+  [--destination-record-type=<snmpwalk|MVC|sapwalk|snmprec|dump>]
+  [--input-file=<filename>]
+  [--output-file=<filename>]
+
+If you posess .snmpwalk or .sapwalk snapshots and wish to convert them
+into Simulator's native .snmprec data file format (what can be required
+for using variation modules), run datafile tool like this:
+
+$ datafile.py --input-file=linux.snmpwalk --source-record-type=snmpwalk
+1.3.6.1.2.1.1.1.0|4|Linux cray 2.6.37.6-smp #2 SMP Sat Apr 9 23:39:07 CDT 2011 i686
+1.3.6.1.2.1.1.2.0|6|1.3.6.1.4.1.8072.3.2.10
+1.3.6.1.2.1.1.3.0|67|121722922
+1.3.6.1.2.1.1.4.0|4|Root <root@cray> (configure /etc/snmp/snmp.local.conf)
+1.3.6.1.2.1.1.5.0|4|new system name
+1.3.6.1.2.1.1.6.0|4|KK12 (edit /etc/snmp/snmpd.conf)
+1.3.6.1.2.1.1.8.0|67|0
+1.3.6.1.2.1.1.9.1.2.1|6|1.3.6.1.6.3.11.2.3.1.1
+1.3.6.1.2.1.1.9.1.2.2|6|1.3.6.1.6.3.15.2.1.1
+1.3.6.1.2.1.1.9.1.2.3|6|1.3.6.1.6.3.10.3.1.1
+...
+# Records: written 3711, filtered out 0, deduplicated 0, broken 0, variated 0
+
+Simulator requires data files to be sorted (by OID) and containing no 
+duplicate OIDs. In case your data file does not comply with these requirements
+for some reason, you could pass it through the datafile.py tool to
+fix data file:
+
+$ datafile.py --input-file=tcp-mib.snmprec --sort-records --ignore-broken-records --deduplicate-records
+1.3.6.1.2.1.6.1.0|2|1
+1.3.6.1.2.1.6.2.0|2|4
+1.3.6.1.2.1.6.3.0|2|2
+1.3.6.1.2.1.6.4.0|2|4
+...
+1.3.6.1.2.1.6.20.1.2.2.0.432|4|
+1.3.6.1.2.1.6.20.1.3.2.0.432|66|80
+1.3.6.1.2.1.6.20.1.4.2.0.432|66|1524968792
+# Records: written 33, filtered out 0, deduplicated 0, broken 0, variated 0
+
+If you have a huge data file and wish to use just a part of it for
+simulation purposes, datafile.py tool could cut a slice from a data file
+and store records in a new one:
+
+$ datafile.py --input-file=tcp-mib.snmprec --start-oid=1.3.6.1.2.1.6.13 --stop-oid=1.3.6.1.2.1.6.14
+1.3.6.1.2.1.6.13.1.1.72.192.51.208.2.234.233.215.7.3|2|1
+1.3.6.1.2.1.6.13.1.2.72.192.51.208.2.234.233.215.7.3|64x|8b896863
+1.3.6.1.2.1.6.13.1.3.72.192.51.208.2.234.233.215.7.3|2|3
+1.3.6.1.2.1.6.13.1.4.72.192.51.208.2.234.233.215.7.3|64x|4f1182fe
+1.3.6.1.2.1.6.13.1.5.72.192.51.208.2.234.233.215.7.3|2|3
+# Records: written 5, filtered out 28, deduplicated 0, broken 0, variated 0
+
+Merge of multiple data files into a single data file is also supported:
+
+$ datafile.py --input-file=tcp-mib.snmprec --input-file=udp-mib.snmprec --sort-records --deduplicate-records
+1.3.6.1.2.1.6.1.0|2|1
+1.3.6.1.2.1.6.2.0|2|4
+1.3.6.1.2.1.6.3.0|2|2
+1.3.6.1.2.1.6.4.0|2|4
+...
+1.3.6.1.2.1.7.8.0|70|3896031866066683889
+1.3.6.1.2.1.7.9.0|70|3518073560493506800
+# Records: written 49, filtered out 0, deduplicated 0, broken 0, variated 0
+
+Current datafile.py version does not support data files conversion from
+its native .snmprec into other formats.
 
 Performance improvement
 -----------------------
