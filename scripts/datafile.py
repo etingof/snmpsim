@@ -51,10 +51,12 @@ Usage: %s [--help]
     [--ignore-broken-records]
     [--deduplicate-records]
     [--start-oid=<OID>] [--stop-oid=<OID>]
-    [--source-record-type=<type>]
-    [--destination-record-type=<type>]
+    [--source-record-type=<%s>]
+    [--destination-record-type=<%s>]
     [--input-file=<filename>]
-    [--output-file=<filename>]""" % sys.argv[0]
+    [--output-file=<filename>]""" % (sys.argv[0], 
+                                     '|'.join(recordsSet.keys()),
+                                     '|'.join(recordsSet.keys()))
 
 try:
     opts, params = getopt.getopt(sys.argv[1:], 'hv',
