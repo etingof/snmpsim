@@ -20,7 +20,7 @@ startOID = stopOID = None
 outputFile = sys.stderr
 stringPool = 'Portez ce vieux whisky au juge blond qui fume!'.split()
 int32Range = (0, 16)  # these values are more likely to fit constraints
-automaticValues = True
+automaticValues = 50
 tableSize = 10
 modNames = []
 mibDirs = []
@@ -32,6 +32,7 @@ helpMessage = """Usage: %s [--help]
     [--pysnmp-mib-dir=<path>] [--mib-module=<name>]
     [--start-oid=<OID>] [--stop-oid=<OID>]
     [--manual-values]
+    [--automatic-values=<max-probes>]
     [--table-size=<number>]
     [--output-file=<filename>]
     [--string-pool=<words>]
@@ -42,7 +43,7 @@ helpMessage = """Usage: %s [--help]
 
 try:
     opts, params = getopt.getopt(sys.argv[1:], 'hv',
-        ['help', 'version', 'debug=', 'quiet', 'pysnmp-mib-dir=', 'mib-module=', 'start-oid=', 'stop-oid=', 'manual-values', 'table-size=', 'output-file=', 'string-pool=', 'integer32-range=']
+        ['help', 'version', 'debug=', 'quiet', 'pysnmp-mib-dir=', 'mib-module=', 'start-oid=', 'stop-oid=', 'manual-values', 'automatic-values=', 'table-size=', 'output-file=', 'string-pool=', 'integer32-range=']
         )
 except Exception:
     sys.stdout.write('ERROR: %s\r\n%s\r\n' % (sys.exc_info()[1], helpMessage))
@@ -87,15 +88,29 @@ Software documentation and support at http://snmpsim.sf.net
     if opt[0] == '--stop-oid':
         stopOID = univ.ObjectIdentifier(opt[1])
     if opt[0] == '--manual-values':
-        automaticValues = False
+        automaticValues = 0
+    if opt[0] == '--automatic-values':
+        try:
+            automaticValues = int(opt[1])
+        except ValueError:
+            sys.stdout.write('ERROR: bad value %s: %s\r\n' % (opt[1], sys.exc_info()[1]))
+            sys.exit(-1)   
     if opt[0] == '--table-size':
-        tableSize = int(opt[1])
+        try:
+            tableSize = int(opt[1])
+        except ValueError:
+            sys.stdout.write('ERROR: bad value %s: %s\r\n' % (opt[1], sys.exc_info()[1]))
+            sys.exit(-1)   
     if opt[0] == '--output-file':
         outputFile = open(opt[1], 'wb')
     if opt[0] == '--string-pool':
         stringPool = opt[1].split()
     if opt[0] == '--integer32-range':
-        int32Range = [int(x) for x in opt[1].split(',')]
+        try:
+            int32Range = [int(x) for x in opt[1].split(',')]
+        except ValueError:
+            sys.stdout.write('ERROR: bad value %s: %s\r\n' % (opt[1], sys.exc_info()[1]))
+            sys.exit(-1)
 
 # Catch missing params
 if not modNames:
@@ -103,33 +118,42 @@ if not modNames:
     sys.exit(-1)    
 
 def getValue(syntax, hint='', automaticValues=automaticValues):
-    # Pick a value
-    if isinstance(syntax, rfc1902.IpAddress):
-        val = '.'.join([ str(random.randrange(1, 256)) for x in range(4) ])
-    elif isinstance(syntax, (rfc1902.Counter32, rfc1902.Gauge32, rfc1902.TimeTicks, rfc1902.Unsigned32)):
-        val = random.randrange(0, 0xffffffff)
-    elif isinstance(syntax, rfc1902.Integer32):
-        val = random.randrange(int32Range[0], int32Range[1])
-    elif isinstance(syntax, rfc1902.Counter64):
-        val = random.randrange(0, 0xffffffffffffffff)
-    elif isinstance(syntax, univ.OctetString):
-        val = ' '.join(
-            [ stringPool[i] for i in range(random.randrange(0, len(stringPool)), random.randrange(0, len(stringPool))) ]
-            )
-    elif isinstance(syntax, univ.ObjectIdentifier):
-        val = '.'.join(['1','3','6','1','3'] + ['%d' % random.randrange(0, 255) for x in range(random.randrange(0, 10))])
-    elif isinstance(syntax, rfc1902.Bits):
-        val = [random.randrange(0, 256) for x in range(random.randrange(0,9))]
-    else:
-        val = '?'
-
     # Optionally approve chosen value with the user
     makeGuess = automaticValues
+    val = None
     while 1:
         if makeGuess:
+            # Pick a value
+            if isinstance(syntax, rfc1902.IpAddress):
+                val = '.'.join(
+                    [ str(random.randrange(1, 256)) for x in range(4) ]
+                )
+            elif isinstance(syntax, (rfc1902.Counter32,
+                                     rfc1902.Gauge32,
+                                     rfc1902.TimeTicks,
+                                     rfc1902.Unsigned32)):
+                val = random.randrange(0, 0xffffffff)
+            elif isinstance(syntax, rfc1902.Integer32):
+                val = random.randrange(int32Range[0], int32Range[1])
+            elif isinstance(syntax, rfc1902.Counter64):
+                val = random.randrange(0, 0xffffffffffffffff)
+            elif isinstance(syntax, univ.OctetString):
+                val = ' '.join(
+                    [ stringPool[i] for i in range(random.randrange(0, len(stringPool)), random.randrange(0, len(stringPool))) ]
+                )
+            elif isinstance(syntax, univ.ObjectIdentifier):
+                val = '.'.join(['1','3','6','1','3'] + ['%d' % random.randrange(0, 255) for x in range(random.randrange(0, 10))])
+            elif isinstance(syntax, rfc1902.Bits):
+                val = [random.randrange(0, 256) for x in range(random.randrange(0,9))]
+            else:
+                val = '?'
+
             try:
                 return syntax.clone(val)
             except PyAsn1Error:
+                if automaticValues and makeGuess:
+                    makeGuess -= 1
+                    continue
                 sys.stdout.write(
                     '*** Inconsistent value: %s\r\n*** See constraints and suggest a better one for:\r\n' % (sys.exc_info()[1],)
                     )
@@ -264,4 +288,4 @@ for modName in modNames:
     if verboseFlag:
         sys.stdout.write(
             '# End of %s, %s OID(s) dumped\r\n' % (modName, oidCount)
-            )
+        )

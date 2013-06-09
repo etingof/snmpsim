@@ -15,6 +15,8 @@
   * Hex values can now be given at the prompt using the 0x syntax
   * Default automatic value ranges for integers are now much smaller
     to increase a chance of automatic selection.
+  * When generating values, make N probes choosing random values for 
+    better automation
   * Fix to OID range checking when specified at the command-line.
 - Help messages made more readable and complete.
 - Data file search code fixed (not to crash Simulator in corner cases)
