@@ -15,6 +15,7 @@
   * Hex values can now be given at the prompt using the 0x syntax
   * Default automatic value ranges for integers are now much smaller
     to increase a chance of automatic selection.
+  * Values ranges can now be set for each SNMP type separately.
   * When generating values, make N probes choosing random values for 
     better automation
   * Produced values are sorted and de-duplicated.

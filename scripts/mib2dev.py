@@ -19,8 +19,13 @@ verboseFlag = True
 startOID = stopOID = None
 outputFile = sys.stderr
 stringPool = 'Portez ce vieux whisky au juge blond qui fume!'.split()
+counterRange = (0, 0xffffffff)
+counter64Range = (0, 0xffffffffffffffff)
+gaugeRange = (0, 0xffffffff)
+timeticksRange = (0, 0xffffffff)
+unsignedRange = (0, 65535)
 int32Range = (0, 32)  # these values are more likely to fit constraints
-automaticValues = 50
+automaticValues = 5000
 tableSize = 10
 modNames = []
 mibDirs = []
@@ -36,6 +41,11 @@ helpMessage = """Usage: %s [--help]
     [--table-size=<number>]
     [--output-file=<filename>]
     [--string-pool=<words>]
+    [--counter-range=<min,max>]
+    [--counter64-range=<min,max>]
+    [--gauge-range=<min,max>]
+    [--timeticks-range=<min,max>]
+    [--unsigned-range=<min,max>]
     [--integer32-range=<min,max>]""" % (
         sys.argv[0], 
         '|'.join([ x for x in debug.flagMap.keys() if x not in ('app', 'msgproc', 'proxy', 'io', 'secmod', 'dsp', 'acl') ])
@@ -43,7 +53,7 @@ helpMessage = """Usage: %s [--help]
 
 try:
     opts, params = getopt.getopt(sys.argv[1:], 'hv',
-        ['help', 'version', 'debug=', 'quiet', 'pysnmp-mib-dir=', 'mib-module=', 'start-oid=', 'stop-oid=', 'manual-values', 'automatic-values=', 'table-size=', 'output-file=', 'string-pool=', 'integer32-range=']
+        ['help', 'version', 'debug=', 'quiet', 'pysnmp-mib-dir=', 'mib-module=', 'start-oid=', 'stop-oid=', 'manual-values', 'automatic-values=', 'table-size=', 'output-file=', 'string-pool=', 'integer32-range=', 'counter-range=', 'counter64-range=', 'gauge-range=', 'unsigned-range=', 'timeticks-range=']
         )
 except Exception:
     sys.stdout.write('ERROR: %s\r\n%s\r\n' % (sys.exc_info()[1], helpMessage))
@@ -105,12 +115,43 @@ Software documentation and support at http://snmpsim.sf.net
         outputFile = open(opt[1], 'wb')
     if opt[0] == '--string-pool':
         stringPool = opt[1].split()
+    if opt[0] == '--counter-range':
+        try:
+            counterRange = [int(x) for x in opt[1].split(',')]
+        except ValueError:
+            sys.stdout.write('ERROR: bad value %s: %s\r\n' % (opt[1], sys.exc_info()[1]))
+            sys.exit(-1)
+    if opt[0] == '--counter64-range':
+        try:
+            counter64Range = [int(x) for x in opt[1].split(',')]
+        except ValueError:
+            sys.stdout.write('ERROR: bad value %s: %s\r\n' % (opt[1], sys.exc_info()[1]))
+            sys.exit(-1)
+    if opt[0] == '--gauge-range':
+        try:
+            gaugeRange = [int(x) for x in opt[1].split(',')]
+        except ValueError:
+            sys.stdout.write('ERROR: bad value %s: %s\r\n' % (opt[1], sys.exc_info()[1]))
+            sys.exit(-1)
+    if opt[0] == '--timeticks-range':
+        try:
+            timeticksRange = [int(x) for x in opt[1].split(',')]
+        except ValueError:
+            sys.stdout.write('ERROR: bad value %s: %s\r\n' % (opt[1], sys.exc_info()[1]))
+            sys.exit(-1)
     if opt[0] == '--integer32-range':
         try:
             int32Range = [int(x) for x in opt[1].split(',')]
         except ValueError:
             sys.stdout.write('ERROR: bad value %s: %s\r\n' % (opt[1], sys.exc_info()[1]))
             sys.exit(-1)
+    if opt[0] == '--unsigned-range':
+        try:
+            unsignedRange = [int(x) for x in opt[1].split(',')]
+        except ValueError:
+            sys.stdout.write('ERROR: bad value %s: %s\r\n' % (opt[1], sys.exc_info()[1]))
+            sys.exit(-1)
+
 
 # Catch missing params
 if not modNames:
@@ -128,15 +169,18 @@ def getValue(syntax, hint='', automaticValues=automaticValues):
                 val = '.'.join(
                     [ str(random.randrange(1, 256)) for x in range(4) ]
                 )
-            elif isinstance(syntax, (rfc1902.Counter32,
-                                     rfc1902.Gauge32,
-                                     rfc1902.TimeTicks,
-                                     rfc1902.Unsigned32)):
-                val = random.randrange(0, 0xffffffff)
+            elif isinstance(syntax, rfc1902.TimeTicks):
+                val = random.randrange(timeticksRange[0], timeticksRange[1])
+            elif isinstance(syntax, rfc1902.Gauge32):
+                val = random.randrange(gaugeRange[0], gaugeRange[1])
+            elif isinstance(syntax, rfc1902.Counter32):
+                val = random.randrange(counterRange[0], counterRange[1])
             elif isinstance(syntax, rfc1902.Integer32):
                 val = random.randrange(int32Range[0], int32Range[1])
+            elif isinstance(syntax, rfc1902.Unsigned32):
+                val = random.randrange(unsignedRange[0], unsignedRange[1])
             elif isinstance(syntax, rfc1902.Counter64):
-                val = random.randrange(0, 0xffffffffffffffff)
+                val = random.randrange(counter64Range[0], counter64Range[1])
             elif isinstance(syntax, univ.OctetString):
                 val = ' '.join(
                     [ stringPool[i] for i in range(random.randrange(0, len(stringPool)), random.randrange(0, len(stringPool))) ]
@@ -148,15 +192,17 @@ def getValue(syntax, hint='', automaticValues=automaticValues):
             else:
                 val = '?'
 
-            try:
-                return syntax.clone(val)
-            except PyAsn1Error:
-                if automaticValues and makeGuess:
-                    makeGuess -= 1
-                    continue
+        try:
+            return syntax.clone(val)
+        except PyAsn1Error:
+            if makeGuess == 1:
                 sys.stdout.write(
                     '*** Inconsistent value: %s\r\n*** See constraints and suggest a better one for:\r\n' % (sys.exc_info()[1],)
-                    )
+                )
+            if makeGuess:
+                makeGuess -= 1
+                continue
+
         sys.stdout.write(
             '%s# Value [\'%s\'] ? ' % (hint,(val is None and '<none>' or val),)
             )
@@ -172,7 +218,6 @@ def getValue(syntax, hint='', automaticValues=automaticValues):
                     val = int(line[2:], 16)
             else:
                 val = line
-        makeGuess = True
 
 # Data file builder
 
