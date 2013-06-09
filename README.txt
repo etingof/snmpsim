@@ -94,21 +94,35 @@ No other information or comments is allowed in the data file.
 Data file recording would look like this:
 
 $ snmprec.py  -h
-SNMP Simulator version 0.2.2, written by Ilya Etingof <ilya@glas.net>
-Software documentation and support at http://snmpsim.sf.net
-Usage: scripts/snmprec.py [--help] [--debug=<category>] 
-  [--logging-method=<method|?>] [--version=<1|2c|3>] [--community=<string>]
-  [--v3-user=<username>] [--v3-auth-key=<key>] [--v3-priv-key=<key>] 
-  [--v3-auth-proto=<SHA|MD5>] 
-  [--v3-priv-proto=<3DES|AES256|DES|AES|AES128|AES192>] [--context=<string>]
-  [--use-getbulk] [--getbulk-repetitions=<number>] 
-  [--agent-udpv4-endpoint=<X.X.X.X:NNNNN>] 
-  [--agent-udpv6-endpoint=<[X:X:..X]:NNNNN>] 
-  [--agent-unix-endpoint=</path/to/named/pipe>] [--start-oid=<OID>] 
-  [--stop-oid=<OID>] [--output-file=<filename>] 
-  [--variation-modules-dir=<dir>] [--variation-module=<module>] 
-  [--variation-module-options=<args]>]
-$
+Synopsis:
+  SNMP Agents Recording tool. Queries specified Agent, stores response
+  data in data files for subsequent playback by SNMP Simulation tool.
+  Can store a series of recordings for a more dynamic playback.
+Documentation:
+  http://snmpsim.sourceforge.net/snapshotting.html
+Usage: scripts/snmprec.py [--help]
+    [--version]
+    [--debug=<mibbuild|all|app|msgproc|proxy|io|secmod|dsp|acl|mibinstrum>]
+    [--logging-method=<stdout|stderr|syslog|file>[:args>]]
+    [--version=<1|2c|3>]
+    [--community=<string>]
+    [--v3-user=<username>]
+    [--v3-auth-key=<key>]
+    [--v3-auth-proto=<SHA|MD5>]
+    [--v3-priv-key=<key>]
+    [--v3-priv-proto=<3DES|AES256|DES|AES|AES128|AES192>]
+    [--context=<string>]
+    [--use-getbulk]
+    [--getbulk-repetitions=<number>]
+    [--agent-udpv4-endpoint=<X.X.X.X:NNNNN>]
+    [--agent-udpv6-endpoint=<[X:X:..X]:NNNNN>]
+    [--agent-unix-endpoint=</path/to/named/pipe>]
+    [--start-oid=<OID>] [--stop-oid=<OID>]
+    [--output-file=<filename>]
+    [--variation-modules-dir=<dir>]
+    [--variation-module=<module>]
+    [--variation-module-options=<args>]
+
 $ snmprec.py --agent-udpv4-endpoint=192.168.1.1 --start-oid=1.3.6.1.2.1 --stop-oid=1.3.6.1.2.1.5 --output-file=snmpsim/data/recorded/linksys-system.snmprec
 Scanning "/usr/local/share/snmpsim/variation" directory for variation modules...  none requested
 SNMP version 2c
@@ -164,56 +178,136 @@ chosen values:
    MIB node instantiation. In that case the mib2dev.py script will revert
    to an interactive mode and ask you for a compliant value.
 
+3. When building snapshots from MIBs, rather then recording them off a
+   prototype device, you are not simulating the actual values device
+   is producing. In other words, with MIB-based simulation you can
+   only simulate the collection of OIDs, not their combined values which
+   are characteristic to particular device you wish to simulate.
+
 On the bright side, the mib2dev.py tool will respect Managed Object type
 (e.g type associated with the OIDs), and produce valid indices for the MIB
 tables.
 
 Device file generation from a MIB file would look like this:
 
-$ mib2dev.py
-SNMP Simulator version 0.2.2, written by Ilya Etingof <ilya@glas.net>
-Software documentation and support at http://snmpsim.sf.net
-Usage: scripts/mib2dev.py [--help] [--debug=<category>] [--quiet] 
-  [--pysnmp-mib-dir=<path>] [--mib-module=<name>] [--start-oid=<OID>] 
-  [--stop-oid=<OID>] [--manual-values] [--output-file=<filename>] 
-  [--string-pool=<words>] [--integer32-range=<min,max>]
+$ mib2dev.py -h
+Synopsis:
+  Converts MIB modules into SNMP Simulator data files.
+  Takes MIB module in PySNMP format and produces data file for SNMP Simulator
+  to playback. Chooses random values or can ask for them interactively.
+  Able to fill SNMP conceptual tables with consistent indices.
+Documentation:
+  http://snmpsim.sourceforge.net/simulation-based-on-mibs.html
+Usage: scripts/mib2dev.py [--help]
+    [--version]
+    [--debug=<mibbuild|all|mibview|mibinstrum>]
+    [--quiet]
+    [--pysnmp-mib-dir=<path>] [--mib-module=<name>]
+    [--start-oid=<OID>] [--stop-oid=<OID>]
+    [--manual-values]
+    [--automatic-values=<max-probes>]
+    [--table-size=<number>]
+    [--output-file=<filename>]
+    [--string-pool=<words>]
+    [--counter-range=<min,max>]
+    [--counter64-range=<min,max>]
+    [--gauge-range=<min,max>]
+    [--timeticks-range=<min,max>]
+    [--unsigned-range=<min,max>]
+    [--integer32-range=<min,max>]
 
 Please note that to run mib2dev.py you would first have to convert an ASN.1
 (e.g. text) MIB into a pysnmp module (with the libsmi2pysnmp tool shipped
 with pysnmp disitribution).
 
-Assuming we have the IF-MIB.py module in the pysnmp search path, run:
+Here we produce values for a portion of OID space of SNMPv2-MIB:
 
-$ mib2dev.py --mib-module=IF-MIB 
+$ mib2dev.py --mib-module=SNMPv2-MIB --start-oid=1.3.6.1.2.1.1.1 --stop-oid=1.3.6.1.2.1.1.8
+# MIB module: SNMPv2-MIB
+1.3.6.1.2.1.1.1.0|4|Portez ce vieux
+1.3.6.1.2.1.1.2.0|6|1.3.6.1.3.39.232.14.10.84.109.1
+1.3.6.1.2.1.1.3.0|67|350728093
+1.3.6.1.2.1.1.4.0|4|whisky
+1.3.6.1.2.1.1.5.0|4|
+1.3.6.1.2.1.1.6.0|4|whisky au juge blond
+1.3.6.1.2.1.1.7.0|2|4
+1.3.6.1.2.1.1.8.0|67|3138976393
+# End of SNMPv2-MIB, 8 OID(s) dumped
+
+As you can see, values are autogenerated and would still benefit from manual
+improvement.
+
+The mib2dev.py tool can also generate values for SNMP conceptual tables.
+It's doing that by iterating over table definition in MIB for specified
+number of times.
+
+Assuming we have the IF-MIB.py module in the pysnmp search path, the
+following command will produce two rows for IF-MIB::ifTable table:
+
+$ snmptranslate -On IF-MIB::ifTable
+.1.3.6.1.2.1.2.2
+
+$ mib2dev.py --mib-module=IF-MIB --start-oid=1.3.6.1.2.1.2.2 --stop-oid=1.3.6.1.2.1.2.3 --table-size=2
 # MIB module: IF-MIB
-1.3.6.1.2.1.2.1.0|2|3
-1.3.6.1.2.1.2.2.1.1.2|2|4
-1.3.6.1.2.1.2.2.1.2.2|4|whisky au juge blond qui
-1.3.6.1.2.1.2.2.1.3.2|2|4
-1.3.6.1.2.1.2.2.1.4.2|2|3
-1.3.6.1.2.1.2.2.1.5.2|66|1453149645
-1.3.6.1.2.1.2.2.1.6.2|4|Portez ce vieux whisky
-1.3.6.1.2.1.2.2.1.7.2|2|2
-1.3.6.1.2.1.2.2.1.8.2|2|1
-1.3.6.1.2.1.2.2.1.9.2|67|3622365885
-1.3.6.1.2.1.2.2.1.10.2|65|1132976988
-1.3.6.1.2.1.2.2.1.11.2|65|645067793
-1.3.6.1.2.1.2.2.1.12.2|65|29258291
-1.3.6.1.2.1.2.2.1.13.2|65|2267341229
-1.3.6.1.2.1.2.2.1.14.2|65|3666596422
-1.3.6.1.2.1.2.2.1.15.2|65|1846597313
-1.3.6.1.2.1.2.2.1.16.2|65|1260601176
-1.3.6.1.2.1.2.2.1.17.2|65|1631945174
-1.3.6.1.2.1.2.2.1.18.2|65|499457590
-1.3.6.1.2.1.2.2.1.19.2|65|278923014
-1.3.6.1.2.1.2.2.1.20.2|65|3153307863
-1.3.6.1.2.1.2.2.1.21.2|66|1395745280
-1.3.6.1.2.1.2.2.1.22.2|6|1.3.6.1.3.99.148.60.97.205.134.179
-# End of SNMPv2-SMI, 23 OID(s) dumped
+# Starting table IF-MIB::ifTable (1.3.6.1.2.1.2.2)
+# Synthesizing row #1 of table 1.3.6.1.2.1.2.2.1
+# Finished table 1.3.6.1.2.1.2.2.1 (2 rows)
+1.3.6.1.2.1.2.2.1.1.12|2|12
+1.3.6.1.2.1.2.2.1.1.26|2|26
+1.3.6.1.2.1.2.2.1.2.12|4|vieux whisky
+1.3.6.1.2.1.2.2.1.2.26|4|ce vieux whisky au juge
+1.3.6.1.2.1.2.2.1.3.12|2|29
+1.3.6.1.2.1.2.2.1.3.26|2|1
+1.3.6.1.2.1.2.2.1.4.12|2|28
+1.3.6.1.2.1.2.2.1.4.26|2|16
+1.3.6.1.2.1.2.2.1.5.12|66|3029607807
+1.3.6.1.2.1.2.2.1.5.26|66|3150811331
+1.3.6.1.2.1.2.2.1.6.12|4|
+1.3.6.1.2.1.2.2.1.6.26|4|
+1.3.6.1.2.1.2.2.1.7.12|2|1
+1.3.6.1.2.1.2.2.1.7.26|2|1
+1.3.6.1.2.1.2.2.1.8.12|2|6
+1.3.6.1.2.1.2.2.1.8.26|2|5
+1.3.6.1.2.1.2.2.1.9.12|67|2871454194
+1.3.6.1.2.1.2.2.1.9.26|67|496156868
+1.3.6.1.2.1.2.2.1.10.12|65|1488410552
+1.3.6.1.2.1.2.2.1.10.26|65|3473823260
+1.3.6.1.2.1.2.2.1.11.12|65|1727276906
+1.3.6.1.2.1.2.2.1.11.26|65|342963679
+1.3.6.1.2.1.2.2.1.12.12|65|1511248359
+1.3.6.1.2.1.2.2.1.12.26|65|2207653511
+1.3.6.1.2.1.2.2.1.13.12|65|4226165132
+1.3.6.1.2.1.2.2.1.13.26|65|36536957
+1.3.6.1.2.1.2.2.1.14.12|65|130591184
+1.3.6.1.2.1.2.2.1.14.26|65|1852726355
+1.3.6.1.2.1.2.2.1.15.12|65|3301920138
+1.3.6.1.2.1.2.2.1.15.26|65|470729731
+1.3.6.1.2.1.2.2.1.16.12|65|4148984503
+1.3.6.1.2.1.2.2.1.16.26|65|953020685
+1.3.6.1.2.1.2.2.1.17.12|65|1569764479
+1.3.6.1.2.1.2.2.1.17.26|65|2095562772
+1.3.6.1.2.1.2.2.1.18.12|65|238446444
+1.3.6.1.2.1.2.2.1.18.26|65|3268308217
+1.3.6.1.2.1.2.2.1.19.12|65|3230500934
+1.3.6.1.2.1.2.2.1.19.26|65|566234076
+1.3.6.1.2.1.2.2.1.20.12|65|3549197996
+1.3.6.1.2.1.2.2.1.20.26|65|2834484035
+1.3.6.1.2.1.2.2.1.21.12|66|68812076
+1.3.6.1.2.1.2.2.1.21.26|66|1903146216
+1.3.6.1.2.1.2.2.1.22.12|6|1.3.6.1.3
+1.3.6.1.2.1.2.2.1.22.26|6|1.3.6.1.3.231.101.247.88
+# End of IF-MIB, 44 OID(s) dumped
 
-One of the useful options are the --string-pool and --integer32-ranges. They
-let you specify an alternative set of words and integer values ranges
-to be used in random values generation.
+The range of values for automatic and random selection can be controlled
+on a per-type basis with the --counter-range, --counter64-range,
+--gauge-range, --timeticks-range, --unsigned-range,
+--integer32-range options. Words for strings generations can be passed
+via --string-pool option.
+
+If you wish to specify each value rather then rely on automatic random
+selection, use --manual-value command line switch. If you would rather
+have mib2dev.py tool to work out all the values by itself, consider
+raising the --automatic-values max probes value (default is 5000 probes).
 
 Finally, you could always modify your data files with a text editor.
 
