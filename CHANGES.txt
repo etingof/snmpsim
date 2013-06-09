@@ -25,6 +25,7 @@
   and simplified.
 - Variable conflict fixed that broke --v2c-arch option operations.
 - Fix to OIDs ordering in --v2c-arch GETBULK responder.
+- Fix subprocess variation module to work with old Python(s).
 - Source code linted and improved.
 
 0.2.2
