@@ -295,18 +295,18 @@ for modName in modNames:
         if stopOID and oid > stopOID:
             break  # stop on out of range condition
  
-        modName, symName, _ = mibView.getNodeLocation(oid)
-        node, = mibBuilder.importSymbols(modName, symName)
+        mibName, symName, _ = mibView.getNodeLocation(oid)
+        node, = mibBuilder.importSymbols(mibName, symName)
     
         if isinstance(node, MibTable):
-            hint = '# Table %s::%s\r\n' % (modName, symName)
+            hint = '# Table %s::%s\r\n' % (mibName, symName)
             if verboseFlag:
-                sys.stdout.write('# Starting table %s::%s (%s)\r\n' % (modName, symName, univ.ObjectIdentifier(oid)))
+                sys.stdout.write('# Starting table %s::%s (%s)\r\n' % (mibName, symName, univ.ObjectIdentifier(oid)))
             continue
         elif isinstance(node, MibTableRow):
             rowIndices = {}
             suffix = ()
-            rowHint = hint + '# Row %s::%s\r\n' % (modName, symName)
+            rowHint = hint + '# Row %s::%s\r\n' % (mibName, symName)
             for impliedFlag, idxModName, idxSymName in node.getIndexNames():
                 idxNode, = mibBuilder.importSymbols(idxModName, idxSymName)
                 rowHint += '# Index %s::%s (type %s)\r\n' % (idxModName, idxSymName, idxNode.syntax.__class__.__name__)
@@ -321,11 +321,11 @@ for modName in modNames:
             if oid in rowIndices:
                 val = rowIndices[oid]
             else:
-                val = getValue(node.syntax, verboseFlag and rowHint + '# Column %s::%s (type %s)\r\n' % (modName, symName, node.syntax.__class__.__name__) or '')
+                val = getValue(node.syntax, verboseFlag and rowHint + '# Column %s::%s (type %s)\r\n' % (mibName, symName, node.syntax.__class__.__name__) or '')
         elif isinstance(node, MibScalar):
             oid = node.name
             suffix = (0,)
-            val = getValue(node.syntax, verboseFlag and '# Scalar %s::%s (type %s)\r\n' % (modName, symName, node.syntax.__class__.__name__) or '')
+            val = getValue(node.syntax, verboseFlag and '# Scalar %s::%s (type %s)\r\n' % (mibName, symName, node.syntax.__class__.__name__) or '')
         else:
             continue
   
