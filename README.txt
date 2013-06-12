@@ -43,6 +43,10 @@ originator and SQL database adapter. Users of the Simulator software are
 welcome to develop their own variation modules if stock ones appears
 insufficient.
 
+We host an instance of SNMP Simulator at demo.snmplabs.com for everyone
+to play with it online. More details at
+http://snmpsim.sf.net/public-snmp-simulator.html
+
 The Simulator software is fully free and open source. It's written from
 ground-up in an easy to learn and high-level scripting language called
 Python. Everyone is welcome to modify Simulator in any way to best suite
@@ -146,6 +150,24 @@ $ head data/recorded/linksys-system.snmprec
 There are no special requirements for data file name and location. Note,
 that Simulator treats data file path as an SNMPv1/v2c community string
 and its MD5 hash constitutes SNMPv3 context name.
+
+If you don't readily have SNMP Agent to play with, you're welcome to 
+use online SNMP Simulator:
+
+$ snmprec.py --agent-udpv4-endpoint=demo.snmplabs.com --community=public
+SNMP version 2c, Community name: public
+Querying UDP/IPv4 agent at 195.218.195.228:161
+Sending initial GETNEXT request....
+1.3.6.1.2.1.1.1.0|4|SunOS zeus.snmplabs.com 4.1.3_U1 1 sun4m
+1.3.6.1.2.1.1.2.0|6|1.3.6.1.4.1.20408
+1.3.6.1.2.1.1.3.0|67|137765775
+1.3.6.1.2.1.1.4.0|4|SNMP Laboratories, info@snmplabs.com
+1.3.6.1.2.1.1.5.0|4|zeus.snmplabs.com
+1.3.6.1.2.1.1.6.0|4|Moscow, Russia
+...
+1.3.6.1.2.1.11.31.0|65|0
+1.3.6.1.2.1.11.32.0|65|0
+OIDs dumped: 86, elapsed: 2.00 sec, rate: 42.00 OIDs/sec
 
 About three times faster snapshot recording may be achieved by using SNMP's
 GETBULK operation:
@@ -888,6 +910,13 @@ Here's an example numeric module use for various types in a .snmprec file:
 
   # GAUGE object
   1.3.6.1.2.1.2.2.1.14.1|66:numeric|min=5,max=50,initial=25
+
+You are welcome to try the numeric module in action at our online
+SNMP simulation service:
+
+$ snmpget -v2c -c variation/virtualtable demo.snmplabs.com IF-MIB::ifLastChange.1 IF-MIB::ifInOctets.1
+IF-MIB::ifLastChange.1 = Timeticks: (16808012) 1 day, 22:41:20.12
+IF-MIB::ifInOctets.1 = Counter32: 30374688
 
 The numeric module can be used for simulating INTEGER, Counter32, Counter64,
 Gauge32, TimeTicks objects.
