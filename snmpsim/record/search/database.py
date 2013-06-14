@@ -24,6 +24,8 @@ class RecordIndex:
         self.__db = self.__text = None
         self.__dbType = '?'
 
+        self.__textFileTime = 0
+
     def __str__(self):
         return 'Data file %s, %s-indexed, %s' % (
             self.__textFile, self.__dbType, self.__db and 'opened' or 'closed'
@@ -32,12 +34,17 @@ class RecordIndex:
     def isOpen(self): return self.__db is not None
 
     def getHandles(self):
+        if self.isOpen():
+            if self.__textFileTime != os.stat(self.__textFile)[8]:
+                log.msg('Text file %s modified, closing' % self.__textFile)
+                self.close()
         if not self.isOpen():
+            self.create()
             self.open()
         return self.__text, self.__db
 
     def create(self, forceIndexBuild=False, validateData=False):
-        textFileStamp = os.stat(self.__textFile)[8]
+        textFileTime = os.stat(self.__textFile)[8]
 
         # gdbm on OS X seems to voluntarily append .db, trying to catch that
         
@@ -48,7 +55,7 @@ class RecordIndex:
             self.__dbFile
             ):
             if os.path.exists(dbFile):
-                if textFileStamp < os.stat(dbFile)[8]:
+                if textFileTime < os.stat(dbFile)[8]:
                     if indexNeeded:
                         log.msg('Forced index rebuild %s' % dbFile)
                     elif not whichdb(dbFile):
@@ -150,8 +157,10 @@ class RecordIndex:
 
             text.close()
             db.close()
-        
+       
             log.msg('...%d entries indexed' % (lineNo - 1,))
+
+        self.__textFileTime = os.stat(self.__textFile)[8]
 
         self.__dbType = whichdb(self.__dbFile)
 

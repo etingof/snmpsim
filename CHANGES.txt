@@ -1,3 +1,9 @@
+0.2.4
+-----
+
+- Automatic online data file index rebuild on data file timestamp 
+  change implemented.
+
 0.2.3
 -----
 
