@@ -240,8 +240,6 @@ class DataFile(AbstractLayout):
 
             log.msg('Opening %s' % self)
 
-            self.__recordIndex.open()
-
         return self.__recordIndex.getHandles()
 
     def processVarBinds(self, varBinds, nextFlag=False, setFlag=False):
@@ -252,7 +250,11 @@ class DataFile(AbstractLayout):
         else:
             errorStatus = exval.noSuchInstance
 
-        text, db = self.getHandles()
+        try:
+            text, db = self.getHandles()
+        except SnmpsimError:
+            log.msg('Problem with data file or its index: %s' % sys.exc_info()[1])
+            return [ (vb[0],errorStatus) for vb in varBinds ]
        
         varsRemaining = varsTotal = len(varBinds)
         
