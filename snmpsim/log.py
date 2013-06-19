@@ -85,16 +85,17 @@ class FileLogger(AbstractLogger):
                 try:
                     os.rename(self._file, newName)
                 except:
-                    pass  # losing log
-                else:
-                    try: 
-                        self._fileobj = open(self._file, 'a')
-                    except:
-                        pass # losing log
-                    else:
-                        self(self._infomsg)
-                        if self._maxage:
-                            self._lastrotate = self._lastrotatefun()
+                    pass
+
+                try: 
+                    self._fileobj = open(self._file, 'a')
+                except:
+                    return  # losing log message
+
+                if self._maxage:
+                    self._lastrotate = self._lastrotatefun()
+
+                self(self._infomsg)
 
         try:
             self._fileobj.write('%s %s[%s]: %s\n' % (self.timestamp(now), self.progId, getattr(os, 'getpid', lambda x: 0)(), s))
