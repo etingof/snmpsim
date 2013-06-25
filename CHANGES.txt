@@ -3,6 +3,7 @@
 
 - Automatic online data file index rebuild on data file timestamp 
   change implemented.
+- The --version option of snmprec.py renamed into --protocol-version.
 - Fixes to time-based log file rotation implementation.
 
 0.2.3

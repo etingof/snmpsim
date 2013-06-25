@@ -70,7 +70,7 @@ Usage: %s [--help]
     [--version]
     [--debug=<%s>]
     [--logging-method=<stdout|stderr|syslog|file>[:args>]]
-    [--version=<1|2c|3>]
+    [--protocol-version=<1|2c|3>]
     [--community=<string>]
     [--v3-user=<username>]
     [--v3-auth-key=<key>]
@@ -98,7 +98,7 @@ log.setLogger('snmprec', 'stdout')
 
 try:
     opts, params = getopt.getopt(sys.argv[1:], 'hv',
-        ['help', 'version', 'debug=', 'logging-method=', 'quiet', 'v1', 'v2c', 'v3', 'version=', 'community=', 'v3-user=', 'v3-auth-key=', 'v3-priv-key=', 'v3-auth-proto=', 'v3-priv-proto=', 'context=', 'use-getbulk', 'getbulk-repetitions=', 'agent-address=', 'agent-port=', 'agent-udpv4-endpoint=', 'agent-udpv6-endpoint=', 'agent-unix-endpoint=', 'start-oid=', 'stop-oid=', 'output-file=', 'variation-modules-dir=', 'variation-module=', 'variation-module-options=']
+        ['help', 'version', 'debug=', 'logging-method=', 'quiet', 'v1', 'v2c', 'v3', 'protocol-version=', 'community=', 'v3-user=', 'v3-auth-key=', 'v3-priv-key=', 'v3-auth-proto=', 'v3-priv-proto=', 'context=', 'use-getbulk', 'getbulk-repetitions=', 'agent-address=', 'agent-port=', 'agent-udpv4-endpoint=', 'agent-udpv6-endpoint=', 'agent-unix-endpoint=', 'start-oid=', 'stop-oid=', 'output-file=', 'variation-modules-dir=', 'variation-module=', 'variation-module-options=']
         )
 except Exception:
     sys.stderr.write('ERROR: %s\r\n%s\r\n' % (sys.exc_info()[1], helpMessage))
@@ -145,7 +145,7 @@ Software documentation and support at http://snmpsim.sf.net
         snmpVersion = 1
     elif opt[0] == '--v3':
         snmpVersion = 3
-    elif opt[0] == '--version':
+    elif opt[0] == '--protocol-version':
         if opt[1] in ('1', 'v1'):
             snmpVersion = 0
         elif opt[1] in ('2', '2c', 'v2c'):
