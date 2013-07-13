@@ -89,6 +89,7 @@ params.update( {
     'scripts': [ 'scripts/snmpsimd.py',
                  'scripts/snmprec.py',
                  'scripts/datafile.py',
+                 'scripts/pcap2dev.py',
                  'scripts/mib2dev.py' ],
     'packages': [ 'snmpsim', 'snmpsim.grammar', 'snmpsim.record',
                   'snmpsim.record.search' ]
