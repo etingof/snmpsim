@@ -1,6 +1,8 @@
 0.2.4
 -----
 
+- A tool for building SNMP Simulator data files from network
+  packet captures added.
 - Automatic online data file index rebuild on data file timestamp 
   change implemented.
 - The --version option of snmprec.py renamed into --protocol-version.
