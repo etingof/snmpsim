@@ -219,7 +219,7 @@ exc_info = None
 
 try:
     while 1:
-        pcapObj.loop(1, handlePacket)
+        pcapObj.dispatch(1, handlePacket)
 
 except KeyboardInterrupt:
     log.msg('Shutting down process...')
@@ -250,9 +250,9 @@ for context in contexts:
     outputFile.close()
 
 log.msg("""Statistics:
-    packets read: %s
-    packets dropped %s
-    packets dropped by interface %s""" % pcapObj.stats())
+    packets snooped: %s
+    packets dropped: %s
+    packets dropped: by interface %s""" % pcapObj.stats())
 
 log.msg('    '+'    '.join([ '%s: %s\r\n' % kv for kv in stats.items() ]))
 
