@@ -14,9 +14,7 @@ import traceback
 try:
     import pcap
 except ImportError:
-    sys.stderr.write("""Install pylibpcap module and try again!
-""")
-    sys.exit(-1)
+    pcap = None
 from pyasn1.codec.ber import decoder
 from pyasn1.error import PyAsn1Error
 from pysnmp.proto import api, rfc1905
@@ -117,6 +115,10 @@ Software documentation and support at http://snmpsim.sf.net
 if params:
     sys.stderr.write('ERROR: extra arguments supplied %s\r\n%s\r\n' % (params, helpMessage))
     sys.exit(-1)    
+
+if not pcap:
+    sys.stderr.write('ERROR: pylibpcap package is missing!\r\nGet it from http://sourceforge.net/projects/pylibpcap/\r\n%s\r\n' % helpMessage)
+    sys.exit(-1)
 
 pcapObj = pcap.pcapObject()
 
