@@ -462,6 +462,12 @@ def cbFun(sendRequestHandle, errorIndication, errorStatus, errorIndex,
                 cbCtx['total'] += cbCtx['count']
                 cbCtx['count'] = 0
                 cbCtx['iteration'] += 1
+
+                moreDataNotification = sys.exc_info()[1]
+                if 'period' in moreDataNotification:
+                    log.msg('%s OIDs dumped, waiting %.2f sec(s)...' % (cbCtx['total']+cbCtx['count'], moreDataNotification['period']))
+                    time.sleep(moreDataNotification['period'])
+ 
                 # initiate another SNMP walk iteration
                 if getBulkFlag:
                     cmdGen.sendReq(

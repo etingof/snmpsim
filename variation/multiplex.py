@@ -183,13 +183,12 @@ def record(oid, tag, value, **context):
         else:
             moduleContext['filenum'] = 0
         if 'iterations' in moduleContext and moduleContext['iterations']:
-            wait = max(0, moduleContext['period'] - (time.time() - moduleContext['started']))
-            log.msg('multiplex: waiting %.2f sec(s), %s OIDs dumped, %s iterations remaining...' % (wait, context['total']+context['count'], moduleContext['iterations']))
-            time.sleep(wait)
+            log.msg('multiplex: %s iterations remaining' % moduleContext['iterations'])
             moduleContext['started'] = time.time()
             moduleContext['iterations'] -= 1
             moduleContext['filenum'] += 1
-            raise error.MoreDataNotification()
+            wait = max(0, moduleContext['period'] - (time.time() - moduleContext['started']))
+            raise error.MoreDataNotification(period=wait)
         else:
             raise error.NoDataNotification()
 

@@ -5,8 +5,11 @@
   packet captures added.
 - Automatic online data file index rebuild on data file timestamp 
   change implemented.
+- Variation module API slightly changed to allow recording module
+  to communicate to its host time of the next probe to occur. 
 - The --version option of snmprec.py renamed into --protocol-version.
 - Fixes to time-based log file rotation implementation.
+- Fixes to numeric variation module.
 
 0.2.3
 -----

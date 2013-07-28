@@ -40,6 +40,9 @@ def init(snmpEngine, **context):
             else:
                 moduleContext['settings']['period'] = 10.0
 
+            if 'taglist' not in moduleContext['settings']:
+                moduleContext['settings']['taglist'] = '2-65-66-67-70'
+
 def variate(oid, tag, value, **context):
     if not context['nextFlag'] and not context['exactMatch']:
         return context['origOid'], tag, context['errorStatus']
@@ -171,18 +174,17 @@ def record(oid, tag, value, **context):
 
     if moduleContext['iterations']:
         if context['stopFlag']: # switching to final iteration
-            wait = max(0, float(moduleContext['settings']['period']) - (time.time() - moduleContext['started']))
-            log.msg('numeric: waiting %.2f sec(s), %s OIDs dumped, %s iterations remaining...' % (wait, context['total']+context['count'], moduleContext['settings']['iterations']))
-            time.sleep(wait)
+            log.msg('numeric: %s iterations remaining' % moduleContext['settings']['iterations'])
             moduleContext['iterations'] -= 1
             moduleContext['started'] = time.time()
-            raise error.MoreDataNotification()
+            wait = max(0, float(moduleContext['settings']['period']) - (time.time() - moduleContext['started']))
+            raise error.MoreDataNotification(period=wait)
         else:  # storing values on first iteration
             moduleContext[oid]['time'] = time.time()
             moduleContext[oid]['value'] = context['origValue']
-            if 'hexvalue' in moduleContext:
+            if 'hexvalue' in moduleContext[oid]:
                 moduleContext[oid]['hexvalue'] = context['hexvalue']
-            if 'hextag' in moduleContext:
+            if 'hextag' in moduleContext[oid]:
                 moduleContext[oid]['hextag'] = context['hextag']
             raise error.NoDataNotification()
     else:
@@ -202,11 +204,10 @@ def record(oid, tag, value, **context):
                     value = moduleContext[oid]['hexvalue']
                 return oid, tag, value
 
-            if 'taglist' not in moduleContext['settings'] or \
-                    tag not in moduleContext['settings']['taglist']:
+            if tag not in moduleContext['settings']['taglist']:
                 return oid, tag, moduleContext[oid]['value']
  
-            moduleContext[oid]['rate'] = (int(context['origValue']) - int(moduleContext[oid]['value'])) / (time.time() - moduleContext[oid]['time'])
+            moduleContext[oid]['settings']['rate'] = (int(context['origValue']) - int(moduleContext[oid]['value'])) / (time.time() - moduleContext[oid]['time'])
 
             tag += ':numeric'
             value = ','.join(
