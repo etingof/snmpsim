@@ -19,7 +19,7 @@ except ImportError:
     sys.exit(-1)
 from pyasn1.codec.ber import decoder
 from pyasn1.error import PyAsn1Error
-from pysnmp.proto import api
+from pysnmp.proto import api, rfc1905
 from pysnmp.carrier.asynsock.dgram import udp
 from snmpsim.record import snmprec
 from snmpsim import confdir, error, log
@@ -27,6 +27,7 @@ from snmpsim import confdir, error, log
 # Defaults
 verboseFlag = True
 startOID = stopOID = None
+promiscuousMode = False
 dataDir = '.'
 outputFile = sys.stderr
 listenInterface = captureFile = None
@@ -38,13 +39,14 @@ contexts = {}
 stats = {
   'UDP packets': 0,
   'IP packets': 0,
-  'bad SNMP packets': 0,
+  'bad packets': 0,
   'SNMP errors': 0,
-  'SNMP agents seen': 0,
-  'SNMP contexts seen': 0,
-  'SNMP snapshots taken': 0,
-  'SNMP Response PDUs seen': 0,
-  'SNMP OIDs seen': 0
+  'SNMP exceptions': 0,
+  'agents seen': 0,
+  'contexts seen': 0,
+  'snapshots taken': 0,
+  'Response PDUs seen': 0,
+  'OIDs seen': 0
 }
 
 helpMessage = """Usage: %s [--help]
@@ -55,13 +57,14 @@ helpMessage = """Usage: %s [--help]
     [--data-dir=<directory>]
     [--capture-file=<filename.pcap>]
     [--listen-interface=<device>]
+    [--promiscuous-mode]
     [--packet-filter=<ruleset>]""" % sys.argv[0] 
 
 log.setLogger('pcap2dev', 'stdout')
 
 try:
     opts, params = getopt.getopt(sys.argv[1:], 'hv',
-        ['help', 'version', 'quiet', 'logging-method=', 'start-oid=', 'stop-oid=', 'data-dir=', 'capture-file=', 'listen-interface=', 'packet-filter=']
+        ['help', 'version', 'quiet', 'logging-method=', 'start-oid=', 'stop-oid=', 'data-dir=', 'capture-file=', 'listen-interface=', 'promiscuous-mode', 'packet-filter=']
         )
 except Exception:
     sys.stderr.write('ERROR: %s\r\n%s\r\n' % (sys.exc_info()[1], helpMessage))
@@ -104,6 +107,8 @@ Software documentation and support at http://snmpsim.sf.net
         dataDir = opt[1]
     elif opt[0] == '--listen-interface':
         listenInterface = opt[1]
+    elif opt[0] == '--promiscuous-mode':
+        promiscuousMode = True
     elif opt[0] == '--capture-file':
         captureFile = opt[1]
     elif opt[0] == '--packet-filter':
@@ -117,11 +122,11 @@ pcapObj = pcap.pcapObject()
 
 if listenInterface:
     if verboseFlag:
-        log.msg('Openning interface %s' % opt[1])
+        log.msg('Listening on interface %s in %spromiscuous mode' % (listenInterface, promiscuousMode == False and 'non-' or ''))
     try:
-        pcapObj.open_live(listenInterface, 1600, 0, 100)
+        pcapObj.open_live(listenInterface, 65536, promiscuousMode, 1000)
     except:
-        log.msg('Error openning interface %s for snooping: %s' % (listenInteface, sys.exc_info()[1]))
+        log.msg('Error openning interface %s for snooping: %s' % (listenInterface, sys.exc_info()[1]))
         sys.exit(-1)
 elif captureFile:
     if verboseFlag:
@@ -173,14 +178,14 @@ def handleSnmpMessage(d, t):
     if msgVer in api.protoModules:
         pMod = api.protoModules[msgVer]
     else:
-        stats['bad SNMP packets'] +=1
+        stats['bad packets'] +=1
         return
     try:
         rspMsg, wholeMsg = decoder.decode(
             d['data'], asn1Spec=pMod.Message(),
         )
     except PyAsn1Error:
-        stats['bad SNMP packets'] +=1
+        stats['bad packets'] +=1
         return
     if rspMsg['data'].getName() == 'response':
         rspPDU = pMod.apiMessage.getPDU(rspMsg)
@@ -191,23 +196,23 @@ def handleSnmpMessage(d, t):
             endpoint = d['source_address'], d['source_port']
             if endpoint not in endpoints:
                 endpoints[endpoint] = udp.domainName + (len(endpoints),)
-                stats['SNMP agents seen'] +=1
+                stats['agents seen'] +=1
             context = '%s/%s' % (pMod.ObjectIdentifier(endpoints[endpoint]), pMod.apiMessage.getCommunity(rspMsg))
             if context not in contexts:
                 contexts[context] = {}
-                stats['SNMP contexts seen'] +=1
+                stats['contexts seen'] +=1
             context = '%s/%s' % (pMod.ObjectIdentifier(endpoints[endpoint]), pMod.apiMessage.getCommunity(rspMsg))
 
-            stats['SNMP Response PDUs seen'] += 1
+            stats['Response PDUs seen'] += 1
 
             for oid, value in pMod.apiPDU.getVarBinds(rspPDU):
                 if oid in contexts[context]:
                     if value != contexts[context][oid]:
-                        stats['SNMP snapshots taken'] +=1
+                        stats['snapshots taken'] +=1
                 else:
                     contexts[context][oid] = {}
                 contexts[context][oid][t] = value
-                stats['SNMP OIDs seen'] += 1
+                stats['OIDs seen'] += 1
  
 def handlePacket(pktlen, data, timestamp):
     if not data:
@@ -218,10 +223,14 @@ def handlePacket(pktlen, data, timestamp):
 exc_info = None
 
 try:
-    while 1:
-        pcapObj.dispatch(1, handlePacket)
+    if listenInterface:
+        while 1:
+            pcapObj.dispatch(1, handlePacket)
+    elif captureFile:
+        while 1:
+            handlePacket(*pcapObj.next())
 
-except KeyboardInterrupt:
+except (TypeError, KeyboardInterrupt):
     log.msg('Shutting down process...')
 
 except Exception:
@@ -244,17 +253,23 @@ for context in contexts:
     oids = list(contexts[context].keys())
     oids.sort()
     for oid in oids:
+        value = contexts[context][oid].values()[0]  # XXX
+        if value.tagSet in (rfc1905.NoSuchObject.tagSet,
+                            rfc1905.NoSuchInstance.tagSet,
+                            rfc1905.EndOfMibView.tagSet):
+            stats['SNMP exceptions'] += 1
+            continue
         outputFile.write(
-            snmprec.SnmprecRecord().format(oid, contexts[context][oid].values()[0])
+            snmprec.SnmprecRecord().format(oid, value)
         )
     outputFile.close()
 
-log.msg("""Statistics:
+log.msg("""PCap statistics:
     packets snooped: %s
     packets dropped: %s
     packets dropped: by interface %s""" % pcapObj.stats())
-
-log.msg('    '+'    '.join([ '%s: %s\r\n' % kv for kv in stats.items() ]))
+log.msg("""SNMP statistics:
+    %s""" % '    '.join([ '%s: %s\r\n' % kv for kv in stats.items() ]))
 
 if exc_info:
     for line in traceback.format_exception(*exc_info):
