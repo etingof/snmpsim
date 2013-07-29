@@ -205,7 +205,7 @@ def record(oid, tag, value, **context):
         SnmprecRecord().format(context['origOid'], context['origValue'])
     )
 
-    if not context['count']:
+    if not context['total']:
         settings = {
             'dir': moduleContext['dir'].replace(os.path.sep, '/')
         }
