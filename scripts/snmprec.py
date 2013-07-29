@@ -459,13 +459,12 @@ def cbFun(sendRequestHandle, errorIndication, errorStatus, errorIndex,
             try:
                 line = dataFileHandler.format(oid, val, **context)
             except error.MoreDataNotification:
-                cbCtx['total'] += cbCtx['count']
                 cbCtx['count'] = 0
                 cbCtx['iteration'] += 1
 
                 moreDataNotification = sys.exc_info()[1]
                 if 'period' in moreDataNotification:
-                    log.msg('%s OIDs dumped, waiting %.2f sec(s)...' % (cbCtx['total']+cbCtx['count'], moreDataNotification['period']))
+                    log.msg('%s OIDs dumped, waiting %.2f sec(s)...' % (cbCtx['total'], moreDataNotification['period']))
                     time.sleep(moreDataNotification['period'])
  
                 # initiate another SNMP walk iteration
@@ -487,6 +486,7 @@ def cbFun(sendRequestHandle, errorIndication, errorStatus, errorIndex,
                 outputFile.write(line)
 
             cbCtx['count'] += 1
+            cbCtx['total'] += 1
 
             if cbCtx['count'] % 100 == 0:
                 log.msg('OIDs dumped: %s/%s' % (cbCtx['iteration'], cbCtx['count']))
