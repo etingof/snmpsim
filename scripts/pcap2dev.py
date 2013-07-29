@@ -10,6 +10,7 @@ import os
 import time
 import socket
 import struct
+import bisect
 import traceback
 try:
     import pcap
@@ -24,10 +25,12 @@ from snmpsim import confdir, error, log
 
 # Defaults
 verboseFlag = True
-startOID = stopOID = None
+startOID = '1.3.6'
+stopOID = '1.3.7'
 promiscuousMode = False
-dataDir = '.'
-outputFile = sys.stderr
+outputDir = '.'
+variationModuleOptions = ""
+variationModuleName = variationModule = None
 listenInterface = captureFile = None
 packetFilter = 'src port 161'
 
@@ -52,17 +55,20 @@ helpMessage = """Usage: %s [--help]
     [--quiet]
     [--logging-method=<stdout|stderr|syslog|file>[:args>]]
     [--start-oid=<OID>] [--stop-oid=<OID>]
-    [--data-dir=<directory>]
+    [--output-dir=<directory>]
     [--capture-file=<filename.pcap>]
     [--listen-interface=<device>]
     [--promiscuous-mode]
-    [--packet-filter=<ruleset>]""" % sys.argv[0] 
+    [--packet-filter=<ruleset>]
+    [--variation-modules-dir=<dir>]
+    [--variation-module=<module>]
+    [--variation-module-options=<args>]""" % sys.argv[0] 
 
 log.setLogger('pcap2dev', 'stdout')
 
 try:
     opts, params = getopt.getopt(sys.argv[1:], 'hv',
-        ['help', 'version', 'quiet', 'logging-method=', 'start-oid=', 'stop-oid=', 'data-dir=', 'capture-file=', 'listen-interface=', 'promiscuous-mode', 'packet-filter=']
+        ['help', 'version', 'quiet', 'logging-method=', 'start-oid=', 'stop-oid=', 'output-dir=', 'capture-file=', 'listen-interface=', 'promiscuous-mode', 'packet-filter=', 'variation-modules-dir=', 'variation-module=', 'variation-module-options=']
         )
 except Exception:
     sys.stderr.write('ERROR: %s\r\n%s\r\n' % (sys.exc_info()[1], helpMessage))
@@ -101,8 +107,8 @@ Software documentation and support at http://snmpsim.sf.net
         except error.SnmpsimError:
             sys.stderr.write('%s\r\n%s\r\n' % (sys.exc_info()[1], helpMessage))
             sys.exit(-1)
-    elif opt[0] == '--data-dir':
-        dataDir = opt[1]
+    elif opt[0] == '--output-dir':
+        outputDir = opt[1]
     elif opt[0] == '--listen-interface':
         listenInterface = opt[1]
     elif opt[0] == '--promiscuous-mode':
@@ -111,7 +117,13 @@ Software documentation and support at http://snmpsim.sf.net
         captureFile = opt[1]
     elif opt[0] == '--packet-filter':
         packetFilter = opt[1]
-
+    elif opt[0] == '--variation-modules-dir':
+        confdir.variation.insert(0, opt[1])
+    elif opt[0] == '--variation-module':
+        variationModuleName = opt[1]
+    elif opt[0] == '--variation-module-options':
+        variationModuleOptions = opt[1]
+ 
 if params:
     sys.stderr.write('ERROR: extra arguments supplied %s\r\n%s\r\n' % (params, helpMessage))
     sys.exit(-1)    
@@ -119,6 +131,84 @@ if params:
 if not pcap:
     sys.stderr.write('ERROR: pylibpcap package is missing!\r\nGet it from http://sourceforge.net/projects/pylibpcap/\r\n%s\r\n' % helpMessage)
     sys.exit(-1)
+
+# Load variation module
+
+if variationModuleName:
+    for variationModulesDir in confdir.variation:
+        log.msg('Scanning "%s" directory for variation modules...' % variationModulesDir)
+        if not os.path.exists(variationModulesDir):
+            log.msg('Directory %s does not exist' % variationModulesDir)
+            continue
+
+        mod = os.path.join(variationModulesDir, variationModuleName + '.py')
+        if not os.path.exists(mod):
+            log.msg('Module %s not found' % mod)
+            continue
+
+        ctx = { 'path': mod, 'moduleContext': {} }
+
+        try:
+            if sys.version_info[0] > 2:
+                exec(compile(open(mod).read(), mod, 'exec'), ctx)
+            else:
+                execfile(mod, ctx)
+        except Exception:
+            log.msg('Variation module %s execution failure: %s' %  (mod, sys.exc_info()[1]))
+            sys.exit(-1)
+        else:
+            variationModule = ctx
+            log.msg('Module %s loaded' % variationModuleName)
+            break
+    else:
+        log.msg('ERROR: variation module %s not found' % variationModuleName)
+        sys.exit(-1)
+ 
+# Variation module initialization
+
+if variationModule:
+    log.msg('Initializing variation module...')
+    for x in ('init', 'record', 'shutdown'):
+        if x not in variationModule:
+            log.msg('ERROR: missing %s handler at module %s' % (x, variationModuleName))
+            sys.exit(-1)
+    try:
+        variationModule['init'](None,  # snmpEngine
+                                options=variationModuleOptions,
+                                mode='recording',
+                                startOID=startOID,
+                                stopOID=stopOID)
+    except Exception:
+        log.msg('Module %s initialization FAILED: %s' % (variationModuleName, sys.exc_info()[1]))
+    else:
+        log.msg('Module %s initialization OK' % variationModuleName)
+
+# Data file builder
+
+class SnmprecRecord(snmprec.SnmprecRecord):
+    def formatValue(self, oid, value, **context):
+        textOid, textTag, textValue = snmprec.SnmprecRecord.formatValue(
+            self, oid, value
+        )
+
+        # invoke variation module
+        if context['variationModule']:
+            plainOid, plainTag, plainValue = snmprec.SnmprecRecord.formatValue(
+                self, oid, value, nohex=True
+            )
+            if plainTag != textTag:
+                context['hextag'], context['hexvalue'] = textTag, textValue
+            else:
+                textTag, textValue = plainTag, plainValue
+
+            textOid, textTag, textValue = context['variationModule']['record'](
+                textOid, textTag, textValue, **context
+            )
+
+        elif 'stopFlag' in context and context['stopFlag']:
+            raise error.NoDataNotification()
+
+        return textOid, textTag, textValue
 
 pcapObj = pcap.pcapObject()
 
@@ -175,7 +265,7 @@ def parseUdpPacket(s):
     stats['IP packets'] +=1
     return d
 
-def handleSnmpMessage(d, t):
+def handleSnmpMessage(d, t, private={}):
     msgVer = api.decodeMessageVersion(d['data'])
     if msgVer in api.protoModules:
         pMod = api.protoModules[msgVer]
@@ -207,15 +297,19 @@ def handleSnmpMessage(d, t):
 
             stats['Response PDUs seen'] += 1
 
+            if 'basetime' not in private:
+                private['basetime'] = t
+
             for oid, value in pMod.apiPDU.getVarBinds(rspPDU):
                 if oid in contexts[context]:
                     if value != contexts[context][oid]:
                         stats['snapshots taken'] +=1
                 else:
-                    contexts[context][oid] = {}
-                contexts[context][oid][t] = value
+                    contexts[context][oid] = [], []
+                contexts[context][oid][0].append(t - private['basetime'])
+                contexts[context][oid][1].append(value)
                 stats['OIDs seen'] += 1
- 
+
 def handlePacket(pktlen, data, timestamp):
     if not data:
         return
@@ -238,8 +332,10 @@ except (TypeError, KeyboardInterrupt):
 except Exception:
     exc_info = sys.exc_info()
 
+dataFileHandler = SnmprecRecord()
+
 for context in contexts:
-    filename = os.path.join(dataDir, context + os.path.extsep + snmprec.SnmprecRecord.ext)
+    filename = os.path.join(outputDir, context + os.path.extsep + SnmprecRecord.ext)
     if verboseFlag:
         log.msg('Creating simulation context %s at %s' % (context, filename))
     try:
@@ -252,18 +348,62 @@ for context in contexts:
         log.msg('ERROR: writing %s: %s' % (filename, sys.exc_info()[1]))
         sys.exit(-1)
 
+    count = total = iteration = 0
+    timeOffset = 0
+    reqTime = time.time()
     oids = list(contexts[context].keys())
     oids.sort()
-    for oid in oids:
-        value = contexts[context][oid].values()[0]  # XXX
-        if value.tagSet in (rfc1905.NoSuchObject.tagSet,
-                            rfc1905.NoSuchInstance.tagSet,
-                            rfc1905.EndOfMibView.tagSet):
-            stats['SNMP exceptions'] += 1
-            continue
-        outputFile.write(
-            snmprec.SnmprecRecord().format(oid, value)
-        )
+    while True:
+        for oid in oids:
+            timeline, values = contexts[context][oid]
+            value = values[
+                min(len(values)-1, bisect.bisect_left(timeline, timeOffset))
+            ]
+            if value.tagSet in (rfc1905.NoSuchObject.tagSet,
+                                rfc1905.NoSuchInstance.tagSet,
+                                rfc1905.EndOfMibView.tagSet):
+                stats['SNMP exceptions'] += 1
+                continue
+
+            # Build .snmprec record
+
+            ctx = {
+                'origOid': oid,
+                'origValue': value,
+                'count': count,
+                'total': total,
+                'iteration': iteration,
+                'reqTime': reqTime,
+                'startOID': startOID,
+                'stopOID': stopOID,
+                # XXX -  last OID is dropped
+                'stopFlag': oids.index(oid) == len(oids)-1,
+                'variationModule': variationModule
+            }
+
+            try:
+                line = dataFileHandler.format(oid, value, **ctx)
+            except error.MoreDataNotification:
+                count = 0
+                iteration += 1
+
+                moreDataNotification = sys.exc_info()[1]
+                if 'period' in moreDataNotification:
+                    timeOffset += moreDataNotification['period']
+                    log.msg('%s OIDs dumped, advancing time window to %.2f sec(s)...' % (total, timeOffset))
+                break
+ 
+            except error.NoDataNotification:
+                pass
+            else:
+                outputFile.write(line)
+
+            count += 1
+            total += 1
+
+        else:
+            break
+
     outputFile.close()
 
 log.msg("""PCap statistics:
