@@ -32,7 +32,7 @@ outputDir = '.'
 variationModuleOptions = ""
 variationModuleName = variationModule = None
 listenInterface = captureFile = None
-packetFilter = 'src port 161'
+packetFilter = 'udp and src port 161'
 
 endpoints = {}
 contexts = {}
@@ -237,8 +237,20 @@ if packetFilter:
         log.msg('Applying packet filter \"%s\"' % packetFilter)
     pcapObj.setfilter(packetFilter, 0, 0)
 
-def parseUdpPacket(s):
+def parsePacket(s):
     d={}
+
+    # http://www.tcpdump.org/linktypes.html
+    llHeaders = {
+        0: 4,
+        1: 14,
+        108: 4,
+        228: 0
+    }
+
+    if pcapObj.datalink() in llHeaders:
+        s = s[llHeaders[pcapObj.datalink()]:]
+ 
     d['version']=(ord(s[0]) & 0xf0) >> 4
     d['header_len']=ord(s[0]) & 0x0f
     d['tos']=ord(s[1])
@@ -313,8 +325,8 @@ def handleSnmpMessage(d, t, private={}):
 def handlePacket(pktlen, data, timestamp):
     if not data:
         return
-    elif data[12:14]=='\x08\x00':
-        handleSnmpMessage(parseUdpPacket(data[14:]), timestamp)
+    else:
+        handleSnmpMessage(parsePacket(data), timestamp)
 
 exc_info = None
 
@@ -323,10 +335,13 @@ try:
         while 1:
             pcapObj.dispatch(1, handlePacket)
     elif captureFile:
-        while 1:
-            handlePacket(*pcapObj.next())
+        args = pcapObj.next()
+        while args:
+            handlePacket(*args)
+            args = pcapObj.next()
 
-except (TypeError, KeyboardInterrupt):
+#except (TypeError, KeyboardInterrupt):
+except KeyboardInterrupt:
     log.msg('Shutting down process...')
 
 except Exception:
@@ -405,6 +420,17 @@ for context in contexts:
             break
 
     outputFile.close()
+
+if variationModule:
+    log.msg('Shutting down variation module %s...' % variationModuleName)
+    try:
+        variationModule['shutdown'](None,
+                                    options=variationModuleOptions,
+                                    mode='recording')
+    except Exception:
+        log.msg('Variation module %s shutdown FAILED: %s' % (variationModuleName, sys.exc_info()[1]))
+    else:
+        log.msg('Variation module %s shutdown OK' % variationModuleName)
 
 log.msg("""PCap statistics:
     packets snooped: %s
