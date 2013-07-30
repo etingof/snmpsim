@@ -340,8 +340,7 @@ try:
             handlePacket(*args)
             args = pcapObj.next()
 
-#except (TypeError, KeyboardInterrupt):
-except KeyboardInterrupt:
+except (TypeError, KeyboardInterrupt):
     log.msg('Shutting down process...')
 
 except Exception:
