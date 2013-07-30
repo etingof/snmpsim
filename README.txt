@@ -821,7 +821,7 @@ empty TAG-ID sub-field serves as an indicator of a subtree:
 For example, the following data file will serve all OIDs under 1.3.6.1.2.1.1
 prefix to the "sql" variation module:
 
-1.3.6.1.2.1.1|:sql|system
+1.3.6.1.2.1.1|:sql|snmprec
 
 The value part is passed to variation module as-is. It is typically holds some
 module-specific configuration or initialization values.
@@ -845,9 +845,9 @@ parameter.
 
 For example, the following Simulator invocation will configure its
 "sql" variation module to use sqlite database (sqlite3 Python module)
-and /var/tmp/system.db database file:
+and /var/tmp/snmpsim.db database file:
 
-$ snmpsimd.py --variation-module-options=sql:dbtype:sqlite3,dboptions:/var/tmp/system.db
+$ snmpsimd.py --variation-module-options=sql:dbtype:sqlite3,dboptions:/var/tmp/snmpsim.db
 
 In case you are using multiple database connections or database types
 all through the sql variation module, you could refer to each module instance
@@ -1285,10 +1285,10 @@ table layout should be as follows:
 The most usual setup is to keep many OID-value pairs in a database
 table referred to by a .snmprec line serving a subtree of OIDs:
 
-  1.3.6.1.2.1.1|:sql|system
+  1.3.6.1.2.1.1|:sql|snmprec
 
 In the above case all OIDs under 1.3.6.1.2.1.1 prefix will be
-handled by a sql module using 'system' table.
+handled by a sql module using 'snmprec' table.
 
 Please, note, that to make SQL's ORDER BY clause working with OIDs,
 each sub-OID stored in the database (in case of manual database population) 
