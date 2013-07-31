@@ -7,12 +7,13 @@ from pysnmp.proto import rfc1902
 from snmpsim.grammar.snmprec import SnmprecGrammar
 from snmpsim import error, log
 
-def init(snmpEngine, **context):
+def init(**context):
     global ntfOrg
-    if snmpEngine:
-        ntfOrg = ntforg.AsynNotificationOriginator(snmpEngine)
-    else:
-        ntfOrg = None
+    if context['mode'] == 'variating':
+        if 'snmpEngine' in context and context['snmpEngine']:
+            ntfOrg = ntforg.AsynNotificationOriginator(context['snmpEngine'])
+        else:
+            ntfOrg = None
 
 typeMap = {
     's': rfc1902.OctetString,
@@ -177,4 +178,4 @@ def variate(oid, tag, value, **context):
     else:
         return oid, tag, args['value']
 
-def shutdown(snmpEngine, **context): pass 
+def shutdown(**context): pass 

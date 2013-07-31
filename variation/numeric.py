@@ -17,7 +17,7 @@ from snmpsim import error
 
 tboot = time.time()
 
-def init(snmpEngine, **context):
+def init(**context):
     if context['mode'] == 'variating':
         random.seed()
     if context['mode'] == 'recording':
@@ -217,4 +217,4 @@ def record(oid, tag, value, **context):
         else:
             raise error.NoDataNotification()
 
-def shutdown(snmpEngine, **context): pass 
+def shutdown(**context): pass 

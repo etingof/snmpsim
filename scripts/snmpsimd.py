@@ -826,7 +826,7 @@ if variationModules:
                 log.msg('ERROR: missing %s handler in %s!' % (x, name))
                 sys.exit(-1)
         try:
-            body['init'](not v2cArch and snmpEngine or None,
+            body['init'](snmpEngine=not v2cArch and snmpEngine or None,
                          options=body['args'],
                          mode='variating')
         except Exception:
@@ -1082,7 +1082,7 @@ if variationModules:
     for name, contexts in variationModules.items():
         body = contexts[0]
         try:
-            body['shutdown'](not v2cArch and snmpEngine or None,
+            body['shutdown'](snmpEngine=not v2cArch and snmpEngine or None,
                              options=body['args'], mode='variation')
         except Exception:
             log.msg('Module %s shutdown FAILED: %s' % (name, sys.exc_info()[1]))

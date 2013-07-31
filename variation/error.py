@@ -25,7 +25,7 @@ errorTypes = {
         'endofmib': error.EndOfMibViewError
 }
 
-def init(snmpEngine, **context): pass
+def init(**context): pass
 
 def variate(oid, tag, value, **context):
     if not context['nextFlag'] and not context['exactMatch']:
@@ -92,4 +92,4 @@ def variate(oid, tag, value, **context):
 
     return oid, tag, recordContext['settings'].get('value', context['errorStatus'])
 
-def shutdown(snmpEngine, **context): pass 
+def shutdown(**context): pass 

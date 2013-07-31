@@ -16,7 +16,7 @@ from snmpsim import error
 dbConn = None
 dbTable = 'snmprec'
 
-def init(snmpEngine, **context):
+def init(**context):
     global dbConn, dbTable
     options = {}
     if context['options']:
@@ -133,7 +133,7 @@ def record(oid, tag, value, **context):
     else:
         raise error.NoDataNotification()
 
-def shutdown(snmpEngine, **context):
+def shutdown(**context):
     if dbConn is not None:
         dbConn.commit()
         dbConn.close()

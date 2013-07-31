@@ -14,7 +14,7 @@ from snmpsim import confdir
 from snmpsim import log
 from snmpsim import error
 
-def init(snmpEngine, **context):
+def init(**context):
     if context['options']:
         for k,v in [x.split(':') for x in context['options'].split(',')]:
             if k == 'addon':
@@ -220,4 +220,4 @@ def record(oid, tag, value, **context):
     else:
         raise error.NoDataNotification()
 
-def shutdown(snmpEngine, **context): pass
+def shutdown(**context): pass

@@ -8,7 +8,7 @@ from snmpsim.grammar.snmprec import SnmprecGrammar
 from snmpsim import log
 from snmpsim import error
 
-def init(snmpEngine, **context):
+def init(**context):
     random.seed()
 
 def variate(oid, tag, value, **context):
@@ -129,4 +129,4 @@ def record(oid, tag, value, **context):
         textValue += ',' + context['options']
     return oid, tag, textValue
 
-def shutdown(snmpEngine, **context): pass 
+def shutdown(**context): pass 

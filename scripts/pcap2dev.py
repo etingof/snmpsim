@@ -176,8 +176,7 @@ if variationModule:
             log.msg('ERROR: missing %s handler at module %s' % (x, variationModuleName))
             sys.exit(-1)
     try:
-        variationModule['init'](None,  # snmpEngine
-                                options=variationModuleOptions,
+        variationModule['init'](options=variationModuleOptions,
                                 mode='recording',
                                 startOID=startOID,
                                 stopOID=stopOID)
@@ -431,8 +430,7 @@ for context in contexts:
 if variationModule:
     log.msg('Shutting down variation module %s...' % variationModuleName)
     try:
-        variationModule['shutdown'](None,
-                                    options=variationModuleOptions,
+        variationModule['shutdown'](options=variationModuleOptions,
                                     mode='recording')
     except Exception:
         log.msg('Variation module %s shutdown FAILED: %s' % (variationModuleName, sys.exc_info()[1]))

@@ -5,7 +5,7 @@ import sys
 import subprocess
 from snmpsim import log
 
-def init(snmpEngine, **context):
+def init(**context):
     moduleContext['settings'] = {}
     if context['options']:
         moduleContext['settings'].update(
@@ -46,4 +46,4 @@ def variate(oid, tag, value, **context):
         log.msg('subprocess: external program execution failed')
         return context['origOid'], tag, context['errorStatus']
 
-def shutdown(snmpEngine, **context): pass 
+def shutdown(**context): pass 

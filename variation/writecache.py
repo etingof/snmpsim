@@ -24,7 +24,7 @@ errorTypes = {
         'endofmib': error.EndOfMibViewError
 }
 
-def init(snmpEngine, **context):
+def init(**context):
     moduleContext['settings'] = {}
     if context['options']:
         moduleContext['settings'].update(
@@ -98,6 +98,6 @@ def variate(oid, tag, value, **context):
     else:
         return oid, tag, context['errorStatus']
 
-def shutdown(snmpEngine, **context):
+def shutdown(**context):
     if 'file' in moduleContext['settings']:
         moduleContext['cache'].close()
