@@ -125,9 +125,10 @@ Documentation:
         sys.stderr.write("""\
 SNMP Simulator version %s, written by Ilya Etingof <ilya@glas.net>
 Using foundation libraries: pysnmp %s, pyasn1 %s.
+Python interpreter: %s
 Software documentation and support at http://snmpsim.sf.net
 %s
-""" % (snmpsim.__version__, hasattr(pysnmp, '__version__') and pysnmp.__version__ or 'unknown', hasattr(pyasn1, '__version__') and pyasn1.__version__ or 'unknown', helpMessage))
+""" % (snmpsim.__version__, hasattr(pysnmp, '__version__') and pysnmp.__version__ or 'unknown', hasattr(pyasn1, '__version__') and pyasn1.__version__ or 'unknown', sys.version, helpMessage))
         sys.exit(-1)
     elif opt[0] == '--debug':
         debug.setLogger(debug.Debug(opt[1]))
