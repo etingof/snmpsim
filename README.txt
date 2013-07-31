@@ -54,7 +54,7 @@ their needs (note a [very permissive] BSD License is protecting Simulator).
 If you'd rather would like us customizing or developing particular
 Simulator feature for you, please let us know the details. 
 
-Producing SNMP snapshots
+Recording SNMP snapshots
 ------------------------
 
 Primary method of recording an SNMP snapshot is to run snmprec tool against
@@ -176,6 +176,9 @@ $ snmprec.py --agent-udpv4-endpoint=127.0.0.1 --use-getbulk --output-file=data/r
 
 Faster recording may be important for capturing changes to Managed Objects
 at better resolution.
+
+MIB-based simulation
+--------------------
 
 Another way to produce data files is to run the mib2dev.py tool against
 virtually any MIB file. With that method you do not have to have a donor
@@ -357,6 +360,141 @@ have mib2dev.py tool to work out all the values by itself, consider
 raising the --automatic-values max probes value (default is 5000 probes).
 
 Finally, you could always modify your data files with a text editor.
+
+Simulation from captured traffic
+--------------------------------
+
+SNMP traffic traveling in a network can also be a source of Simulator data 
+files. The pcap2dev.py tool can snoop live or process captured traffic
+finding SNMP Response messages there and using OID-value pairs for building
+.snmprec files.
+
+$ pcap2dev.py -h
+Synopsis:
+  Snoops network traffic for SNMP responses, builds SNMP Simulator
+  data files.
+  Can read capture files or listen live network interface.
+Documentation:
+  http://snmpsim.sourceforge.net/
+Usage: scripts/pcap2dev.py [--help]
+    [--version]
+    [--quiet]
+    [--logging-method=<stdout|stderr|syslog|file>[:args>]]
+    [--start-oid=<OID>] [--stop-oid=<OID>]
+    [--output-dir=<directory>]
+    [--capture-file=<filename.pcap>]
+    [--listen-interface=<device>]
+    [--promiscuous-mode]
+    [--packet-filter=<ruleset>]
+    [--variation-modules-dir=<dir>]
+    [--variation-module=<module>]
+    [--variation-module-options=<args>]
+
+Since many SNMP Agents can generate traffic over network within the a snooping
+sessions, the pcap2dev.py tool is designed to classify captured SNMP traffic
+on the per-Agent basis and build dedicated data file for each Agent seen on
+the network.
+
+The --output-dir=<directory> command-line option specifies a directory
+where pcap2dev.py tool would put generated data files into. Data files paths
+are crafted so that Simulator would act closer to the prototype Agents
+meaning:
+
+  * Data files for each Agent is put under a separate directory
+    resembling Simulator's transport IDs which correspond to
+    UDP ports Simulator is listening on.
+  * Original SNMPv1/v2c community names are preserved.
+
+Imagine we have two SNMP Agents (192.168.1.1 & 192.168.1.2) sending
+responses over a network we are snooping on. Here's a tcpdump report just
+to illustrate the idea:
+
+# tcpdump -i lo
+listening on lo, link-type EN10MB (Ethernet), capture size 65535 bytes
+20:05:20.799706 IP 192.168.1.9.55803 > 192.168.1.1.snmp:  GetRequest(28)  system.sysDescr.0
+20:05:20.800027 IP 192.168.1.1.snmp > 192.168.1.9.55803:  GetResponse(92)  system.sysDescr.0="Linux jupiter 2.6.37.6-smp #2 SMP Fri May 17 22:03:50 CDT 2013 i686"
+20:05:21.125421 IP 192.168.1.9.55803 > 192.168.1.2.snmp:  GetRequest(28)  system.sysDescr.0
+20:05:21.924022 IP 192.168.1.2.snmp > 192.168.1.9.55803:  GetResponse(92)  system.sysDescr.0="Linux saturn 2.6.37.4-smp #2 SMP Fri May 10 21:31:32 CDT 2013 i686"
+
+The pcap2dev tool would create two directories with fixed prefix
+(1.3.6.1.6.1.1) and increasing suffix parts (0 & 1) to put generated data files
+for each Agent there. That is, all data files for Agent 192.168.1.1 would
+go under 1.3.6.1.6.1.1.0/ while data files for Agent 192.168.1.2 would end
+up in 1.3.6.1.6.1.1.1/. 
+
+Snooped SNMP communities also take part in data file path creation -- they
+appear as a last component of the path. For example, if Agent 192.168.1.1 
+used SNMP communites 'wallace' and 'gromit' (on different occasions) and
+Agent 192.168.1.2 responded with community 'cheese', generated data files
+would look like this:
+
+$ tree /tmp/recording
+/tmp/recording
+|--- 1.3.6.1.6.1.1.0
+|    |
+|     ---- gromit.snmprec
+|    |
+|     ---- wallace.snmprec
+|
+|--- 1.3.6.1.6.1.1.1
+     |
+      ---- cheese.snmprec
+
+With all that in mind we can now run a live snooping session:
+
+# pcap2dev.py --output-dir=/tmp/recording --listen-interface=lo 
+Listening on interface lo in non-promiscuous mode
+Applying packet filter "udp and src port 161"
+Listening on interface "lo", kill me when you are done.
+^C
+Shutting down process...
+Creating simulation context 1.3.6.1.6.1.1.0/gromit at /tmp/recording/1.3.6.1.6.1.1.0/gromit.snmprec
+Creating simulation context 1.3.6.1.6.1.1.0/wallace at /tmp/recording/1.3.6.1.6.1.1.0/wallace.snmprec
+Creating simulation context 1.3.6.1.6.1.1.1/cheese at /tmp/recording/1.3.6.1.6.1.1.1/cheese.snmprec
+PCap statistics:
+    packets snooped: 64
+    packets dropped: 24
+    packets dropped: by interface 0
+SNMP statistics:
+    empty packets: 0
+    OIDs seen: 19
+    UDP packets: 19
+    Response PDUs seen: 19
+    contexts seen: 3
+    SNMP exceptions: 0
+    SNMP errors: 0
+    snapshots taken: 0
+    agents seen: 2
+    unknown L2 protocol: 0
+    IP packets: 19
+    bad packets: 0
+
+Here's one of data files produced:
+
+$ cat /tmp/recording/1.3.6.1.6.1.1.0/gromit.snmprec
+1.3.6.1.2.1.1.1.0|4|Linux jupiter 2.6.37.6-smp #2 SMP Fri May 17 22:03:50 CDT 2013 i686
+1.3.6.1.2.1.1.2.0|6|1.3.6.1.4.1.8072.3.2.10
+1.3.6.1.2.1.1.3.0|67|311441639
+1.3.6.1.2.1.1.4.0|4|postmaster@jupiter
+1.3.6.1.2.1.1.5.0|4|jupiter
+1.3.6.1.2.1.1.6.0|4|Jupiter
+1.3.6.1.2.1.1.8.0|67|1
+
+You can now move data files into your Simulator's data directory and
+fire up simulation.
+
+To build data files from a network capture file, use --capture-file=<file>
+command-line option. Capture file format should be either pcap or pcap-ng.
+Most capturing tools (like tcpdump) support these file formats.
+
+You could also use tcpdump-style filter as a parameter to 
+--packet-filter=<ruleset> option to narrow packets selection
+criteria. Default packet filter is "udp and src port 161".
+
+The pcap2dev.py tool can also invoke variation modules to feed recorded
+data through them. Please, refer to corresponding section of this document
+for more information on recoding data files with variation modules.
+
 
 Simulating SNMP Agents
 ----------------------
