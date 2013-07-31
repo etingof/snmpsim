@@ -9,7 +9,8 @@
   to communicate to its host time of the next probe to occur. 
 - The --version option of snmprec.py renamed into --protocol-version.
 - Fixes to time-based log file rotation implementation.
-- Fixes to numeric variation module.
+- Fixes to numeric variation module. Also, taglist parameter is now
+  defaulted into all numerical types.
 
 0.2.3
 -----

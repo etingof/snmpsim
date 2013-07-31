@@ -1342,7 +1342,7 @@ Example use of numeric module for recording follows:
 $ snmprec.py --agent-udpv4-endpoint=127.0.0.1 
   --start-oid=1.3.6.1.2.1.2 --stop-oid=1.3.6.1.2.1.3 
   --variation-module=numeric 
-  --variation-module-options=taglist:65,iterations:2,period:15
+  --variation-module-options=iterations:2,period:15
 Scanning "/usr/local/share/snmpsim/variation" directory for variation modules...numeric module loaded
 SNMP version 2c
 Community name: public
@@ -1352,13 +1352,13 @@ Initializing variation module:
 numeric: waiting 0.77 sec(s), 111 OIDs dumped, 1 iterations remaining...
 ...
 1.3.6.1.2.1.2.2.1.6.4|4x|008d120f4fa4
-1.3.6.1.2.1.2.2.1.7.1|2|1
-1.3.6.1.2.1.2.2.1.9.2|67|0
-1.3.6.1.2.1.2.2.1.10.1|65:numeric|rate=3374,initial=641734,cumulative=1
-1.3.6.1.2.1.2.2.1.10.2|65:numeric|rate=0,initial=0,cumulative=1
-1.3.6.1.2.1.2.2.1.10.4|65:numeric|rate=1159,initial=32954879,cumulative=1
-1.3.6.1.2.1.2.2.1.11.1|65:numeric|rate=86,initial=12238,cumulative=1
-1.3.6.1.2.1.2.2.1.21.1|66|0
+1.3.6.1.2.1.2.2.1.7.1|2:numeric|rate=0.0,initial=1
+1.3.6.1.2.1.2.2.1.9.2|67:numeric|rate=0.0,initial=0
+1.3.6.1.2.1.2.2.1.10.1|65:numeric|rate=3374.0,initial=641734,cumulative=1
+1.3.6.1.2.1.2.2.1.10.2|65:numeric|rate=0.0,initial=0,cumulative=1
+1.3.6.1.2.1.2.2.1.10.4|65:numeric|rate=1159.0,initial=32954879,cumulative=1
+1.3.6.1.2.1.2.2.1.11.1|65:numeric|rate=86.0,initial=12238,cumulative=1
+1.3.6.1.2.1.2.2.1.21.1|66:numeric|rate=0.0,initial=0.0
 ...
 Shutting down variation modules:
     numeric...OK
@@ -1366,7 +1366,7 @@ OIDs dumped: 224, elapsed: 15.53 sec, rate: 20.00 OIDs/sec
 
 In the above example we have run two iterations against a subset of
 Managed Objects at an Agent requesting numeric module to configure
-itself into generated .snmprec data for Counter32-typed objects (ID 65).
+itself into generated .snmprec data.
 
 Produced snmprec could be used for simulation as-is or edited by
 hand to change variation module behaviour on on a per-OID basis.
