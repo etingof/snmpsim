@@ -41,6 +41,8 @@ stats = {
   'UDP packets': 0,
   'IP packets': 0,
   'bad packets': 0,
+  'empty packets': 0,
+  'unknown L2 protocol': 0,
   'SNMP errors': 0,
   'SNMP exceptions': 0,
   'agents seen': 0,
@@ -251,6 +253,8 @@ def parsePacket(s):
 
     if pcapObj.datalink() in llHeaders:
         s = s[llHeaders[pcapObj.datalink()]:]
+    else:
+        stats['unknown L2 protocol'] += 1
  
     d['version']=(ord(s[0]) & 0xf0) >> 4
     d['header_len']=ord(s[0]) & 0x0f
@@ -325,6 +329,7 @@ def handleSnmpMessage(d, t, private={}):
 
 def handlePacket(pktlen, data, timestamp):
     if not data:
+        stats['empty packets'] += 1
         return
     else:
         handleSnmpMessage(parsePacket(data), timestamp)
@@ -333,9 +338,11 @@ exc_info = None
 
 try:
     if listenInterface:
+        log.msg('Listening on interface "%s", kill me when you are done.' % listenInterface)
         while 1:
             pcapObj.dispatch(1, handlePacket)
     elif captureFile:
+        log.msg('Processing capture file "%s"....' % captureFile)
         args = pcapObj.next()
         while args:
             handlePacket(*args)
