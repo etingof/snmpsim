@@ -16,6 +16,7 @@ try:
     import pcap
 except ImportError:
     pcap = None
+from pyasn1.type import univ
 from pyasn1.codec.ber import decoder
 from pyasn1.error import PyAsn1Error
 from pysnmp.proto import api, rfc1905
@@ -25,8 +26,8 @@ from snmpsim import confdir, error, log
 
 # Defaults
 verboseFlag = True
-startOID = '1.3.6'
-stopOID = '1.3.7'
+startOID = univ.ObjectIdentifier('1.3.6')
+stopOID = None
 promiscuousMode = False
 outputDir = '.'
 variationModuleOptions = ""
@@ -110,6 +111,10 @@ Software documentation and support at http://snmpsim.sf.net
         except error.SnmpsimError:
             sys.stderr.write('%s\r\n%s\r\n' % (sys.exc_info()[1], helpMessage))
             sys.exit(-1)
+    elif opt[0] == '--start-oid':
+        startOID = univ.ObjectIdentifier(opt[1])
+    elif opt[0] == '--stop-oid':
+        stopOID = univ.ObjectIdentifier(opt[1])
     elif opt[0] == '--output-dir':
         outputDir = opt[1]
     elif opt[0] == '--listen-interface':
@@ -317,6 +322,10 @@ def handleSnmpMessage(d, t, private={}):
                 private['basetime'] = t
 
             for oid, value in pMod.apiPDU.getVarBinds(rspPDU):
+                if oid < startOID:
+                    continue
+                if stopOID and oid >= stopOID:
+                    continue
                 if oid in contexts[context]:
                     if value != contexts[context][oid]:
                         stats['snapshots taken'] +=1
