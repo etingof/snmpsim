@@ -1413,8 +1413,9 @@ and MySQL backend could be used as follows:
 
 $ snmpsimd.py --variation-module-options=sql:dbtype:mysql.connector,host:127.0.0.1,port:111,user:snmpsim,password:snmpsim,database:snmpsim
 
-assuming you have a MySQL server running at 127.0.0.1 and have MySQL user
-"snmpsim" with password "snmpsim" having full access to a database "snmpsim".
+assuming you have the MySQL Connector/Python driver installed on a Simulator
+machine and a MySQL server running at 127.0.0.1 with MySQL user/password
+snmpsim/snmpsim having full access to a database "snmpsim".
 
 The .snmprec value is expected to hold database table name to keep
 all OID-value pairs served within selected .snmprec line. This table
@@ -1659,8 +1660,9 @@ $ snmprec.py --agent-udpv4-endpoint=127.0.0.1
   --variation-module=sql
   --variation-module-options=dbtype:mysql.connector,host:127.0.0.1,port:111,user:snmpsim,password:snmpsim,database:snmpsim
 
-The above parameters assume that you have a MySQL server running at 127.0.0.1
-and have MySQL user "snmpsim" with password "snmpsim" having full access to
+The above parameters assume that you have the MySQL Connector/Python driver 
+installed on a snapshot recording machine and a MySQL server running at
+127.0.0.1 with MySQL user/password snmpsim/snmpsim having full access to
 a database "snmpsim".
 
 When sql variation module is invoked by Simulator, it can read, create and
