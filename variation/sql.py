@@ -25,18 +25,32 @@ def init(**context):
         )
     if 'dbtype' not in options:
         raise error.SnmpsimError('database type not specified')
-    db = __import__(options['dbtype'])
-    if 'dboptions' not in options:
-        raise error.SnmpsimError('database connect options not specified')
-    dbConn = db.connect(*options['dboptions'].split('@'))
+    db = __import__(
+        options['dbtype'], 
+        fromlist=options['dbtype'].split('.')[:-1]
+    )
+    if 'dboptions' in options: # legacy
+        connectParams = { 'database': options['dboptions'] }
+    else:
+        connectParams = dict(
+            [ (k,options[k]) for k in options if k in ('host', 'port', 'user', 'passwd', 'password', 'db', 'database', 'unix_socket', 'named_pipe') ]
+        )
+        for k in 'port', 'connect_timeout':
+            if k in connectParams:
+                connectParams[k] = int(connectParams[k])
+    if not connectParams:
+        raise error.SnmpsimError('database connect parameters not specified')
+    dbConn = db.connect(**connectParams)
     if 'dbtable' in options:
         dbTable = options['dbtable']
     if 'mode' in context and context['mode'] == 'recording':
         cursor = dbConn.cursor()
         try:
-            cursor.execute('select * from %s' % dbTable)
+            cursor.execute('select * from %s limit 1' % dbTable)
         except:
-            cursor.execute('CREATE TABLE %s (oid text primary key, tag text, value text, maxaccess text default "read-only")' % dbTable)
+            cursor.execute('CREATE TABLE %s (oid text, tag text, value text, maxaccess text)' % dbTable)
+        else:
+            cursor.fetchall()
         cursor.close()
 
 def variate(oid, tag, value, **context):
@@ -58,7 +72,7 @@ def variate(oid, tag, value, **context):
             textTag = SnmprecGrammar().getTagByType(context['origValue'])
             textValue = str(context['origValue'])
         cursor.execute(
-            'select maxaccess,tag from %s where oid=?' % dbTable, (sqlOid,)
+            'select maxaccess,tag from %s where oid="%s"' % (dbTable, sqlOid)
         )
         resultset = cursor.fetchone()
         if resultset:
@@ -66,11 +80,11 @@ def variate(oid, tag, value, **context):
             if maxaccess != 'read-write':
                 return origOid, tag, context['errorStatus']
             cursor.execute(
-                'update %s set tag=?,value=? where oid=?' % dbTable, (textTag, textValue, sqlOid)
+                'update %s set tag="%s",value="%s" where oid="%s"' % (dbTable, textTag, textValue, sqlOid)
             )
         else:
             cursor.execute(
-                'insert into %s values (?, ?, ?, "read-write")' % dbTable, (sqlOid, textTag, textValue)
+                'insert into %s values ("%s", "%s", "%s", "read-write")' % (dbTable, sqlOid, textTag, textValue)
             )
         if context['varsRemaining'] == 0:  # last OID in PDU
             dbConn.commit()
@@ -78,7 +92,7 @@ def variate(oid, tag, value, **context):
         return origOid, textTag, context['origValue']
     else:
         if context['nextFlag']:
-            cursor.execute('select oid from %s where oid>? order by oid limit 1' % dbTable, (sqlOid,))
+            cursor.execute('select oid from %s where oid>"%s" order by oid limit 1' % (dbTable, sqlOid))
             resultset = cursor.fetchone()
             if resultset:
                 origOid = origOid.clone(
@@ -89,7 +103,7 @@ def variate(oid, tag, value, **context):
                 cursor.close()
                 return origOid, tag, context['errorStatus']
 
-        cursor.execute('select tag, value from %s where oid=?' % dbTable, (sqlOid,))
+        cursor.execute('select tag, value from %s where oid="%s"' % (dbTable, sqlOid))
         resultset = cursor.fetchone()
         cursor.close()
 
@@ -112,19 +126,19 @@ def record(oid, tag, value, **context):
     else:
         textTag = SnmprecGrammar().getTagByType(context['origValue'])
         textValue = str(context['origValue'])
- 
+
     cursor = dbConn.cursor()
 
     cursor.execute(
-        'select oid from %s where oid=? limit 1' % dbTable, (sqlOid,)
+        'select oid from %s where oid="%s" limit 1' % (dbTable, sqlOid)
     )
     if cursor.fetchone():
         cursor.execute(
-            'update %s set tag=?,value=? where oid=?' % dbTable, (textTag, textValue, sqlOid)
+            'update %s set tag="%s",value="%s" where oid="%s"' % (dbTable, textTag, textValue, sqlOid)
         )
     else:
         cursor.execute(
-            'insert into %s values (?, ?, ?, "read-write")' % dbTable, (sqlOid, textTag, textValue)
+            'insert into %s values ("%s", "%s", "%s", "read-write")' % (dbTable, sqlOid, textTag, textValue)
         )
     cursor.close()
 
@@ -135,5 +149,6 @@ def record(oid, tag, value, **context):
 
 def shutdown(**context):
     if dbConn is not None:
-        dbConn.commit()
+        if 'mode' in context and context['mode'] == 'recording':
+            dbConn.commit()
         dbConn.close()

@@ -985,7 +985,7 @@ For example, the following Simulator invocation will configure its
 "sql" variation module to use sqlite database (sqlite3 Python module)
 and /var/tmp/snmpsim.db database file:
 
-$ snmpsimd.py --variation-module-options=sql:dbtype:sqlite3,dboptions:/var/tmp/snmpsim.db
+$ snmpsimd.py --variation-module-options=sql:dbtype:sqlite3,database:/var/tmp/snmpsim.db
 
 In case you are using multiple database connections or database types
 all through the sql variation module, you could refer to each module instance
@@ -1407,7 +1407,14 @@ MySQL and any other compliant to Python DB-API and importable as a Python
 module) and connect string which is database dependant. For example,
 sqlite backend can be configured this way:
 
-$ snmpsimd.py --variation-module-options=sql:sqlite3:/tmp/sqlite.db
+$ snmpsimd.py --variation-module-options=sql:sqlite3:database:/tmp/sqlite.db
+
+and MySQL backend could be used as follows:
+
+$ snmpsimd.py --variation-module-options=sql:dbtype:mysql.connector,host:127.0.0.1,port:111,user:snmpsim,password:snmpsim,database:snmpsim
+
+assuming you have a MySQL server running at 127.0.0.1 and have MySQL user
+"snmpsim" with password "snmpsim" having full access to a database "snmpsim".
 
 The .snmprec value is expected to hold database table name to keep
 all OID-value pairs served within selected .snmprec line. This table
@@ -1415,10 +1422,10 @@ can either be created automatically whenever sql module is invoked in
 recording mode or can be created and populated by hand. In the latter case
 table layout should be as follows:
 
-  CREATE TABLE <tablename> (oid text primary key,
+  CREATE TABLE <tablename> (oid text,
                             tag text,
                             value text,
-                            maxaccess text default "read-only")
+                            maxaccess text)
 
 The most usual setup is to keep many OID-value pairs in a database
 table referred to by a .snmprec line serving a subtree of OIDs:
@@ -1612,7 +1619,7 @@ $ snmprec.py --agent-udpv4-endpoint=127.0.0.1
   --start-oid=1.3.6.1.2.1.2 --stop-oid=1.3.6.1.2.1.3 
   --output-file=data/sql.snmprec
   --variation-module=sql
-  --variation-module-options=dbtype:sqlite3,dboptions:/tmp/snmpsim.db,dbtable:snmprec
+  --variation-module-options=dbtype:sqlite3,database:/tmp/snmpsim.db,dbtable:snmprec
 Scanning "/usr/local/share/snmpsim/variation" directory for variation modules... sql module loaded
 SNMP version 2c
 Community name: public
@@ -1636,13 +1643,25 @@ following contents:
 $ sqlite3 /tmp/snmpsim.db 
 SQLite version 3.7.5
 sqlite> .schema snmprec
-CREATE TABLE snmprec (oid text primary key, tag text, value text, maxaccess text default "read-only");
+CREATE TABLE snmprec (oid text, tag text, value text, maxaccess text);
 sqlite> select * from snmprec limit 1;
          1.         3.         6.         1.         2.         1.         2.         2.         1.         1.         1|2|1|read-write
 
 Notice the format of the OIDs there -- each sub-oid is left-padded with
 up to 8 spaces (must be 10 chars in total) to make OIDs ordering work 
 properly with SQL sorting facilities.
+
+The following snmprec.py invocation would make it storing snapshots into a
+MySQL database using native MySQL's Connector/Python driver:
+
+$ snmprec.py --agent-udpv4-endpoint=127.0.0.1 
+  --output-file=data/sql.snmprec
+  --variation-module=sql
+  --variation-module-options=dbtype:mysql.connector,host:127.0.0.1,port:111,user:snmpsim,password:snmpsim,database:snmpsim
+
+The above parameters assume that you have a MySQL server running at 127.0.0.1
+and have MySQL user "snmpsim" with password "snmpsim" having full access to
+a database "snmpsim".
 
 When sql variation module is invoked by Simulator, it can read, create and
 modify individual rows in the SQL database we just created (this is
