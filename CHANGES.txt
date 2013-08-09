@@ -9,6 +9,8 @@
   Python DB API 2.0 so that it can now work with MySQL out of
   the box. Module options also reworked to support named
   DB connect() parameters.
+- Simulator now accepts custom SnmpEngineID value rather then using
+  randomly generated (and unstable).
 - Variation module API slightly changed to allow recording module
   to communicate to its host time of the next probe to occur. 
 - The --version option of snmprec.py renamed into --protocol-version.

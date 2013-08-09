@@ -45,6 +45,7 @@ forceIndexBuild = False
 validateData = False
 v2cArch = False
 v3Only = False
+v3EngineId = None
 v3Users = []
 v3AuthKeys = {}
 v3AuthProtos = {}
@@ -548,6 +549,7 @@ Usage: %s [--help]
     [--agent-udpv6-endpoints-list=<file>]
     [--agent-unix-endpoints-list=<file>]
     [--v2c-arch]
+    [--v3-engine-id=<hexvalue>]
     [--v3-only]
     [--v3-user=<username>]
     [--v3-auth-key=<key>]
@@ -562,7 +564,7 @@ Usage: %s [--help]
 
 try:
     opts, params = getopt.getopt(sys.argv[1:], 'hv',
-        ['help', 'version', 'debug=', 'daemonize', 'process-user=', 'process-group=', 'logging-method=', 'device-dir=', 'data-dir=', 'cache-dir=', 'force-index-rebuild', 'validate-device-data', 'validate-data', 'variation-modules-dir=', 'variation-module-options=', 'agent-address=', 'agent-port=', 'agent-udpv4-endpoint=', 'agent-udpv6-endpoint=', 'agent-unix-endpoint=', 'agent-udpv4-endpoints-list=', 'agent-udpv6-endpoints-list=', 'agent-unix-endpoints-list=', 'v2c-arch', 'v3-only', 'v3-user=', 'v3-auth-key=', 'v3-auth-proto=', 'v3-priv-key=', 'v3-priv-proto=']
+        ['help', 'version', 'debug=', 'daemonize', 'process-user=', 'process-group=', 'logging-method=', 'device-dir=', 'data-dir=', 'cache-dir=', 'force-index-rebuild', 'validate-device-data', 'validate-data', 'variation-modules-dir=', 'variation-module-options=', 'agent-address=', 'agent-port=', 'agent-udpv4-endpoint=', 'agent-udpv6-endpoint=', 'agent-unix-endpoint=', 'agent-udpv4-endpoints-list=', 'agent-udpv6-endpoints-list=', 'agent-unix-endpoints-list=', 'v2c-arch', 'v3-only', 'v3-engine-id=', 'v3-user=', 'v3-auth-key=', 'v3-auth-proto=', 'v3-priv-key=', 'v3-priv-proto=']
         )
 except Exception:
     sys.stderr.write('ERROR: %s\r\n%s\r\n' % (sys.exc_info()[1], helpMessage))
@@ -680,6 +682,8 @@ Software documentation and support at http://snmpsim.sf.net
         v2cArch = True
     elif opt[0] == '--v3-only':
         v3Only = True
+    elif opt[0] == '--v3-engine-id':
+        v3EngineId = opt[1]
     elif opt[0] == '--v3-user':
         v3Users.append(opt[1])
     elif opt[0] == '--v3-auth-key':
@@ -803,7 +807,13 @@ if not os.path.exists(confdir.cache):
 if v2cArch:
     contexts = { univ.OctetString('index'): dataIndexInstrumController }
 else:
-    snmpEngine = engine.SnmpEngine()
+    try:
+        if v3EngineId:
+            v3EngineId = univ.OctetString(hexValue=v3EngineId)
+        snmpEngine = engine.SnmpEngine(snmpEngineID=v3EngineId)
+    except:
+        log.msg('ERROR: SNMPv3 Engine initialization failed, EngineID "%s": %s' % (v3EngineId is not None and v3EngineId.prettyPrint() or '<default>', sys.exc_info()[1]))
+        sys.exit(-1)
 
     config.addContext(snmpEngine, '')
 
@@ -1015,6 +1025,8 @@ if v2cArch:
         log.msg('Listening at UNIX domain endpoint %s, transport ID %s' % (agentUNIXEndpoints[idx][1], '.'.join([str(x) for x in unix.domainName + (idx,)])))
     transportDispatcher.registerRecvCbFun(commandResponderCbFun)
 else:
+    snmpEngineId, = snmpEngine.msgAndPduDsp.mibInstrumController.mibBuilder.importSymbols('__SNMP-FRAMEWORK-MIB', 'snmpEngineID')
+    log.msg('SNMPv3 EngineID %s' % snmpEngineId.syntax.prettyPrint())
     for v3User in v3Users:
         log.msg('%s' % ('-'*66,))
         log.msg('SNMPv3 USM SecurityName: %s' % v3User)
