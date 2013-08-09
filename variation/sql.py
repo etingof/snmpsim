@@ -7,8 +7,7 @@
 # Module initialization parameters are dbtype:<dbms>,dboptions:<options>
 #
 # Expects to work a table of the following layout:
-# CREATE TABLE <tablename> (oid text primary key, tag text, value text,
-#                           maxaccess text default "read-only")
+# CREATE TABLE <tablename> (oid text, tag text, value text, maxaccess text)
 #
 from snmpsim.grammar.snmprec import SnmprecGrammar
 from snmpsim import error
