@@ -1824,6 +1824,14 @@ into SNMPv3 engine so startup time can be dramatically reduced by either
 using --v2c-arch mode (as mentioned above) or by turning off SNMPv1/v2c
 configuration at SNMPv3 engine with --v3-only command-line flag.
 
+Simulator is a single-threaded program, thus it can only process a single
+request at once. In case of a heavy traffic, Simulator can drop a fraction
+of requests as it's almost always too busy handling all of them. A simple
+workaround is to run multiple instances of the Simulator bound to distinct
+IP addresses or ports what effectively makes Simulator executing multiple
+requests, sent to different simulator instances, in parallel.
+
+
 Installation
 ------------
 
