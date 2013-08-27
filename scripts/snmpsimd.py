@@ -43,7 +43,7 @@ from snmpsim.record.search.database import RecordIndex
 # Settings
 forceIndexBuild = False
 validateData = False
-transportIdIndex= 0
+transportIdOffset= 0
 v2cArch = False
 v3Only = False
 v3EngineId = None
@@ -543,7 +543,7 @@ Usage: %s [--help]
     [--variation-module-options=<module[=alias][:args]>] 
     [--force-index-rebuild]
     [--validate-data]
-    [--transport-id-index=<number>]
+    [--transport-id-offset=<number>]
     [--agent-udpv4-endpoint=<X.X.X.X:NNNNN>]
     [--agent-udpv6-endpoint=<[X:X:..X]:NNNNN>]
     [--agent-unix-endpoint=</path/to/named/pipe>]
@@ -566,7 +566,7 @@ Usage: %s [--help]
 
 try:
     opts, params = getopt.getopt(sys.argv[1:], 'hv',
-        ['help', 'version', 'debug=', 'daemonize', 'process-user=', 'process-group=', 'logging-method=', 'device-dir=', 'data-dir=', 'cache-dir=', 'force-index-rebuild', 'validate-device-data', 'validate-data', 'transport-id-index=', 'variation-modules-dir=', 'variation-module-options=', 'agent-address=', 'agent-port=', 'agent-udpv4-endpoint=', 'agent-udpv6-endpoint=', 'agent-unix-endpoint=', 'agent-udpv4-endpoints-list=', 'agent-udpv6-endpoints-list=', 'agent-unix-endpoints-list=', 'v2c-arch', 'v3-only', 'v3-engine-id=', 'v3-user=', 'v3-auth-key=', 'v3-auth-proto=', 'v3-priv-key=', 'v3-priv-proto=']
+        ['help', 'version', 'debug=', 'daemonize', 'process-user=', 'process-group=', 'logging-method=', 'device-dir=', 'data-dir=', 'cache-dir=', 'force-index-rebuild', 'validate-device-data', 'validate-data', 'transport-id-offset=', 'variation-modules-dir=', 'variation-module-options=', 'agent-address=', 'agent-port=', 'agent-udpv4-endpoint=', 'agent-udpv6-endpoint=', 'agent-unix-endpoint=', 'agent-udpv4-endpoints-list=', 'agent-udpv6-endpoints-list=', 'agent-unix-endpoints-list=', 'v2c-arch', 'v3-only', 'v3-engine-id=', 'v3-user=', 'v3-auth-key=', 'v3-auth-proto=', 'v3-priv-key=', 'v3-priv-proto=']
         )
 except Exception:
     sys.stderr.write('ERROR: %s\r\n%s\r\n' % (sys.exc_info()[1], helpMessage))
@@ -622,9 +622,9 @@ Software documentation and support at http://snmpsim.sf.net
         forceIndexBuild = True
     elif opt[0] in ('--validate-device-data', '--validate-data'):
         validateData = True
-    elif opt[0] == '--transport-id-index':
+    elif opt[0] == '--transport-id-offset':
         try:
-            transportIdIndex = max(0, int(opt[1]))
+            transportIdOffset = max(0, int(opt[1]))
         except:
             sys.stderr.write('ERROR: %s\r\n%s\r\n' % (sys.exc_info()[1], helpMessage))
             sys.exit(-1)
@@ -1018,19 +1018,19 @@ if v2cArch:
     transportDispatcher = AsynsockDispatcher()
     for idx in range(len(agentUDPv4Endpoints)):
         transportDispatcher.registerTransport(
-                udp.domainName + (transportIdIndex+idx,), agentUDPv4Endpoints[idx][0]
+                udp.domainName + (transportIdOffset+idx,), agentUDPv4Endpoints[idx][0]
             )
-        log.msg('Listening at UDP/IPv4 endpoint %s, transport ID %s' % (agentUDPv4Endpoints[idx][1], '.'.join([str(x) for x in udp.domainName + (transportIdIndex+idx,)]),))
+        log.msg('Listening at UDP/IPv4 endpoint %s, transport ID %s' % (agentUDPv4Endpoints[idx][1], '.'.join([str(x) for x in udp.domainName + (transportIdOffset+idx,)]),))
     for idx in range(len(agentUDPv6Endpoints)):
         transportDispatcher.registerTransport(
-                udp6.domainName + (transportIdIndex+idx,), agentUDPv6Endpoints[idx][0]
+                udp6.domainName + (transportIdOffset+idx,), agentUDPv6Endpoints[idx][0]
             )
-        log.msg('Listening at UDP/IPv6 endpoint %s, transport ID %s' % (agentUDPv6Endpoints[idx][1], '.'.join([str(x) for x in udp6.domainName + (transportIdIndex+idx,)]),))
+        log.msg('Listening at UDP/IPv6 endpoint %s, transport ID %s' % (agentUDPv6Endpoints[idx][1], '.'.join([str(x) for x in udp6.domainName + (transportIdOffset+idx,)]),))
     for idx in range(len(agentUNIXEndpoints)):
         transportDispatcher.registerTransport(
-                unix.domainName + (transportIdIndex+idx,), agentUNIXEndpoints[idx][0]
+                unix.domainName + (transportIdOffset+idx,), agentUNIXEndpoints[idx][0]
             )
-        log.msg('Listening at UNIX domain endpoint %s, transport ID %s' % (agentUNIXEndpoints[idx][1], '.'.join([str(x) for x in unix.domainName + (transportIdIndex+idx,)])))
+        log.msg('Listening at UNIX domain endpoint %s, transport ID %s' % (agentUNIXEndpoints[idx][1], '.'.join([str(x) for x in unix.domainName + (transportIdOffset+idx,)])))
     transportDispatcher.registerRecvCbFun(commandResponderCbFun)
 else:
     snmpEngineId, = snmpEngine.msgAndPduDsp.mibInstrumController.mibBuilder.importSymbols('__SNMP-FRAMEWORK-MIB', 'snmpEngineID')
@@ -1057,21 +1057,21 @@ else:
     for idx in range(len(agentUDPv4Endpoints)):
         config.addSocketTransport(
             snmpEngine,
-            udp.domainName + (transportIdIndex+idx,), agentUDPv4Endpoints[idx][0]
+            udp.domainName + (transportIdOffset+idx,), agentUDPv4Endpoints[idx][0]
         )
-        log.msg('Listening at UDP/IPv4 endpoint %s, transport ID %s' % (agentUDPv4Endpoints[idx][1], '.'.join([str(x) for x in udp.domainName + (transportIdIndex+idx,)]),))
+        log.msg('Listening at UDP/IPv4 endpoint %s, transport ID %s' % (agentUDPv4Endpoints[idx][1], '.'.join([str(x) for x in udp.domainName + (transportIdOffset+idx,)]),))
     for idx in range(len(agentUDPv6Endpoints)):
         config.addSocketTransport(
             snmpEngine,
-            udp6.domainName + (transportIdIndex+idx,), agentUDPv6Endpoints[idx][0]
+            udp6.domainName + (transportIdOffset+idx,), agentUDPv6Endpoints[idx][0]
         )
-        log.msg('Listening at UDP/IPv6 endpoint %s, transport ID %s' % (agentUDPv6Endpoints[idx][1], '.'.join([str(x) for x in udp6.domainName + (transportIdIndex+idx,)]),))
+        log.msg('Listening at UDP/IPv6 endpoint %s, transport ID %s' % (agentUDPv6Endpoints[idx][1], '.'.join([str(x) for x in udp6.domainName + (transportIdOffset+idx,)]),))
     for idx in range(len(agentUNIXEndpoints)):
         config.addSocketTransport(
             snmpEngine,
-            unix.domainName + (transportIdIndex+idx,), agentUNIXEndpoints[idx][0]
+            unix.domainName + (transportIdOffset+idx,), agentUNIXEndpoints[idx][0]
         )
-        log.msg('Listening at UNIX domain endpoint %s, transport ID %s' % (agentUNIXEndpoints[idx][1], '.'.join([str(x) for x in unix.domainName + (transportIdIndex+idx,)])))
+        log.msg('Listening at UNIX domain endpoint %s, transport ID %s' % (agentUNIXEndpoints[idx][1], '.'.join([str(x) for x in unix.domainName + (transportIdOffset+idx,)])))
 
     # SNMP applications
 
