@@ -11,6 +11,9 @@
   DB connect() parameters.
 - Simulator now accepts custom SnmpEngineID value rather then using
   randomly generated (and unstable).
+- Simulator now accepts the --transport-id-index command-line parameter
+  to specify the initial transport ID instance for each transport domain
+  configured.
 - Variation module API slightly changed to allow recording module
   to communicate to its host time of the next probe to occur. 
 - The --version option of snmprec.py renamed into --protocol-version.
