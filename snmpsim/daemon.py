@@ -18,10 +18,13 @@ else:
                 os._exit(0) 
         except OSError:
             raise error.SnmpsimError('ERROR: fork #1 failed: %s' % sys.exc_info()[1])
-            
+
         # decouple from parent environment
-        os.chdir('/') 
-        os.setsid() 
+        try:
+            os.chdir('/') 
+            os.setsid() 
+        except OSError:
+            pass
         os.umask(0) 
             
         # do second fork
@@ -32,6 +35,27 @@ else:
                 os._exit(0) 
         except OSError:
             raise error.SnmpsimError('ERROR: fork #2 failed: %s' % sys.exc_info()[1])
+
+        def signal_cb(s,f):
+            raise KeyboardInterrupt
+        for s in signal.SIGTERM, signal.SIGINT, signal.SIGHUP, signal.SIGQUIT:
+            signal.signal(s, signal_cb)
+             
+        # write pidfile
+        def atexit_cb():
+            try:
+                os.remove(pidfile)
+            except OSError:
+                pass
+        atexit.register(atexit_cb)
+
+        try:
+            fd, nm = tempfile.mkstemp()
+            os.write(fd, '%d\n' % os.getpid())
+            os.close(fd)
+            os.rename(nm, pidfile)
+        except:
+            raise error.SnmpsimError('Failed to create PID file %s: %s' % (pidfile, sys.exc_info()[1]))
 
         # redirect standard file descriptors
         sys.stdout.flush()
@@ -44,22 +68,6 @@ else:
         os.dup2(so.fileno(), sys.stdout.fileno())
         os.dup2(se.fileno(), sys.stderr.fileno())
           
-        def cb(s,f):
-            raise KeyboardInterrupt
-        for s in signal.SIGTERM, signal.SIGINT, signal.SIGHUP, signal.SIGQUIT:
-            signal.signal(s, cb)
-             
-        # write pidfile
-        atexit.register(lambda pidfile=pidfile: os.remove(pidfile))
-
-        try:
-            fd, nm = tempfile.mkstemp()
-            os.write(fd, '%d\n' % os.getpid())
-            os.close(fd)
-            os.rename(nm, pidfile)
-        except:
-            raise error.SnmpsimError('Failed to create PID file %s: %s' % (pidfile, sys.exc_info()[1]))
-
     def dropPrivileges(uname, gname):
         if os.getuid() != 0:
             if uname and uname != pwd.getpwnam(uname).pw_name or \
