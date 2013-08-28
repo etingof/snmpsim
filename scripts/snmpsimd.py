@@ -536,6 +536,7 @@ Usage: %s [--help]
     [--debug=<%s>]
     [--daemonize]
     [--process-user=<uname>] [--process-group=<gname>]
+    [--pid-file=<file>]
     [--logging-method=<stdout|stderr|syslog|file>[:args>]]
     [--data-dir=<dir>]
     [--cache-dir=<dir>]
@@ -566,7 +567,7 @@ Usage: %s [--help]
 
 try:
     opts, params = getopt.getopt(sys.argv[1:], 'hv',
-        ['help', 'version', 'debug=', 'daemonize', 'process-user=', 'process-group=', 'logging-method=', 'device-dir=', 'data-dir=', 'cache-dir=', 'force-index-rebuild', 'validate-device-data', 'validate-data', 'transport-id-offset=', 'variation-modules-dir=', 'variation-module-options=', 'agent-address=', 'agent-port=', 'agent-udpv4-endpoint=', 'agent-udpv6-endpoint=', 'agent-unix-endpoint=', 'agent-udpv4-endpoints-list=', 'agent-udpv6-endpoints-list=', 'agent-unix-endpoints-list=', 'v2c-arch', 'v3-only', 'v3-engine-id=', 'v3-user=', 'v3-auth-key=', 'v3-auth-proto=', 'v3-priv-key=', 'v3-priv-proto=']
+        ['help', 'version', 'debug=', 'daemonize', 'process-user=', 'process-group=', 'pid-file=', 'logging-method=', 'device-dir=', 'data-dir=', 'cache-dir=', 'force-index-rebuild', 'validate-device-data', 'validate-data', 'transport-id-offset=', 'variation-modules-dir=', 'variation-module-options=', 'agent-address=', 'agent-port=', 'agent-udpv4-endpoint=', 'agent-udpv6-endpoint=', 'agent-unix-endpoint=', 'agent-udpv4-endpoints-list=', 'agent-udpv6-endpoints-list=', 'agent-unix-endpoints-list=', 'v2c-arch', 'v3-only', 'v3-engine-id=', 'v3-user=', 'v3-auth-key=', 'v3-auth-proto=', 'v3-priv-key=', 'v3-priv-proto=']
         )
 except Exception:
     sys.stderr.write('ERROR: %s\r\n%s\r\n' % (sys.exc_info()[1], helpMessage))
@@ -608,6 +609,8 @@ Software documentation and support at http://snmpsim.sf.net
         procUser = opt[1]
     elif opt[0] == '--process-group':
         procGroup = opt[1]
+    elif opt[0] == '--pid-file':
+        pidFile = opt[1]
     elif opt[0] == '--logging-method':
         try:
             log.setLogger('snmpsimd', *opt[1].split(':'))

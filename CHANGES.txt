@@ -17,6 +17,7 @@
 - Variation module API slightly changed to allow recording module
   to communicate to its host time of the next probe to occur. 
 - The --version option of snmprec.py renamed into --protocol-version.
+- New command-line option --pid-file added.
 - Daemonization under a non-root user now works.
 - Fixes to time-based log file rotation implementation.
 - Fixes to numeric variation module. Also, taglist parameter is now
