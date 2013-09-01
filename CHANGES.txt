@@ -22,6 +22,7 @@
 - Fixes to time-based log file rotation implementation.
 - Fixes to numeric variation module. Also, taglist parameter is now
   defaulted into all numerical types.
+- Fix to PID file creation on daemonization.
 
 0.2.3
 -----

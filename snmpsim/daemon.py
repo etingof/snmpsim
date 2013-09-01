@@ -50,7 +50,7 @@ else:
         atexit.register(atexit_cb)
 
         try:
-            fd, nm = tempfile.mkstemp()
+            fd, nm = tempfile.mkstemp(dir=os.path.dirname(pidfile))
             os.write(fd, '%d\n' % os.getpid())
             os.close(fd)
             os.rename(nm, pidfile)
