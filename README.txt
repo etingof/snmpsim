@@ -1807,8 +1807,92 @@ $ datafile.py --input-file=tcp-mib.snmprec --input-file=udp-mib.snmprec --sort-r
 Current datafile.py version does not support data files conversion from
 its native .snmprec into other formats.
 
-Performance improvement
------------------------
+Large scale simulation
+----------------------
+
+Simulator is designed to simulate tens of thousands of SNMP Agents at once.
+However it is not optimized for high loads as Simulator is internally
+a single-threaded application meaning it can only process a single request
+at once. Moreover, some variation modules may bring additional delay to
+request processing what may cause subsequent requests to build up in
+input queue and contribute to increasing latency.
+
+A simple receipt aimed at maximizing throughput and minimizlng latency 
+is to run multiple instances of the Simulator bound to distinct IP interfaces
+or ports what effectively makes Simulator executing multiple requests, sent
+to different simulator instances, in parallel. Here we invoke two snmpsimd.py
+instances at different IP interfaces serving the same set of data files:
+
+# snmpsimd.py --agent-udpv4-endpoint=127.0.0.1 \
+              --agent-udpv4-endpoint=127.0.0.2 \
+              --transport-id-offset=1 \
+              --data-dir=/usr/local/share/snmpsim/data \
+              --cache-dir=/var/tmp/snmpsim-A/cache \
+              --v2c-arch \
+              --process-user=nobody --process-group=nogroup \
+              --daemonize & \
+  snmpsimd.py --agent-udpv4-endpoint=127.0.0.3 \
+              --agent-udpv4-endpoint=127.0.0.4 \
+              --transport-id-offset=3 \
+              --data-dir=/usr/local/share/snmpsim/data \
+              --cache-dir=/var/tmp/snmpsim-B/cache \
+              --v2c-arch \
+              --process-user=nobody --process-group=nogroup \
+              --daemonize &
+
+Several things to note here:
+
+* Simulator instances share common data directory however use
+  their own, dedicated cache directories.
+* Each Simulator instance is listening on multiple IP interfaces
+  (for the purpose of IP address based Agent simulation).
+* Simulator transport ID's are configured explicitly making
+  the following data-dir layout possible:
+
+  $ tree data
+  data
+  |-- public
+  |   |-- 1.3.6.1.6.1.1.1.snmprec
+  |-- public
+  |   |-- 1.3.6.1.6.1.1.2.snmprec
+  |-- public
+  |   |-- 1.3.6.1.6.1.1.3.snmprec
+  |-- public
+      |-- 1.3.6.1.6.1.1.4.snmprec
+
+  So that each simulated Agent is available by a dedicated IP address
+  (represented by a transport ID) and common SNMPv1/v2c community name
+  'public'. 
+* To make use of IP address based Agent addressing feature, --v2c-arch
+  mode is chosen.
+
+The above setup can be scaled to as many IP interfaces as you can bring
+up on your system. A really large number of IP interfaces might exceed
+the length of the command-line. In that case it's advised to use the
+--agent-udpv4-endpoints-list=<file> option to pass local IP addresses
+for Simulator to listen on:
+
+# head ips.txt
+127.0.0.1
+127.0.0.2
+127.0.0.3
+127.0.0.4
+127.0.0.5
+...
+127.0.255.252
+127.0.255.253
+# snmpsimd.py --agent-udpv4-endpoints-list=ips.txt \
+              --data-dir=/usr/local/share/snmpsim/data \
+              --v2c-arch \
+              --process-user=nobody --process-group=nogroup \
+              --daemonize &
+
+For transport-based simulation to work, make sure to design your
+data directory layout matching transport ID's of the addresses
+listed in the ips.txt file above.
+ 
+Tips and Tricks
+---------------
 
 The SNMPv3 architecture is inherently computationally heavy so Simulator
 is somewhat slow. It can run faster if it would use a much lighter and
@@ -1823,13 +1907,6 @@ When Simulator runs over thousands of data files, startup may take time
 into SNMPv3 engine so startup time can be dramatically reduced by either
 using --v2c-arch mode (as mentioned above) or by turning off SNMPv1/v2c
 configuration at SNMPv3 engine with --v3-only command-line flag.
-
-Simulator is a single-threaded program, thus it can only process a single
-request at once. In case of a heavy traffic, Simulator can drop a fraction
-of requests as it's almost always too busy handling all of them. A simple
-workaround is to run multiple instances of the Simulator bound to distinct
-IP addresses or ports what effectively makes Simulator executing multiple
-requests, sent to different simulator instances, in parallel.
 
 
 Installation
