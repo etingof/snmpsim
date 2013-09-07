@@ -544,16 +544,16 @@ Usage: %s [--help]
     [--variation-module-options=<module[=alias][:args]>] 
     [--force-index-rebuild]
     [--validate-data]
+    [--v2c-arch]
+    [--v3-only]
     [--transport-id-offset=<number>]
+    [--v3-engine-id=<hexvalue>]
     [--agent-udpv4-endpoint=<X.X.X.X:NNNNN>]
     [--agent-udpv6-endpoint=<[X:X:..X]:NNNNN>]
     [--agent-unix-endpoint=</path/to/named/pipe>]
     [--agent-udpv4-endpoints-list=<file>]
     [--agent-udpv6-endpoints-list=<file>]
     [--agent-unix-endpoints-list=<file>]
-    [--v2c-arch]
-    [--v3-engine-id=<hexvalue>]
-    [--v3-only]
     [--v3-user=<username>]
     [--v3-auth-key=<key>]
     [--v3-auth-proto=<%s>]
@@ -566,9 +566,23 @@ Usage: %s [--help]
     )
 
 try:
-    opts, params = getopt.getopt(sys.argv[1:], 'hv',
-        ['help', 'version', 'debug=', 'daemonize', 'process-user=', 'process-group=', 'pid-file=', 'logging-method=', 'device-dir=', 'data-dir=', 'cache-dir=', 'force-index-rebuild', 'validate-device-data', 'validate-data', 'transport-id-offset=', 'variation-modules-dir=', 'variation-module-options=', 'agent-address=', 'agent-port=', 'agent-udpv4-endpoint=', 'agent-udpv6-endpoint=', 'agent-unix-endpoint=', 'agent-udpv4-endpoints-list=', 'agent-udpv6-endpoints-list=', 'agent-unix-endpoints-list=', 'v2c-arch', 'v3-only', 'v3-engine-id=', 'v3-user=', 'v3-auth-key=', 'v3-auth-proto=', 'v3-priv-key=', 'v3-priv-proto=']
-        )
+    opts, params = getopt.getopt(sys.argv[1:], 'hv', [
+        'help', 'version', 'debug=', 'daemonize', 'process-user=',
+        'process-group=', 'pid-file=', 'logging-method=', 'device-dir=',
+        'data-dir=', 'cache-dir=', 'variation-modules-dir=', 
+        'force-index-rebuild', 'validate-device-data', 'validate-data',
+        'v2c-arch', 'v3-only', 'transport-id-offset=', 
+        'variation-module-options=',
+        'agent-address=', 'agent-port=',  # legacy
+        # this option starts new SNMPv3 engine configuration
+        'v3-engine-id=',
+        'agent-udpv4-endpoint=', 'agent-udpv6-endpoint=',
+        'agent-unix-endpoint=', 'agent-udpv4-endpoints-list=', 
+        'agent-udpv6-endpoints-list=', 'agent-unix-endpoints-list=', 
+        'v3-user=',
+        'v3-auth-key=', 'v3-auth-proto=', 
+        'v3-priv-key=', 'v3-priv-proto='
+    ])
 except Exception:
     sys.stderr.write('ERROR: %s\r\n%s\r\n' % (sys.exc_info()[1], helpMessage))
     sys.exit(-1)
@@ -621,16 +635,6 @@ Software documentation and support at http://snmpsim.sf.net
         confdir.data.insert(0, opt[1])
     elif opt[0] == '--cache-dir':
         confdir.cache = opt[1]
-    elif opt[0] == '--force-index-rebuild':
-        forceIndexBuild = True
-    elif opt[0] in ('--validate-device-data', '--validate-data'):
-        validateData = True
-    elif opt[0] == '--transport-id-offset':
-        try:
-            transportIdOffset = max(0, int(opt[1]))
-        except:
-            sys.stderr.write('ERROR: %s\r\n%s\r\n' % (sys.exc_info()[1], helpMessage))
-            sys.exit(-1)
     elif opt[0] == '--variation-modules-dir':
         confdir.variation.insert(0, opt[1])
     elif opt[0] == '--variation-module-options':
@@ -647,6 +651,28 @@ Software documentation and support at http://snmpsim.sf.net
         if modName not in variationModulesOptions:
             variationModulesOptions[modName] = []
         variationModulesOptions[modName].append((alias, args))
+    elif opt[0] == '--force-index-rebuild':
+        forceIndexBuild = True
+    elif opt[0] in ('--validate-device-data', '--validate-data'):
+        validateData = True
+    elif opt[0] == '--v2c-arch':
+        v2cArch = True
+    elif opt[0] == '--v3-only':
+        v3Only = True
+    elif opt[0] == '--transport-id-offset':
+        try:
+            transportIdOffset = max(0, int(opt[1]))
+        except:
+            sys.stderr.write('ERROR: %s\r\n%s\r\n' % (sys.exc_info()[1], helpMessage))
+            sys.exit(-1)
+    elif opt[0] == '--v3-engine-id':
+        v3EngineId = opt[1]
+    elif opt[0] == '--agent-address':
+        sys.stderr.write('ERROR: use --agent-udpv4-endpoint=%s option instead of --agent-address\r\n%s\r\n' % (opt[1], helpMessage))
+        sys.exit(-1)
+    elif opt[0] == '--agent-port':
+        sys.stderr.write('ERROR: use --agent-udpv4-endpoint=0.0.0.0:%s option instead of --agent-port\r\n%s\r\n' % (opt[1], helpMessage))
+        sys.exit(-1)
     elif opt[0] == '--agent-udpv4-endpoint':
         try:
             agentUDPv4Endpoints.add(opt[1])
@@ -683,18 +709,6 @@ Software documentation and support at http://snmpsim.sf.net
         except:
             sys.stderr.write('ERROR: %s\r\n%s\r\n' % (sys.exc_info()[1], helpMessage))
             sys.exit(-1)
-    elif opt[0] == '--agent-address':
-        sys.stderr.write('ERROR: use --agent-udpv4-endpoint=%s option instead of --agent-address\r\n%s\r\n' % (opt[1], helpMessage))
-        sys.exit(-1)
-    elif opt[0] == '--agent-port':
-        sys.stderr.write('ERROR: use --agent-udpv4-endpoint=0.0.0.0:%s option instead of --agent-port\r\n%s\r\n' % (opt[1], helpMessage))
-        sys.exit(-1)
-    elif opt[0] == '--v2c-arch':
-        v2cArch = True
-    elif opt[0] == '--v3-only':
-        v3Only = True
-    elif opt[0] == '--v3-engine-id':
-        v3EngineId = opt[1]
     elif opt[0] == '--v3-user':
         v3Users.append(opt[1])
     elif opt[0] == '--v3-auth-key':
