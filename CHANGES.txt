@@ -9,13 +9,20 @@
   Python DB API 2.0 so that it can now work with MySQL out of
   the box. Module options also reworked to support named
   DB connect() parameters.
-- Simulator now accepts custom SnmpEngineID value rather then using
-  randomly generated (and unstable).
+- Simulator can now run many independent SNMP engines each with its
+  own set of data files listening at dedicated transport endpoints.
+  At least pysnmp 4.2.5 is required for this feature to work.
 - Simulator now accepts the --transport-id-offset command-line parameter
   to specify the initial transport ID instance for each transport domain
   configured.
-- Variation module API slightly changed to allow recording module
-  to communicate to its host time of the next probe to occur. 
+- Variation module API changed to allow recording module to communicate
+  to its host time of the next probe to occur. 
+- Variation module API changed so that SNMP engine ID is only available
+  in variate() context. This is due to the new multi-engine ID design.
+- New --args-from-file command-line parameter added to snmpsimd.py to 
+  allow a large number of SNMP engines configured to Simulator. The
+  --agent-endpoint*-list= family of options discontinued in favor of
+  multiple --agent-*-endpoint options read from args file.
 - The --version option of snmprec.py renamed into --protocol-version.
 - New command-line option --pid-file added.
 - Daemonization under a non-root user now works.
