@@ -661,7 +661,7 @@ simulated resources, all users have the same view of the Simulator and the
 same access permissions. But your can use SNMPv3 contextNames and/or transport
 endpoints for addressing different Simulator data files.
 
-snmpsimd.py --agent-udpv4-endpoint=127.0.0.1  \
+$ snmpsimd.py --agent-udpv4-endpoint=127.0.0.1  \
   --v3-user=wallace --v3-auth-key=testkey123 --v3-priv-key=testkey839 \
   --v3-user=gromit --v3-auth-key=testkey564 --v3-priv-key=testkey6534
 Scanning "/home/user/.snmpsim/variation" directory for variation modules...
@@ -694,6 +694,43 @@ Listening at UDP/IPv4 endpoint 127.0.0.1:161, transport ID 1.3.6.1.6.1.1.0
 
 Keep in mind that SnmpEngineId format has certain layout so it should be
 selected with care.
+
+Finally, Simulator could run many independent SNMP engines all within
+a single process.  Managers could address particular
+SNMP Engine instance by querying it at a transport endpoint to which
+SNMP Engine is bound.
+
+Each SNMP Engine will have its own set of USM users could serve its 
+own --data-dir (or they can share a single directory).  The logic of
+configuring specific parametersto different SNMP engines is to "scope" 
+SNMP Engine parameters (like users, transports, data directory) within
+its --v3-engine-id fragment of Simulator command-line sequence of options.
+For example:
+
+$ snmpsimd.py \
+  --v3-engine-id=010203040505060809 \
+  --v3-user=wallace --v3-auth-key=testkey123 \
+  --agent-udpv4-endpoint=127.0.0.1:1161 \
+  --v3-engine-id=090807060504030201 \
+  --v3-user=gromit --v3-auth-key=testkey564 \
+  --agent-udpv4-endpoint=127.0.0.1:1162
+Scanning "/home/user/.snmpsim/variation" directory for variation modules...
+...
+SNMPv3 EngineID: 0x010203040505060809
+------------------------------------------------------------------
+SNMPv3 USM SecurityName: wallace
+SNMPv3 USM authentication key: testkey123, authentication protocol: MD5
+Listening at UDP/IPv4 endpoint 127.0.0.1:1161, transport ID 1.3.6.1.6.1.1.0
+...
+SNMPv3 EngineID: 0x090807060504030201
+------------------------------------------------------------------
+SNMPv3 USM SecurityName: gromit
+SNMPv3 USM authentication key: testkey564, authentication protocol: MD5
+Listening at UDP/IPv4 endpoint 127.0.0.1:1162, transport ID 1.3.6.1.6.1.1.1
+
+Likewise, to make particular SNMP Engine working with specific data directory, 
+another, more specific, --data-dir option could be passed after the 
+--v3-engine-id option.
 
 To make Simulator listening on SNMP-standard UDP port 161 on a UNIX system,
 you have to invoke it as root but in the same time have to specify some
@@ -1887,9 +1924,14 @@ for Simulator to listen on:
               --process-user=nobody --process-group=nogroup \
               --daemonize &
 
+Latest Simulator version offers the --args-from-file=<file> option
+for passing many --agent-udpv4-endpoint=<address> options for reaching
+the same effect.
+
 For transport-based simulation to work, make sure to design your
 data directory layout matching transport ID's of the addresses
 listed in the ips.txt file above.
+
  
 Tips and Tricks
 ---------------
