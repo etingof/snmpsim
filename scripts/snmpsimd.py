@@ -46,12 +46,6 @@ validateData = False
 transportIdOffset= 0
 v2cArch = False
 v3Only = False
-v3EngineId = None
-v3Users = []
-v3AuthKeys = {}
-v3AuthProtos = {}
-v3PrivKeys = {}
-v3PrivProtos = {}
 pidFile = '/var/run/snmpsim/snmpsimd.pid'
 foregroundFlag = True
 procUser = procGroup = None
@@ -78,21 +72,16 @@ privProtocols = {
 
 class TransportEndpointsBase:
     def __init__(self):
-        self.__endpoints = []
+        self.__endpoint = None
 
     def add(self, addr):
-        self.__endpoints.append(
-            self._addEndpoint(addr)
-        )
+        self.__endpoint = self._addEndpoint(addr)
+        return self
 
-    def load(self, filename):
-        for rec in open(filename).read().split():
-            self.add(rec)
-        
     def _addEndpoint(self, addr): raise NotImplementedError()
 
-    def __len__(self): return len(self.__endpoints)
-    def __getitem__(self, i): return self.__endpoints[i]
+    def __len__(self): return len(self.__endpoint)
+    def __getitem__(self, i): return self.__endpoint[i]
 
 class IPv4TransportEndpoints(TransportEndpointsBase):
     def _addEndpoint(self, addr):
@@ -103,8 +92,6 @@ class IPv4TransportEndpoints(TransportEndpointsBase):
             raise SnmpsimError('improper/busy IPv4/UDP endpoint %s' % addr)
         return udp.UdpTransport().openServerMode((h, p)), addr
 
-agentUDPv4Endpoints = IPv4TransportEndpoints()
- 
 class IPv6TransportEndpoints(TransportEndpointsBase):
     def _addEndpoint(self, addr):
         if not udp6:
@@ -121,15 +108,11 @@ class IPv6TransportEndpoints(TransportEndpointsBase):
             h, p = addr, 161
         return udp6.Udp6Transport().openServerMode((h, p)), addr
  
-agentUDPv6Endpoints = IPv6TransportEndpoints()
-
 class UnixTransportEndpoints(TransportEndpointsBase):
     def _addEndpoint(self, addr):
         if not unix:
             raise SnmpsimError('This system does not support UNIX domain sockets')
         return unix.UnixTransport().openServerMode(addr), addr
-
-agentUNIXEndpoints = UnixTransportEndpoints()
 
 # Extended snmprec record handler
 
@@ -244,10 +227,10 @@ class DataFile(AbstractLayout):
 
         return self.__recordIndex.getHandles()
 
-    def processVarBinds(self, varBinds, nextFlag=False, setFlag=False):
+    def processVarBinds(self, varBinds, **context):
         rspVarBinds = []
 
-        if nextFlag:
+        if context.get('nextFlag'):
             errorStatus = exval.endOfMib
         else:
             errorStatus = exval.noSuchInstance
@@ -260,7 +243,7 @@ class DataFile(AbstractLayout):
        
         varsRemaining = varsTotal = len(varBinds)
         
-        log.msg('Request var-binds: %s, flags: %s, %s' % (', '.join(['%s=<%s>' % (vb[0], vb[1].prettyPrint()) for vb in varBinds]), nextFlag and 'NEXT' or 'EXACT', setFlag and 'SET' or 'GET'))
+        log.msg('Request var-binds: %s, flags: %s, %s' % (', '.join(['%s=<%s>' % (vb[0], vb[1].prettyPrint()) for vb in varBinds]), context.get('nextFlag') and 'NEXT' or 'EXACT', context.get('setFlag') and 'SET' or 'GET'))
 
         for oid, val in varBinds:
             textOid = str(
@@ -288,7 +271,7 @@ class DataFile(AbstractLayout):
  
             while True:
                 if exactMatch:
-                    if nextFlag and not subtreeFlag:
+                    if context.get('nextFlag') and not subtreeFlag:
                         _nextLine = text.readline() # next line
                         if _nextLine:
                             _nextOid, _ = self.__textParser.evaluate(_nextLine, oidOnly=True)
@@ -335,8 +318,21 @@ class DataFile(AbstractLayout):
                     _val = errorStatus
                     break
 
+                callContext = context.copy()
+                callContext.update((),
+                    origOid=oid, 
+                    origValue=val,
+                    dataFile=self.__textFile,
+                    subtreeFlag=subtreeFlag,
+                    exactMatch=exactMatch,
+                    errorStatus=errorStatus,
+                    varsTotal=varsTotal,
+                    varsRemaining=varsRemaining,
+                    variationModules=variationModules
+                )
+ 
                 try:
-                    _oid, _val = self.__textParser.evaluate(line, setFlag=setFlag, origOid=oid, origValue=val, dataFile=self.__textFile, subtreeFlag=subtreeFlag, nextFlag=nextFlag, exactMatch=exactMatch, errorStatus=errorStatus, varsTotal=varsTotal, varsRemaining=varsRemaining, variationModules=variationModules)
+                    _oid, _val = self.__textParser.evaluate(line, **callContext)
                     if _val is exval.endOfMib:
                         exactMatch = True
                         subtreeFlag = False
@@ -400,14 +396,43 @@ class MibInstrumController:
 
     def __str__(self): return str(self.__dataFile)
 
+    def __getCallContext(self, acInfo, nextFlag=False, setFlag=False):
+        if acInfo is None:
+            return { 'nextFlag': nextFlag,
+                     'setFlag': setFlag }
+
+        acFun, acCtx = acInfo
+        ( snmpEngine, 
+          securityModel,
+          securityName,
+          securityLevel,
+          contextName, 
+          pduType ) = acCtx  # this is not [yet] documented
+
+        log.msg('SNMP EngineID %s, securityModel %s, securityName %s, securityLevel %s' % (hasattr(snmpEngine, 'snmpEngineID') and snmpEngine.snmpEngineID.prettyPrint() or '<unknown>', securityModel, securityName, securityLevel))
+
+        return { 'snmpEngine': snmpEngine,
+                 'securityModel': securityModel,
+                 'securityName': securityName,
+                 'securityLevel': securityLevel,
+                 'contextName': contextName,
+                 'nextFlag': nextFlag,
+                 'setFlag': setFlag }
+
     def readVars(self, varBinds, acInfo=None):
-        return self.__dataFile.processVarBinds(varBinds, False)
+        return self.__dataFile.processVarBinds(
+                varBinds, **self.__getCallContext(acInfo, False)
+        )
 
     def readNextVars(self, varBinds, acInfo=None):
-        return self.__dataFile.processVarBinds(varBinds, True)
+        return self.__dataFile.processVarBinds(
+                varBinds, **self.__getCallContext(acInfo, True)
+        )
 
     def writeVars(self, varBinds, acInfo=None):
-        return self.__dataFile.processVarBinds(varBinds, False, True)
+        return self.__dataFile.processVarBinds(
+                varBinds, **self.__getCallContext(acInfo, False, True)
+        )
 
 # Data files index as a MIB instrumentaion at a dedicated SNMP context
 
@@ -444,8 +469,6 @@ class DataIndexInstrumController:
                 ] = rfc1902.OctetString(args[idx])
         self.__idx = self.__idx + 1
 
-dataIndexInstrumController = DataIndexInstrumController()
-
 mibInstrumControllerSet = {
     DataFile.layout: MibInstrumController
 }
@@ -470,64 +493,6 @@ def probeContext(transportDomain, transportAddress, contextName):
         yield rfc1902.OctetString(os.path.normpath(os.path.sep.join(candidate)).replace(os.path.sep, '/')).asOctets()
         del candidate[-1]
  
-if not v2cArch:
-    def probeHashContext(self, snmpEngine, stateReference, contextName):
-        transportDomain, transportAddress = snmpEngine.msgAndPduDsp.getTransportInfo(stateReference)
-
-        for candidate in probeContext(transportDomain, transportAddress, contextName):
-            probedContextName = md5(candidate).hexdigest()
-            try:
-                mibInstrum = self.snmpContext.getMibInstrum(probedContextName)
-            except error.PySnmpError:
-                pass
-            else:
-                log.msg('Using %s selected by candidate %s; transport ID %s, source address %s, context name "%s"' % (mibInstrum, candidate, univ.ObjectIdentifier(transportDomain), transportAddress[0], probedContextName))
-                return probedContextName
-
-        log.msg('Using %s selected by contextName "%s", transport ID %s, source address %s' % (self.snmpContext.getMibInstrum(contextName), contextName, univ.ObjectIdentifier(transportDomain), transportAddress[0]))
-
-        return contextName
-
-    class GetCommandResponder(cmdrsp.GetCommandResponder):
-        def handleMgmtOperation(
-                self, snmpEngine, stateReference, contextName, PDU, acInfo
-            ):
-            cmdrsp.GetCommandResponder.handleMgmtOperation(
-                self, snmpEngine, stateReference, 
-                probeHashContext(self, snmpEngine, stateReference, contextName),
-                PDU, acInfo
-            )
-
-    class SetCommandResponder(cmdrsp.SetCommandResponder):
-        def handleMgmtOperation(
-                self, snmpEngine, stateReference, contextName, PDU, acInfo
-            ):
-            cmdrsp.SetCommandResponder.handleMgmtOperation(
-                self, snmpEngine, stateReference, 
-                probeHashContext(self, snmpEngine, stateReference, contextName),
-                PDU, acInfo
-            )
-
-    class NextCommandResponder(cmdrsp.NextCommandResponder):
-        def handleMgmtOperation(
-                self, snmpEngine, stateReference, contextName, PDU, acInfo
-            ):
-            cmdrsp.NextCommandResponder.handleMgmtOperation(
-                self, snmpEngine, stateReference, 
-                probeHashContext(self, snmpEngine, stateReference, contextName),
-                PDU, acInfo
-            )
-
-    class BulkCommandResponder(cmdrsp.BulkCommandResponder):
-        def handleMgmtOperation(
-                self, snmpEngine, stateReference, contextName, PDU, acInfo
-            ):
-            cmdrsp.BulkCommandResponder.handleMgmtOperation(
-                self, snmpEngine, stateReference, 
-                probeHashContext(self, snmpEngine, stateReference, contextName),
-                PDU, acInfo
-            )
-
 # main script body starts here
 
 helpMessage = """\
@@ -538,7 +503,6 @@ Usage: %s [--help]
     [--process-user=<uname>] [--process-group=<gname>]
     [--pid-file=<file>]
     [--logging-method=<stdout|stderr|syslog|file>[:args>]]
-    [--data-dir=<dir>]
     [--cache-dir=<dir>]
     [--variation-modules-dir=<dir>]
     [--variation-module-options=<module[=alias][:args]>] 
@@ -547,13 +511,12 @@ Usage: %s [--help]
     [--v2c-arch]
     [--v3-only]
     [--transport-id-offset=<number>]
+    [--args-from-file=<file>]
     [--v3-engine-id=<hexvalue>]
+    [--data-dir=<dir>]
     [--agent-udpv4-endpoint=<X.X.X.X:NNNNN>]
     [--agent-udpv6-endpoint=<[X:X:..X]:NNNNN>]
     [--agent-unix-endpoint=</path/to/named/pipe>]
-    [--agent-udpv4-endpoints-list=<file>]
-    [--agent-udpv6-endpoints-list=<file>]
-    [--agent-unix-endpoints-list=<file>]
     [--v3-user=<username>]
     [--v3-auth-key=<key>]
     [--v3-auth-proto=<%s>]
@@ -569,16 +532,15 @@ try:
     opts, params = getopt.getopt(sys.argv[1:], 'hv', [
         'help', 'version', 'debug=', 'daemonize', 'process-user=',
         'process-group=', 'pid-file=', 'logging-method=', 'device-dir=',
-        'data-dir=', 'cache-dir=', 'variation-modules-dir=', 
+        'cache-dir=', 'variation-modules-dir=', 
         'force-index-rebuild', 'validate-device-data', 'validate-data',
         'v2c-arch', 'v3-only', 'transport-id-offset=', 
         'variation-module-options=',
-        'agent-address=', 'agent-port=',  # legacy
+        'args-from-file=',
         # this option starts new SNMPv3 engine configuration
+        'data-dir=',
         'v3-engine-id=',
-        'agent-udpv4-endpoint=', 'agent-udpv6-endpoint=',
-        'agent-unix-endpoint=', 'agent-udpv4-endpoints-list=', 
-        'agent-udpv6-endpoints-list=', 'agent-unix-endpoints-list=', 
+        'agent-udpv4-endpoint=','agent-udpv6-endpoint=','agent-unix-endpoint=',
         'v3-user=',
         'v3-auth-key=', 'v3-auth-proto=', 
         'v3-priv-key=', 'v3-priv-proto='
@@ -592,6 +554,8 @@ if params:
     sys.exit(-1)
 
 log.setLogger('snmpsimd', 'stdout')
+
+v3Args = []
 
 for opt in opts:
     if opt[0] == '-h' or opt[0] == '--help':
@@ -632,7 +596,10 @@ Software documentation and support at http://snmpsim.sf.net
             sys.stderr.write('%s\r\n%s\r\n' % (sys.exc_info()[1], helpMessage))
             sys.exit(-1)
     elif opt[0] in ('--device-dir', '--data-dir'):
-        confdir.data.insert(0, opt[1])
+        if '--v3-engine-id' in [ x[0] for x in v3Args ]:
+            v3Args.append(opt)
+        else:
+            confdir.data.insert(0, opt[1])
     elif opt[0] == '--cache-dir':
         confdir.cache = opt[1]
     elif opt[0] == '--variation-modules-dir':
@@ -665,97 +632,59 @@ Software documentation and support at http://snmpsim.sf.net
         except:
             sys.stderr.write('ERROR: %s\r\n%s\r\n' % (sys.exc_info()[1], helpMessage))
             sys.exit(-1)
-    elif opt[0] == '--v3-engine-id':
-        v3EngineId = opt[1]
-    elif opt[0] == '--agent-address':
-        sys.stderr.write('ERROR: use --agent-udpv4-endpoint=%s option instead of --agent-address\r\n%s\r\n' % (opt[1], helpMessage))
+    # processing of the following args is postponed till SNMP engine startup
+    elif opt[0] in ('--agent-udpv4-endpoint',
+                    '--agent-udpv6-endpoint',
+                    '--agent-unix-endpoint') :
+        v3Args.append(opt)
+    elif opt[0] in ('--agent-udpv4-endpoints-list',
+                    '--agent-udpv6-endpoints-list',
+                    '--agent-unix-endpoints-list'):
+        sys.stderr.write('ERROR: use --args-from-file=<file> option to list many endpoints\r\n%s\r\n' % helpMessage)
         sys.exit(-1)
-    elif opt[0] == '--agent-port':
-        sys.stderr.write('ERROR: use --agent-udpv4-endpoint=0.0.0.0:%s option instead of --agent-port\r\n%s\r\n' % (opt[1], helpMessage))
-        sys.exit(-1)
-    elif opt[0] == '--agent-udpv4-endpoint':
+    elif opt[0] in ('--v3-engine-id', '--v3-user', '--v3-auth-key', 
+                    '--v3-auth-proto', '--v3-priv-key', '--v3-priv-proto'):
+        v3Args.append(opt)
+    elif opt[0] == '--args-from-file':
         try:
-            agentUDPv4Endpoints.add(opt[1])
+            v3Args.extend(
+                [x.split('=', 1) for x in open(opt[1]).read().split()]
+            )
+        except:
+            sys.stderr.write('ERROR: file %s opening failure: %s\r\n%s\r\n' % (opt[1], sys.exc_info()[1], helpMessage))
+            sys.exit(-1)
+
+if v2cArch and (v3Only or [ x for x in v3Args if x[0][:4] == '--v3' ]):
+    sys.stderr.write('ERROR: either of --v2c-arch or --v3-* options should be used\r\n%s\r\n' % helpMessage)
+    sys.exit(-1)
+
+for opt in tuple(v3Args):
+    if opt[0] == '--agent-udpv4-endpoint':
+        try:
+            v3Args.append((opt[0], IPv4TransportEndpoints().add(opt[1])))
         except:
             sys.stderr.write('ERROR: %s\r\n%s\r\n' % (sys.exc_info()[1], helpMessage))
             sys.exit(-1)
     elif opt[0] == '--agent-udpv6-endpoint':
         try:
-            agentUDPv6Endpoints.add(opt[1])
+            v3Args.append((opt[0], IPv6TransportEndpoints().add(opt[1])))
         except:
             sys.stderr.write('ERROR: %s\r\n%s\r\n' % (sys.exc_info()[1], helpMessage))
             sys.exit(-1)
     elif opt[0] == '--agent-unix-endpoint':
         try:
-            agentUNIXEndpoints.add(opt[1])
+            v3Args.append((opt[0], UNIXTransportEndpoints().add(opt[1])))
         except:
             sys.stderr.write('ERROR: %s\r\n%s\r\n' % (sys.exc_info()[1], helpMessage))
             sys.exit(-1)
-    elif opt[0] == '--agent-udpv4-endpoints-list':
-        try:
-            agentUDPv4Endpoints.load(opt[1])
-        except:
-            sys.stderr.write('ERROR: %s\r\n%s\r\n' % (sys.exc_info()[1], helpMessage))
-            sys.exit(-1)
-    elif opt[0] == '--agent-udpv6-endpoints-list':
-        try:
-            agentUDPv6Endpoints.load(opt[1])
-        except:
-            sys.stderr.write('ERROR: %s\r\n%s\r\n' % (sys.exc_info()[1], helpMessage))
-            sys.exit(-1)
-    elif opt[0] == '--agent-unix-endpoints-list':
-        try:
-            agentUNIXEndpoints.load(opt[1])
-        except:
-            sys.stderr.write('ERROR: %s\r\n%s\r\n' % (sys.exc_info()[1], helpMessage))
-            sys.exit(-1)
-    elif opt[0] == '--v3-user':
-        v3Users.append(opt[1])
-    elif opt[0] == '--v3-auth-key':
-        v3AuthKeys[v3Users[-1]] = opt[1]
-    elif opt[0] == '--v3-auth-proto':
-        v3AuthProtos[v3Users[-1]] = opt[1].upper()
-        if v3AuthProtos[v3Users[-1]] not in authProtocols:
-            sys.stderr.write('ERROR: bad v3 auth protocol %s\r\n%s\r\n' % (v3AuthProtos[v3Users[-1]], helpMessage))
-            sys.exit(-1)
-    elif opt[0] == '--v3-priv-key':
-        v3PrivKeys[v3Users[-1]] = opt[1]
-    elif opt[0] == '--v3-priv-proto':
-        v3PrivProtos[v3Users[-1]] = opt[1].upper()
-        if v3PrivProtos[v3Users[-1]] not in privProtocols:
-            sys.stderr.write('ERROR: bad v3 privacy protocol %s\r\n%s\r\n' % (v3PrivProtos[v3Users[-1]], helpMessage))
-            sys.exit(-1)
-
-for v3User in v3Users:
-    if v3User in v3AuthKeys:
-        if v3User not in v3AuthProtos:
-            v3AuthProtos[v3User] = 'MD5'
     else:
-        v3AuthKeys[v3User] = None
-        v3AuthProtos[v3User] = 'NONE'
-    if v3User in v3PrivKeys:
-        if v3User not in v3PrivProtos:
-            v3PrivProtos[v3User] = 'DES'
-    else:
-        v3PrivKeys[v3User] = None
-        v3PrivProtos[v3User] = 'NONE'
-    if authProtocols[v3AuthProtos[v3User]] == config.usmNoAuthProtocol and \
-            privProtocols[v3PrivProtos[v3User]] != config.usmNoPrivProtocol:
-        sys.stderr.write('ERROR: privacy impossible without authentication\r for USM user %s\n%s\r\n', (v3User, helpMessage))
-        sys.exit(-1)
+        v3Args.append(opt) 
 
-if not v3Users:
-    v3Users = [ 'simulator' ]
-    v3AuthKeys[v3Users[0]] = 'auctoritas'
-    v3AuthProtos[v3Users[0]] = 'MD5'
-    v3PrivKeys[v3Users[0]] = 'privatus'
-    v3PrivProtos[v3Users[0]] = 'DES'
-
-if not agentUDPv4Endpoints and \
-        not agentUDPv6Endpoints and \
-        not agentUNIXEndpoints:
+if v3Args[:len(v3Args)//2] == v3Args[len(v3Args)//2:]:
     sys.stderr.write('ERROR: agent endpoint address(es) not specified\r\n%s\r\n' % helpMessage)
     sys.exit(-1)
+else:
+    v3Args = v3Args[len(v3Args)//2:]
 
 try:
     daemon.dropPrivileges(procUser, procGroup)
@@ -769,6 +698,8 @@ if not foregroundFlag:
     except:
         sys.stderr.write('ERROR: cant daemonize process: %s\r\n%s\r\n' % (sys.exc_info()[1], helpMessage))
         sys.exit(-1)
+
+# hook up variation modules
 
 for variationModulesDir in confdir.variation:
     log.msg('Scanning "%s" directory for variation modules...' % variationModulesDir)
@@ -826,32 +757,6 @@ if not os.path.exists(confdir.cache):
     else:
         log.msg('Cache directory %s created' % confdir.cache)
 
-
-# Basic SNMP engine configuration
-
-if v2cArch:
-    contexts = { univ.OctetString('index'): dataIndexInstrumController }
-else:
-    try:
-        if v3EngineId:
-            v3EngineId = univ.OctetString(hexValue=v3EngineId)
-        snmpEngine = engine.SnmpEngine(snmpEngineID=v3EngineId)
-    except:
-        log.msg('ERROR: SNMPv3 Engine initialization failed, EngineID "%s": %s' % (v3EngineId is not None and v3EngineId.prettyPrint() or '<default>', sys.exc_info()[1]))
-        sys.exit(-1)
-
-    config.addContext(snmpEngine, '')
-
-    snmpContext = context.SnmpContext(snmpEngine)
-        
-    for v3User in v3Users:
-        config.addV3User(
-            snmpEngine,
-            v3User,
-            authProtocols[v3AuthProtos[v3User]], v3AuthKeys[v3User],
-            privProtocols[v3PrivProtos[v3User]], v3PrivKeys[v3User]
-        )
-
 if variationModules:
     log.msg('Initializing variation modules...')
     for name, modulesContexts in variationModules.items():
@@ -861,9 +766,7 @@ if variationModules:
                 log.msg('ERROR: missing %s handler in %s!' % (x, name))
                 sys.exit(-1)
         try:
-            body['init'](snmpEngine=not v2cArch and snmpEngine or None,
-                         options=body['args'],
-                         mode='variating')
+            body['init'](options=body['args'], mode='variating')
         except Exception:
             log.msg('Module %s load FAILED: %s' % (name,sys.exc_info()[1]))
         else:
@@ -871,60 +774,62 @@ if variationModules:
 
 # Build pysnmp Managed Objects base from data files information
 
-_mibInstrums = {}
-_dataFiles = {}
+def configureManagedObjects(dataDirs, dataIndexInstrumController,
+                            snmpEngine=None, snmpContext=None):
+    _mibInstrums = {}
+    _dataFiles = {}
 
-for dataDir in confdir.data:
-    log.msg('Scanning "%s" directory for %s data files...' % (dataDir, ','.join([' *%s%s' % (os.path.extsep, x.ext) for x in recordSet.values()]))
-    )
-    if not os.path.exists(dataDir):
-        log.msg('Directory %s does not exist' % dataDir)
-        continue
-    log.msg('%s' % ('='*66,))
-    for fullPath, textParser, communityName in getDataFiles(dataDir):
-        if communityName in _dataFiles:
-            log.msg('WARNING: ignoring duplicate Community/ContextName "%s" for data file %s (%s already loaded)' % (communityName, fullPath, _dataFiles[communityName]))
+    for dataDir in dataDirs:
+        log.msg('Scanning "%s" directory for %s data files...' % (dataDir, ','.join([' *%s%s' % (os.path.extsep, x.ext) for x in recordSet.values()]))
+        )
+        if not os.path.exists(dataDir):
+            log.msg('Directory %s does not exist' % dataDir)
             continue
-        elif fullPath in _mibInstrums:
-            mibInstrum = _mibInstrums[fullPath]
-            log.msg('Configuring *shared* %s' % (mibInstrum,))
-        else:
-            dataFile = DataFile(fullPath, textParser).indexText(forceIndexBuild)
-            mibInstrum = mibInstrumControllerSet[dataFile.layout](dataFile)
+        log.msg('%s' % ('='*66,))
+        for fullPath, textParser, communityName in getDataFiles(dataDir):
+            if communityName in _dataFiles:
+                log.msg('WARNING: ignoring duplicate Community/ContextName "%s" for data file %s (%s already loaded)' % (communityName, fullPath, _dataFiles[communityName]))
+                continue
+            elif fullPath in _mibInstrums:
+                mibInstrum = _mibInstrums[fullPath]
+                log.msg('Configuring *shared* %s' % (mibInstrum,))
+            else:
+                dataFile = DataFile(fullPath, textParser).indexText(forceIndexBuild)
+                mibInstrum = mibInstrumControllerSet[dataFile.layout](dataFile)
 
-            _mibInstrums[fullPath] = mibInstrum
-            _dataFiles[communityName] = fullPath
+                _mibInstrums[fullPath] = mibInstrum
+                _dataFiles[communityName] = fullPath
 
-            log.msg('Configuring %s' % (mibInstrum,))
+                log.msg('Configuring %s' % (mibInstrum,))
 
-        log.msg('SNMPv1/2c community name: %s' % (communityName,))
+            log.msg('SNMPv1/2c community name: %s' % (communityName,))
 
-        if v2cArch:
-            contexts[univ.OctetString(communityName)] = mibInstrum
-        
-            dataIndexInstrumController.addDataFile(
-                fullPath, communityName
-            )
-        else:
-            agentName = contextName = md5(univ.OctetString(communityName).asOctets()).hexdigest()
-
-            if not v3Only:
-                config.addV1System(
-                    snmpEngine, agentName, communityName, contextName=contextName
+            if v2cArch:
+                contexts[univ.OctetString(communityName)] = mibInstrum
+            
+                dataIndexInstrumController.addDataFile(
+                    fullPath, communityName
                 )
+            else:
+                agentName = contextName = md5(univ.OctetString(communityName).asOctets()).hexdigest()
 
-            snmpContext.registerContextName(contextName, mibInstrum)
-                 
-            dataIndexInstrumController.addDataFile(
-                fullPath, communityName, contextName
-            )
-                 
-            log.msg('SNMPv3 context name: %s' % (contextName,))
-        
-        log.msg('%s' % ('-+' * 33,))
-        
-del _mibInstrums
-del _dataFiles
+                if not v3Only:
+                    config.addV1System(
+                        snmpEngine, agentName, communityName, contextName=contextName
+                    )
+
+                snmpContext.registerContextName(contextName, mibInstrum)
+                         
+                dataIndexInstrumController.addDataFile(
+                    fullPath, communityName, contextName
+                )
+                         
+                log.msg('SNMPv3 context name: %s' % (contextName,))
+                
+            log.msg('%s' % ('-+' * 33,))
+                
+    del _mibInstrums
+    del _dataFiles
 
 if v2cArch:
     def getBulkHandler(reqVarBinds, nonRepeaters, maxRepetitions, readNextVars):
@@ -947,7 +852,7 @@ if v2cArch:
             M = M - 1
 
         return rspVarBinds
- 
+
     def commandResponderCbFun(transportDispatcher, transportDomain,
                               transportAddress, wholeMsg):
         while wholeMsg:
@@ -1026,78 +931,326 @@ if v2cArch:
             
         return wholeMsg
 
+else: # v3arch
+    def probeHashContext(self, snmpEngine, stateReference, contextName):
+        transportDomain, transportAddress = snmpEngine.msgAndPduDsp.getTransportInfo(stateReference)
+
+        for candidate in probeContext(transportDomain, transportAddress, contextName):
+            probedContextName = md5(candidate).hexdigest()
+            try:
+                mibInstrum = self.snmpContext.getMibInstrum(probedContextName)
+            except error.PySnmpError:
+                pass
+            else:
+                log.msg('Using %s selected by candidate %s; transport ID %s, source address %s, context name "%s"' % (mibInstrum, candidate, univ.ObjectIdentifier(transportDomain), transportAddress[0], probedContextName))
+                return probedContextName
+
+        log.msg('Using %s selected by contextName "%s", transport ID %s, source address %s' % (self.snmpContext.getMibInstrum(contextName), contextName, univ.ObjectIdentifier(transportDomain), transportAddress[0]))
+
+        return contextName
+
+    class GetCommandResponder(cmdrsp.GetCommandResponder):
+        def handleMgmtOperation(
+                self, snmpEngine, stateReference, contextName, PDU, acInfo
+            ):
+            cmdrsp.GetCommandResponder.handleMgmtOperation(
+                self, snmpEngine, stateReference, 
+                probeHashContext(self, snmpEngine, stateReference, contextName),
+                PDU, acInfo
+            )
+
+    class SetCommandResponder(cmdrsp.SetCommandResponder):
+        def handleMgmtOperation(
+                self, snmpEngine, stateReference, contextName, PDU, acInfo
+            ):
+            cmdrsp.SetCommandResponder.handleMgmtOperation(
+                self, snmpEngine, stateReference, 
+                probeHashContext(self, snmpEngine, stateReference, contextName),
+                PDU, acInfo
+            )
+
+    class NextCommandResponder(cmdrsp.NextCommandResponder):
+        def handleMgmtOperation(
+                self, snmpEngine, stateReference, contextName, PDU, acInfo
+            ):
+            cmdrsp.NextCommandResponder.handleMgmtOperation(
+                self, snmpEngine, stateReference, 
+                probeHashContext(self, snmpEngine, stateReference, contextName),
+                PDU, acInfo
+            )
+
+    class BulkCommandResponder(cmdrsp.BulkCommandResponder):
+        def handleMgmtOperation(
+                self, snmpEngine, stateReference, contextName, PDU, acInfo
+            ):
+            cmdrsp.BulkCommandResponder.handleMgmtOperation(
+                self, snmpEngine, stateReference, 
+                probeHashContext(self, snmpEngine, stateReference, contextName),
+                PDU, acInfo
+            )
+
+# Start configuring SNMP engine(s)
+
+transportDispatcher = AsynsockDispatcher()
+
+if v2cArch:
     # Configure access to data index
-    
+   
+    dataIndexInstrumController = DataIndexInstrumController()
+ 
+    contexts = { univ.OctetString('index'): dataIndexInstrumController }
+
+    configureManagedObjects(confdir.data, dataIndexInstrumController)
+
     contexts['index'] = dataIndexInstrumController
     
+    agentUDPv4Endpoints = []
+    agentUDPv6Endpoints = []
+    agentUnixEndpoints = []
+
+    for opt in v3Args:
+        if opt[0] == '--agent-udpv4-endpoint':
+            agentUDPv4Endpoints.append(opt[1])
+        elif opt[0] == '--agent-udpv6-endpoint':
+            agentUDPv6Endpoints.append(opt[1])
+        elif opt[0] == '--agent-unix-endpoint':
+            agentUnixEndpoints.append(opt[1])
+
+    if not agentUDPv4Endpoints and \
+            not agentUDPv6Endpoints and \
+            not agentUnixEndpoints:
+        log.msg('ERROR: agent endpoint address(es) not specified for SNMP engine ID %s' % v3EngineId)
+        sys.exit(-1)
+
     # Configure socket server
    
-    transportDispatcher = AsynsockDispatcher()
-    for idx in range(len(agentUDPv4Endpoints)):
+    transportIndex = transportIdOffset
+    for agentUDPv4Endpoint in agentUDPv4Endpoints:
+        transportDomain = udp.domainName + (transportIndex,)
+        transportIndex += 1
         transportDispatcher.registerTransport(
-                udp.domainName + (transportIdOffset+idx,), agentUDPv4Endpoints[idx][0]
-            )
-        log.msg('Listening at UDP/IPv4 endpoint %s, transport ID %s' % (agentUDPv4Endpoints[idx][1], '.'.join([str(x) for x in udp.domainName + (transportIdOffset+idx,)]),))
-    for idx in range(len(agentUDPv6Endpoints)):
+                transportDomain, agentUDPv4Endpoint[0]
+        )
+        log.msg('Listening at UDP/IPv4 endpoint %s, transport ID %s' % (agentUDPv4Endpoint[1], '.'.join([str(x) for x in transportDomain])))
+
+    transportIndex = transportIdOffset
+    for agentUDPv6Endpoint in agentUDPv6Endpoints:
+        transportDomain = udp6.domainName + (transportIndex,)
+        transportIndex += 1
         transportDispatcher.registerTransport(
-                udp6.domainName + (transportIdOffset+idx,), agentUDPv6Endpoints[idx][0]
-            )
-        log.msg('Listening at UDP/IPv6 endpoint %s, transport ID %s' % (agentUDPv6Endpoints[idx][1], '.'.join([str(x) for x in udp6.domainName + (transportIdOffset+idx,)]),))
-    for idx in range(len(agentUNIXEndpoints)):
+                transportDomain, agentUDPv4Endpoint[0]
+        )
+        log.msg('Listening at UDP/IPv6 endpoint %s, transport ID %s' % (agentUDPv4Endpoint[1], '.'.join([str(x) for x in transportDomain])))
+
+    transportIndex = transportIdOffset
+    for agentUnixEndpoint in agentUnixEndpoints:
+        transportDomain = unix.domainName + (transportIndex,)
+        transportIndex += 1
         transportDispatcher.registerTransport(
-                unix.domainName + (transportIdOffset+idx,), agentUNIXEndpoints[idx][0]
-            )
-        log.msg('Listening at UNIX domain endpoint %s, transport ID %s' % (agentUNIXEndpoints[idx][1], '.'.join([str(x) for x in unix.domainName + (transportIdOffset+idx,)])))
+                transportDomain, agentUnixEndpoint[0]
+        )
+        log.msg('Listening at UNIX domain socket endpoint %s, transport ID %s' % (agentUnixEndpoint[1], '.'.join([str(x) for x in transportDomain])))
+
     transportDispatcher.registerRecvCbFun(commandResponderCbFun)
-else:
-    snmpEngineId, = snmpEngine.msgAndPduDsp.mibInstrumController.mibBuilder.importSymbols('__SNMP-FRAMEWORK-MIB', 'snmpEngineID')
-    log.msg('SNMPv3 EngineID %s' % snmpEngineId.syntax.prettyPrint())
-    for v3User in v3Users:
-        log.msg('%s' % ('-'*66,))
-        log.msg('SNMPv3 USM SecurityName: %s' % v3User)
-        if authProtocols[v3AuthProtos[v3User]] != config.usmNoAuthProtocol:
-            log.msg('SNMPv3 USM authentication key: %s, authentication protocol: %s' % (v3AuthKeys[v3User], v3AuthProtos[v3User]))
-            if privProtocols[v3PrivProtos[v3User]] != config.usmNoPrivProtocol:
-                log.msg('SNMPv3 USM encryption (privacy) key: %s, encryption protocol: %s' % (v3PrivKeys[v3User], v3PrivProtos[v3User]))
+ 
+else:  # v3 mode
+    if hasattr(transportDispatcher, 'registerRoutingCbFun'):
+        transportDispatcher.registerRoutingCbFun(lambda td,t,d: td)
+    else:
+        log.msg('WARNING: upgrade pysnmp to 4.2.5 or later get multi-engine ID feature working!')
 
-    # Configure access to data index
+    if v3Args and v3Args[0][0] != '--v3-engine-id':
+        v3Args.insert(0, ('--v3-engine-id', 'auto'))
+    v3Args.append(('end-of-options', ''))
 
-    config.addV1System(snmpEngine, 'index',
-                       'index', contextName='index')
+    snmpEngine = None
+    transportIndex = { 'udpv4': transportIdOffset,
+                       'udpv6': transportIdOffset,
+                       'unix': transportIdOffset }
 
-    snmpContext.registerContextName(
-        'index', dataIndexInstrumController
-        )
+    for opt in v3Args:
+        if opt[0] in ('--v3-engine-id', 'end-of-options'):
+            if snmpEngine:
+                log.msg('%s' % ('*'*66,))
 
-    # Configure socket server
+                dataIndexInstrumController = DataIndexInstrumController()
 
-    for idx in range(len(agentUDPv4Endpoints)):
-        config.addSocketTransport(
-            snmpEngine,
-            udp.domainName + (transportIdOffset+idx,), agentUDPv4Endpoints[idx][0]
-        )
-        log.msg('Listening at UDP/IPv4 endpoint %s, transport ID %s' % (agentUDPv4Endpoints[idx][1], '.'.join([str(x) for x in udp.domainName + (transportIdOffset+idx,)]),))
-    for idx in range(len(agentUDPv6Endpoints)):
-        config.addSocketTransport(
-            snmpEngine,
-            udp6.domainName + (transportIdOffset+idx,), agentUDPv6Endpoints[idx][0]
-        )
-        log.msg('Listening at UDP/IPv6 endpoint %s, transport ID %s' % (agentUDPv6Endpoints[idx][1], '.'.join([str(x) for x in udp6.domainName + (transportIdOffset+idx,)]),))
-    for idx in range(len(agentUNIXEndpoints)):
-        config.addSocketTransport(
-            snmpEngine,
-            unix.domainName + (transportIdOffset+idx,), agentUNIXEndpoints[idx][0]
-        )
-        log.msg('Listening at UNIX domain endpoint %s, transport ID %s' % (agentUNIXEndpoints[idx][1], '.'.join([str(x) for x in unix.domainName + (transportIdOffset+idx,)])))
+                configureManagedObjects(dataDirs and dataDirs or confdir.data, 
+                                        dataIndexInstrumController,
+                                        snmpEngine,
+                                        snmpContext)
 
-    # SNMP applications
+                # Configure access to data index
 
-    GetCommandResponder(snmpEngine, snmpContext)
-    SetCommandResponder(snmpEngine, snmpContext)
-    NextCommandResponder(snmpEngine, snmpContext)
-    BulkCommandResponder(snmpEngine, snmpContext)
+                config.addV1System(snmpEngine, 'index',
+                                   'index', contextName='index')
 
-    transportDispatcher = snmpEngine.transportDispatcher
+                log.msg('SNMPv3 EngineID: %s' % (hasattr(snmpEngine, 'snmpEngineID') and snmpEngine.snmpEngineID.prettyPrint() or '<unknown>',))
+
+                if not v3Users:
+                    v3Users = [ 'simulator' ]
+                    v3AuthKeys[v3Users[0]] = None not in v3AuthKeys and \
+                                             'auctoritas' or v3AuthKeys[None]
+                    v3AuthProtos[v3Users[0]] = None not in v3AuthProtos and \
+                                             'MD5' or v3AuthProtos[None]
+                    v3PrivKeys[v3Users[0]] = None not in v3PrivKeys and \
+                                             'privatus' or v3PrivKeys[None]
+                    v3PrivProtos[v3Users[0]] = None not in v3PrivProtos and \
+                                               'DES' or v3PrivProtos[None]
+
+                for v3User in v3Users:
+                    if v3User in v3AuthKeys:
+                        if v3User not in v3AuthProtos:
+                            v3AuthProtos[v3User] = 'MD5'
+                    else:
+                        v3AuthKeys[v3User] = None
+                        v3AuthProtos[v3User] = 'NONE'
+                    if v3User in v3PrivKeys:
+                        if v3User not in v3PrivProtos:
+                            v3PrivProtos[v3User] = 'DES'
+                    else:
+                        v3PrivKeys[v3User] = None
+                        v3PrivProtos[v3User] = 'NONE'
+                    if authProtocols[v3AuthProtos[v3User]] == config.usmNoAuthProtocol and privProtocols[v3PrivProtos[v3User]] != config.usmNoPrivProtocol:
+                        log.msg('ERROR: privacy impossible without authentication for USM user %s' % v3User)
+                        sys.exit(-1)
+
+                    try:
+                        config.addV3User(
+                            snmpEngine,
+                            v3User,
+                            authProtocols[v3AuthProtos[v3User]],
+                            v3AuthKeys[v3User],
+                            privProtocols[v3PrivProtos[v3User]], 
+                            v3PrivKeys[v3User]
+                        )
+                    except error.PySnmpError:
+                        log.msg('ERROR: bad USM values for user %s: %s' % (v3User, sys.exc_info()[1]))
+                        sys.exit(-1)
+
+                    log.msg('SNMPv3 USM SecurityName: %s' % v3User)
+
+                    if authProtocols[v3AuthProtos[v3User]] != config.usmNoAuthProtocol:
+                        log.msg('SNMPv3 USM authentication key: %s, authentication protocol: %s' % (v3AuthKeys[v3User], v3AuthProtos[v3User]))
+                    if privProtocols[v3PrivProtos[v3User]] != config.usmNoPrivProtocol:
+                        log.msg('SNMPv3 USM encryption (privacy) key: %s, encryption protocol: %s' % (v3PrivKeys[v3User], v3PrivProtos[v3User]))
+
+
+                snmpContext.registerContextName(
+                    'index', dataIndexInstrumController
+                )
+
+                # Configure socket server
+
+                if not agentUDPv4Endpoints and \
+                        not agentUDPv6Endpoints and \
+                        not agentUnixEndpoints:
+                    log.msg('ERROR: agent endpoint address(es) not specified for SNMP engine ID %s' % v3EngineId)
+                    sys.exit(-1)
+
+                for agentUDPv4Endpoint in agentUDPv4Endpoints:
+                    transportDomain = udp.domainName + \
+                            (transportIndex['udpv4'],)
+                    transportIndex['udpv4'] += 1
+                    snmpEngine.registerTransportDispatcher(
+                        transportDispatcher, transportDomain
+                    )
+                    config.addSocketTransport(
+                        snmpEngine,
+                        transportDomain, agentUDPv4Endpoint[0]
+                    )
+                    log.msg('Listening at UDP/IPv4 endpoint %s, transport ID %s' % (agentUDPv4Endpoint[1], '.'.join([str(x) for x in transportDomain])))
+
+                for agentUDPv6Endpoint in range(len(agentUDPv6Endpoints)):
+                    transportDomain = udp6.domainName + \
+                            (transportIndex['udpv6'],)
+                    transportIndex['udpv6'] += 1
+                    snmpEngine.registerTransportDispatcher(
+                        transportDispatcher, transportDomain
+                    )
+                    config.addSocketTransport(
+                        snmpEngine,
+                        transportDomain, agentUDPv6Endpoint[0]
+                    )
+                    log.msg('Listening at UDP/IPv6 endpoint %s, transport ID %s' % (agentUDPv6Endpoint[1], '.'.join([str(x) for x in transportDomains[-1]])))
+
+                for idx in range(len(agentUnixEndpoints)):
+                    transportDomain = unix.domainName + \
+                            (transportIndex['unix'],)
+                    transportIndex['unix'] += 1
+                    snmpEngine.registerTransportDispatcher(
+                        transportDispatcher, transportDomain
+                    )
+                    config.addSocketTransport(
+                        snmpEngine,
+                        transportDomain, agentUNIXEndpoint[0]
+                    )
+                    log.msg('Listening at UNIX domain socket endpoint %s, transport ID %s' % (agentUNIXEndpoint[1], '.'.join([str(x) for x in transportDomains[-1]])))
+
+                # SNMP applications
+                GetCommandResponder(snmpEngine, snmpContext)
+                SetCommandResponder(snmpEngine, snmpContext)
+                NextCommandResponder(snmpEngine, snmpContext)
+                BulkCommandResponder(snmpEngine, snmpContext)
+
+            if opt[0] == 'end-of-options':
+                break
+
+            # Prepare for next engine ID configuration
+
+            dataDirs = []
+            v3Users = []
+            v3AuthKeys = {}; v3AuthProtos = {}
+            v3PrivKeys = {}; v3PrivProtos = {}
+            agentUDPv4Endpoints = []
+            agentUDPv6Endpoints = []
+            agentUnixEndpoints = []
+
+            try:
+                v3EngineId = opt[1]
+                if v3EngineId.lower() == 'auto':
+                    snmpEngine = engine.SnmpEngine()
+                else:
+                    snmpEngine = engine.SnmpEngine(
+                        snmpEngineID=univ.OctetString(hexValue=v3EngineId)
+                    )
+            except:
+                log.msg('ERROR: SNMPv3 Engine initialization failed, EngineID "%s": %s' % (v3EngineId, sys.exc_info()[1]))
+                sys.exit(-1)
+
+            
+            config.addContext(snmpEngine, '')
+
+            snmpContext = context.SnmpContext(snmpEngine)
+
+        elif opt[0] == '--data-dir':
+            dataDirs.append(opt[1])
+        elif opt[0] == '--v3-user':
+            v3Users.append(opt[1])
+            if None in v3AuthKeys:
+                v3AuthKeys[None] = v3Users[-1]
+        elif opt[0] == '--v3-auth-key':
+            v3AuthKeys[v3Users and v3Users[-1] or None] = opt[1]
+        elif opt[0] == '--v3-auth-proto':
+            if opt[1].upper() not in authProtocols:
+                log.msg('ERROR: bad v3 auth protocol %s' % opt[1])
+                sys.exit(-1)
+            else:
+                v3AuthProtos[v3Users and v3Users[-1] or None] = opt[1].upper()
+        elif opt[0] == '--v3-priv-key':
+            v3PrivKeys[v3Users and v3Users[-1] or None] = opt[1]
+        elif opt[0] == '--v3-priv-proto':
+            if opt[1].upper() not in privProtocols:
+                log.msg('ERROR: bad v3 privacy protocol %s' % opt[1])
+                sys.exit(-1)
+            else:
+                v3PrivProtos[v3Users and v3Users[-1] or None] = opt[1].upper()
+        elif opt[0] == '--agent-udpv4-endpoint':
+            agentUDPv4Endpoints.append(opt[1])
+        elif opt[0] == '--agent-udpv6-endpoint':
+            agentUDPv6Endpoints.append(opt[1])
+        elif opt[0] == '--agent-unix-endpoint':
+            agentUnixEndpoints.append(opt[1])
 
 # Run mainloop
 
@@ -1119,8 +1272,7 @@ if variationModules:
     for name, contexts in variationModules.items():
         body = contexts[0]
         try:
-            body['shutdown'](snmpEngine=not v2cArch and snmpEngine or None,
-                             options=body['args'], mode='variation')
+            body['shutdown'](options=body['args'], mode='variation')
         except Exception:
             log.msg('Module %s shutdown FAILED: %s' % (name, sys.exc_info()[1]))
         else:

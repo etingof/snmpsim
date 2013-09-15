@@ -7,13 +7,7 @@ from pysnmp.proto import rfc1902
 from snmpsim.grammar.snmprec import SnmprecGrammar
 from snmpsim import error, log
 
-def init(**context):
-    global ntfOrg
-    if context['mode'] == 'variating':
-        if 'snmpEngine' in context and context['snmpEngine']:
-            ntfOrg = ntforg.AsynNotificationOriginator(context['snmpEngine'])
-        else:
-            ntfOrg = None
+def init(**context): pass
 
 typeMap = {
     's': rfc1902.OctetString,
@@ -37,8 +31,10 @@ def _cbFun(sendRequestHandle,
         log.msg('notification: for %s=%r failed with errorIndication %s, errorStatus %s' % (oid, value, errorIndication, errorStatus))
 
 def variate(oid, tag, value, **context):
-    if ntfOrg is None:
-        raise error.SnmpsimError('variation module not initialized')
+    if 'snmpEngine' in context and context['snmpEngine']:
+        ntfOrg = ntforg.AsynNotificationOriginator(context['snmpEngine'])
+    else:
+        raise error.SnmpsimError('variation module not given snmpEngine')
 
     if not context['nextFlag'] and not context['exactMatch']:
         return context['origOid'], tag, context['errorStatus']
