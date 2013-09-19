@@ -18,6 +18,8 @@ from snmpsim.record import snmprec
 verboseFlag = True
 startOID = stopOID = None
 outputFile = sys.stderr
+if hasattr(outputFile, 'buffer'):
+    outputFile = outputFile.buffer
 stringPool = 'Portez ce vieux whisky au juge blond qui fume!'.split()
 counterRange = (0, 0xffffffff)
 counter64Range = (0, 0xffffffffffffffff)
@@ -354,3 +356,6 @@ for modName in modNames:
         sys.stdout.write(
             '# End of %s, %s OID(s) dumped\r\n' % (modName, len(unique))
         )
+
+outputFile.flush()
+outputFile.close()

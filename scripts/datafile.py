@@ -17,6 +17,8 @@ startOID = stopOID = None
 srcRecordType = dstRecordType = 'snmprec'
 inputFiles = []
 outputFile = sys.stdout
+if hasattr(outputFile, 'buffer'):
+    outputFile = outputFile.buffer
 writtenCount = skippedCount = duplicateCount = brokenCount = variationCount = 0
 
 class SnmprecRecord(snmprec.SnmprecRecord):
@@ -172,9 +174,10 @@ for record in recordsList:
     if record[2]:
         variationCount += 1
 
-outputFile.flush()
-
 if verboseFlag:
     sys.stderr.write(
         '# Records: written %s, filtered out %s, deduplicated %s, broken %s, variated %s\r\n' % (writtenCount, skippedCount, duplicateCount, brokenCount, variationCount)
     )
+
+outputFile.flush()
+outputFile.close()

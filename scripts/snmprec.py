@@ -46,6 +46,8 @@ agentUNIXEndpoint = None
 startOID = univ.ObjectIdentifier('1.3.6')
 stopOID = None
 outputFile = sys.stderr
+if hasattr(outputFile, 'buffer'):
+    outputFile = outputFile.buffer
 variationModuleOptions = ""
 variationModuleName = variationModule = None
 
@@ -557,3 +559,6 @@ log.msg('OIDs dumped: %s, elapsed: %.2f sec, rate: %.2f OIDs/sec' % (cbCtx['tota
 if exc_info:
     for line in traceback.format_exception(*exc_info):
         log.msg(line.replace('\n', ';'))
+
+outputFile.flush()
+outputFile.close()

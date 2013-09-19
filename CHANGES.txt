@@ -30,6 +30,7 @@
 - Fixes to numeric variation module. Also, taglist parameter is now
   defaulted into all numerical types.
 - Fix to PID file creation on daemonization.
+- Fixes to stdio binary mode write to work with Python 3.
 
 0.2.3
 -----

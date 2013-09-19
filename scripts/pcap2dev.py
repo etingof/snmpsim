@@ -434,6 +434,7 @@ for context in contexts:
         else:
             break
 
+    outputFile.flush()
     outputFile.close()
 
 if variationModule:
