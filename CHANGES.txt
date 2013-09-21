@@ -23,6 +23,7 @@
   allow a large number of SNMP engines configured to Simulator. The
   --agent-endpoint*-list= family of options discontinued in favor of
   multiple --agent-*-endpoint options read from args file.
+- Distribute is gone, switching to setuptools completely.
 - The --version option of snmprec.py renamed into --protocol-version.
 - New command-line option --pid-file added.
 - Daemonization under a non-root user now works.
