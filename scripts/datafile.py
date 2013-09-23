@@ -83,6 +83,8 @@ for opt in opts:
         sys.stderr.write("""\
 Synopsis:
   SNMP Simulator data files management and repair tool.
+Documentation:
+  http://snmpsim.sourceforge.net/managing-data-files.html
 %s
 """ % helpMessage)
         sys.exit(-1)
@@ -167,9 +169,16 @@ for record in recordsList:
             continue
         else:
             uniqueIndices.add(record[0])
-    outputFile.write(
-        recordsSet[dstRecordType].format(record[0], record[1], backdoor=record[2])
-    )
+    try:
+        outputFile.write(
+            recordsSet[dstRecordType].format(
+                record[0], record[1], backdoor=record[2]
+            )
+        )
+    except:
+        sys.stderr.write('ERROR: record not written: %s\r\n'%sys.exc_info()[1])
+        break
+
     writtenCount += 1
     if record[2]:
         variationCount += 1
