@@ -338,7 +338,7 @@ class DataFile(AbstractLayout):
                         subtreeFlag = False
                         continue
                 except NoDataNotification:
-                    raise error.PySnmpError()
+                    raise
                 except MibOperationError:
                     raise
                 except Exception:
@@ -903,10 +903,15 @@ if v2cArch:
                     transportAddress
                     ))
                 return wholeMsg
-    
-            varBinds = backendFun(
-                pMod.apiPDU.getVarBinds(reqPDU)
+   
+            try: 
+                varBinds = backendFun(
+                    pMod.apiPDU.getVarBinds(reqPDU)
                 )
+            except NoDataNotification:
+                return wholeMsg
+            except:
+                log.msg('Ignoring SNMP engine failure: %s' % sys.exc_info()[1])
 
             # Poor man's v2c->v1 translation
             errorMap = {  rfc1902.Counter64.tagSet: 5,
@@ -953,41 +958,53 @@ else: # v3arch
         def handleMgmtOperation(
                 self, snmpEngine, stateReference, contextName, PDU, acInfo
             ):
-            cmdrsp.GetCommandResponder.handleMgmtOperation(
-                self, snmpEngine, stateReference, 
-                probeHashContext(self, snmpEngine, stateReference, contextName),
-                PDU, acInfo
-            )
+            try:
+                cmdrsp.GetCommandResponder.handleMgmtOperation(
+                    self, snmpEngine, stateReference, 
+                    probeHashContext(self, snmpEngine, stateReference, contextName),
+                    PDU, acInfo
+                )
+            except NoDataNotification:
+                self.releaseStateInformation(stateReference)
 
     class SetCommandResponder(cmdrsp.SetCommandResponder):
         def handleMgmtOperation(
                 self, snmpEngine, stateReference, contextName, PDU, acInfo
             ):
-            cmdrsp.SetCommandResponder.handleMgmtOperation(
-                self, snmpEngine, stateReference, 
-                probeHashContext(self, snmpEngine, stateReference, contextName),
-                PDU, acInfo
-            )
+            try:
+                cmdrsp.SetCommandResponder.handleMgmtOperation(
+                    self, snmpEngine, stateReference, 
+                    probeHashContext(self, snmpEngine, stateReference, contextName),
+                    PDU, acInfo
+                )
+            except NoDataNotification:
+                self.releaseStateInformation(stateReference)
 
     class NextCommandResponder(cmdrsp.NextCommandResponder):
         def handleMgmtOperation(
                 self, snmpEngine, stateReference, contextName, PDU, acInfo
             ):
-            cmdrsp.NextCommandResponder.handleMgmtOperation(
-                self, snmpEngine, stateReference, 
-                probeHashContext(self, snmpEngine, stateReference, contextName),
-                PDU, acInfo
-            )
+            try:
+                cmdrsp.NextCommandResponder.handleMgmtOperation(
+                    self, snmpEngine, stateReference, 
+                    probeHashContext(self, snmpEngine, stateReference, contextName),
+                    PDU, acInfo
+                )
+            except NoDataNotification:
+                self.releaseStateInformation(stateReference)
 
     class BulkCommandResponder(cmdrsp.BulkCommandResponder):
         def handleMgmtOperation(
                 self, snmpEngine, stateReference, contextName, PDU, acInfo
             ):
-            cmdrsp.BulkCommandResponder.handleMgmtOperation(
-                self, snmpEngine, stateReference, 
-                probeHashContext(self, snmpEngine, stateReference, contextName),
-                PDU, acInfo
-            )
+            try:
+                cmdrsp.BulkCommandResponder.handleMgmtOperation(
+                    self, snmpEngine, stateReference, 
+                    probeHashContext(self, snmpEngine, stateReference, contextName),
+                    PDU, acInfo
+                )
+            except NoDataNotification:
+                self.releaseStateInformation(stateReference)
 
 # Start configuring SNMP engine(s)
 
