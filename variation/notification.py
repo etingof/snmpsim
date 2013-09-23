@@ -167,6 +167,8 @@ def variate(oid, tag, value, **context):
             varBinds, cbInfo=(_cbFun, (oid, value))
         )
 
+        ntfOrg.uncfgCmdGen()
+
         log.msg('notification: sending Notification to %s with credentials %s' % (authData, target))
 
     if context['setFlag'] or 'value' not in args:
