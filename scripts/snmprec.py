@@ -493,6 +493,9 @@ def cbFun(sendRequestHandle, errorIndication, errorStatus, errorIndex,
  
             except error.NoDataNotification:
                 pass
+            except error.SnmpsimError:
+                log.msg('ERROR: %s' % (sys.exc_info()[1],))
+                continue
             else:
                 outputFile.write(line)
 

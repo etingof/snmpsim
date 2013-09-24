@@ -13,6 +13,7 @@ from pysnmp.smi import builder, view, error
 from pysnmp.proto import rfc1902
 from pysnmp import debug
 from snmpsim.record import snmprec
+from snmpsim.error import SnmpsimError
 
 # Defaults
 verboseFlag = True
@@ -352,10 +353,16 @@ for modName in modNames:
                     '# Dropping duplicate OID %s\r\n' % (univ.ObjectIdentifier(oid),)
                 )
         else:
-            outputFile.write(
-                dataFileHandler.format(oid, val)
-            )
-            unique.add(oid)
+            try:
+                outputFile.write(
+                    dataFileHandler.format(oid, val)
+                )
+            except SnmpsimError:
+                sys.stderr.write(
+                    'ERROR: %s\r\n' % (sys.exc_info()[1],)
+                )
+            else:
+                unique.add(oid)
 
     if verboseFlag:
         sys.stderr.write(
