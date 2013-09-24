@@ -45,7 +45,7 @@ agentUDPv6Endpoint = None
 agentUNIXEndpoint = None
 startOID = univ.ObjectIdentifier('1.3.6')
 stopOID = None
-outputFile = sys.stderr
+outputFile = sys.stdout
 if hasattr(outputFile, 'buffer'):
     outputFile = outputFile.buffer
 variationModuleOptions = ""
@@ -96,7 +96,7 @@ Usage: %s [--help]
         '|'.join([ x for x in privProtocols if x != 'NONE' ])
     )
 
-log.setLogger('snmprec', 'stdout')
+log.setLogger('snmprec', 'stderr')
 
 try:
     opts, params = getopt.getopt(sys.argv[1:], 'hv', [

@@ -553,7 +553,7 @@ if params:
     sys.stderr.write('ERROR: extra arguments supplied %s\r\n%s\r\n' % (params, helpMessage))
     sys.exit(-1)
 
-log.setLogger('snmpsimd', 'stdout')
+log.setLogger('snmpsimd', 'stderr')
 
 v3Args = []
 

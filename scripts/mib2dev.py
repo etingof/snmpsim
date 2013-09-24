@@ -17,7 +17,7 @@ from snmpsim.record import snmprec
 # Defaults
 verboseFlag = True
 startOID = stopOID = None
-outputFile = sys.stderr
+outputFile = sys.stdout
 if hasattr(outputFile, 'buffer'):
     outputFile = outputFile.buffer
 stringPool = 'Portez ce vieux whisky au juge blond qui fume!'.split()
@@ -63,11 +63,11 @@ try:
         'unsigned-range=', 'timeticks-range='
     ] )
 except Exception:
-    sys.stdout.write('ERROR: %s\r\n%s\r\n' % (sys.exc_info()[1], helpMessage))
+    sys.stderr.write('ERROR: %s\r\n%s\r\n' % (sys.exc_info()[1], helpMessage))
     sys.exit(-1)
 
 if params:
-    sys.stdout.write('ERROR: extra arguments supplied %s\r\n%s\r\n' % (params, helpMessage))
+    sys.stderr.write('ERROR: extra arguments supplied %s\r\n%s\r\n' % (params, helpMessage))
     sys.exit(-1)    
 
 for opt in opts:
@@ -111,13 +111,13 @@ Software documentation and support at http://snmpsim.sf.net
         try:
             automaticValues = int(opt[1])
         except ValueError:
-            sys.stdout.write('ERROR: bad value %s: %s\r\n' % (opt[1], sys.exc_info()[1]))
+            sys.stderr.write('ERROR: bad value %s: %s\r\n' % (opt[1], sys.exc_info()[1]))
             sys.exit(-1)   
     if opt[0] == '--table-size':
         try:
             tableSize = int(opt[1])
         except ValueError:
-            sys.stdout.write('ERROR: bad value %s: %s\r\n' % (opt[1], sys.exc_info()[1]))
+            sys.stderr.write('ERROR: bad value %s: %s\r\n' % (opt[1], sys.exc_info()[1]))
             sys.exit(-1)   
     if opt[0] == '--output-file':
         outputFile = open(opt[1], 'wb')
@@ -127,43 +127,43 @@ Software documentation and support at http://snmpsim.sf.net
         try:
             counterRange = [int(x) for x in opt[1].split(',')]
         except ValueError:
-            sys.stdout.write('ERROR: bad value %s: %s\r\n' % (opt[1], sys.exc_info()[1]))
+            sys.stderr.write('ERROR: bad value %s: %s\r\n' % (opt[1], sys.exc_info()[1]))
             sys.exit(-1)
     if opt[0] == '--counter64-range':
         try:
             counter64Range = [int(x) for x in opt[1].split(',')]
         except ValueError:
-            sys.stdout.write('ERROR: bad value %s: %s\r\n' % (opt[1], sys.exc_info()[1]))
+            sys.stderr.write('ERROR: bad value %s: %s\r\n' % (opt[1], sys.exc_info()[1]))
             sys.exit(-1)
     if opt[0] == '--gauge-range':
         try:
             gaugeRange = [int(x) for x in opt[1].split(',')]
         except ValueError:
-            sys.stdout.write('ERROR: bad value %s: %s\r\n' % (opt[1], sys.exc_info()[1]))
+            sys.stderr.write('ERROR: bad value %s: %s\r\n' % (opt[1], sys.exc_info()[1]))
             sys.exit(-1)
     if opt[0] == '--timeticks-range':
         try:
             timeticksRange = [int(x) for x in opt[1].split(',')]
         except ValueError:
-            sys.stdout.write('ERROR: bad value %s: %s\r\n' % (opt[1], sys.exc_info()[1]))
+            sys.stderr.write('ERROR: bad value %s: %s\r\n' % (opt[1], sys.exc_info()[1]))
             sys.exit(-1)
     if opt[0] == '--integer32-range':
         try:
             int32Range = [int(x) for x in opt[1].split(',')]
         except ValueError:
-            sys.stdout.write('ERROR: bad value %s: %s\r\n' % (opt[1], sys.exc_info()[1]))
+            sys.stderr.write('ERROR: bad value %s: %s\r\n' % (opt[1], sys.exc_info()[1]))
             sys.exit(-1)
     if opt[0] == '--unsigned-range':
         try:
             unsignedRange = [int(x) for x in opt[1].split(',')]
         except ValueError:
-            sys.stdout.write('ERROR: bad value %s: %s\r\n' % (opt[1], sys.exc_info()[1]))
+            sys.stderr.write('ERROR: bad value %s: %s\r\n' % (opt[1], sys.exc_info()[1]))
             sys.exit(-1)
 
 
 # Catch missing params
 if not modNames:
-    sys.stdout.write('ERROR: MIB modules not specified\r\n%s\r\n' % helpMessage)
+    sys.stderr.write('ERROR: MIB modules not specified\r\n%s\r\n' % helpMessage)
     sys.exit(-1)    
 
 def getValue(syntax, hint='', automaticValues=automaticValues):
@@ -204,17 +204,17 @@ def getValue(syntax, hint='', automaticValues=automaticValues):
             return syntax.clone(val)
         except PyAsn1Error:
             if makeGuess == 1:
-                sys.stdout.write(
+                sys.stderr.write(
                     '*** Inconsistent value: %s\r\n*** See constraints and suggest a better one for:\r\n' % (sys.exc_info()[1],)
                 )
             if makeGuess:
                 makeGuess -= 1
                 continue
 
-        sys.stdout.write(
+        sys.stderr.write(
             '%s# Value [\'%s\'] ? ' % (hint,(val is None and '<none>' or val),)
             )
-        sys.stdout.flush()
+        sys.stderr.flush()
         line = sys.stdin.readline().strip()
         if line:
             if line[:2] == '0x':
@@ -258,7 +258,7 @@ output = []
 # MIBs walk
 for modName in modNames:
     if verboseFlag:
-        sys.stdout.write('# MIB module: %s\r\n' % modName)
+        sys.stderr.write('# MIB module: %s\r\n' % modName)
     mibBuilder.loadModules(modName)
     modOID = oid = univ.ObjectIdentifier(
         mibView.getFirstNodeName(modName)[0]
@@ -276,17 +276,17 @@ for modName in modNames:
                 if thisTableSize < tableSize:
                     oid = tuple(rowOID)
                     if verboseFlag:
-                        sys.stdout.write('# Synthesizing row #%d of table %s\r\n' % (thisTableSize, rowOID))
+                        sys.stderr.write('# Synthesizing row #%d of table %s\r\n' % (thisTableSize, rowOID))
                 else:
                     if verboseFlag:
-                        sys.stdout.write('# Finished table %s (%d rows)\r\n' % (rowOID, thisTableSize))
+                        sys.stderr.write('# Finished table %s (%d rows)\r\n' % (rowOID, thisTableSize))
                     rowOID = None
             else:
                 while 1:
-                    sys.stdout.write(
+                    sys.stderr.write(
                         '# Synthesize row #%d for table %s (y/n)? ' % (thisTableSize, rowOID)
                     )
-                    sys.stdout.flush()
+                    sys.stderr.flush()
                     line = sys.stdin.readline().strip()
                     if line:
                         if line[0] in ('y', 'Y'):
@@ -294,7 +294,7 @@ for modName in modNames:
                             break
                         elif line[0] in ('n', 'N'):
                             if verboseFlag:
-                                sys.stdout.write('# Finished table %s (%d rows)\r\n' % (rowOID, thisTableSize))
+                                sys.stderr.write('# Finished table %s (%d rows)\r\n' % (rowOID, thisTableSize))
                             rowOID = None
                             break
 
@@ -309,7 +309,7 @@ for modName in modNames:
         if isinstance(node, MibTable):
             hint = '# Table %s::%s\r\n' % (mibName, symName)
             if verboseFlag:
-                sys.stdout.write('# Starting table %s::%s (%s)\r\n' % (mibName, symName, univ.ObjectIdentifier(oid)))
+                sys.stderr.write('# Starting table %s::%s (%s)\r\n' % (mibName, symName, univ.ObjectIdentifier(oid)))
             continue
         elif isinstance(node, MibTableRow):
             rowIndices = {}
@@ -348,7 +348,7 @@ for modName in modNames:
     for oid, val in output:
         if oid in unique:
             if verboseFlag:
-                sys.stdout.write(
+                sys.stderr.write(
                     '# Dropping duplicate OID %s\r\n' % (univ.ObjectIdentifier(oid),)
                 )
         else:
@@ -358,7 +358,7 @@ for modName in modNames:
             unique.add(oid)
 
     if verboseFlag:
-        sys.stdout.write(
+        sys.stderr.write(
             '# End of %s, %s OID(s) dumped\r\n' % (modName, len(unique))
         )
 
