@@ -99,9 +99,17 @@ Usage: %s [--help]
 log.setLogger('snmprec', 'stdout')
 
 try:
-    opts, params = getopt.getopt(sys.argv[1:], 'hv',
-        ['help', 'version', 'debug=', 'logging-method=', 'quiet', 'v1', 'v2c', 'v3', 'protocol-version=', 'community=', 'v3-user=', 'v3-auth-key=', 'v3-priv-key=', 'v3-auth-proto=', 'v3-priv-proto=', 'context=', 'use-getbulk', 'getbulk-repetitions=', 'agent-address=', 'agent-port=', 'agent-udpv4-endpoint=', 'agent-udpv6-endpoint=', 'agent-unix-endpoint=', 'start-oid=', 'stop-oid=', 'output-file=', 'variation-modules-dir=', 'variation-module=', 'variation-module-options=']
-        )
+    opts, params = getopt.getopt(sys.argv[1:], 'hv', [
+        'help', 'version', 'debug=', 'logging-method=', 'quiet',
+        'v1', 'v2c', 'v3', 'protocol-version=', 'community=', 
+        'v3-user=', 'v3-auth-key=', 'v3-priv-key=', 'v3-auth-proto=',
+        'v3-priv-proto=', 'context=', 'use-getbulk', 'getbulk-repetitions=',
+        'agent-address=', 'agent-port=', 'agent-udpv4-endpoint=',
+        'agent-udpv6-endpoint=', 'agent-unix-endpoint=', 
+        'start-oid=', 'stop-oid=', 'output-file=',
+        'variation-modules-dir=', 'variation-module=',
+        'variation-module-options='
+    ] )
 except Exception:
     sys.stderr.write('ERROR: %s\r\n%s\r\n' % (sys.exc_info()[1], helpMessage))
     sys.exit(-1)

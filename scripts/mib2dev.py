@@ -54,9 +54,14 @@ helpMessage = """Usage: %s [--help]
     )
 
 try:
-    opts, params = getopt.getopt(sys.argv[1:], 'hv',
-        ['help', 'version', 'debug=', 'quiet', 'pysnmp-mib-dir=', 'mib-module=', 'start-oid=', 'stop-oid=', 'manual-values', 'automatic-values=', 'table-size=', 'output-file=', 'string-pool=', 'integer32-range=', 'counter-range=', 'counter64-range=', 'gauge-range=', 'unsigned-range=', 'timeticks-range=']
-        )
+    opts, params = getopt.getopt(sys.argv[1:], 'hv', [
+        'help', 'version', 'debug=', 'quiet', 
+        'pysnmp-mib-dir=', 'mib-module=', 'start-oid=', 'stop-oid=',
+        'manual-values', 'automatic-values=', 'table-size=', 
+        'output-file=', 'string-pool=', 'integer32-range=',
+        'counter-range=', 'counter64-range=', 'gauge-range=',
+        'unsigned-range=', 'timeticks-range='
+    ] )
 except Exception:
     sys.stdout.write('ERROR: %s\r\n%s\r\n' % (sys.exc_info()[1], helpMessage))
     sys.exit(-1)
