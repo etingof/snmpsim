@@ -159,12 +159,12 @@ if variationModuleName:
     for variationModulesDir in confdir.variation:
         log.msg('Scanning "%s" directory for variation modules...' % variationModulesDir)
         if not os.path.exists(variationModulesDir):
-            log.msg('Directory %s does not exist' % variationModulesDir)
+            log.msg('Directory "%s" does not exist' % variationModulesDir)
             continue
 
         mod = os.path.join(variationModulesDir, variationModuleName + '.py')
         if not os.path.exists(mod):
-            log.msg('Module %s not found' % mod)
+            log.msg('Variation module "%s" not found' % mod)
             continue
 
         ctx = { 'path': mod, 'moduleContext': {} }
@@ -175,14 +175,14 @@ if variationModuleName:
             else:
                 execfile(mod, ctx)
         except Exception:
-            log.msg('Variation module %s execution failure: %s' %  (mod, sys.exc_info()[1]))
+            log.msg('Variation module "%s" execution failure: %s' %  (mod, sys.exc_info()[1]))
             sys.exit(-1)
         else:
             variationModule = ctx
-            log.msg('Module %s loaded' % variationModuleName)
+            log.msg('Variation module "%s" loaded' % variationModuleName)
             break
     else:
-        log.msg('ERROR: variation module %s not found' % variationModuleName)
+        log.msg('ERROR: variation module "%s" not found' % variationModuleName)
         sys.exit(-1)
  
 # Variation module initialization
@@ -191,7 +191,7 @@ if variationModule:
     log.msg('Initializing variation module...')
     for x in ('init', 'record', 'shutdown'):
         if x not in variationModule:
-            log.msg('ERROR: missing %s handler at module %s' % (x, variationModuleName))
+            log.msg('ERROR: missing "%s" handler at variation module "%s"' % (x, variationModuleName))
             sys.exit(-1)
     try:
         variationModule['init'](options=variationModuleOptions,
@@ -199,9 +199,9 @@ if variationModule:
                                 startOID=startOID,
                                 stopOID=stopOID)
     except Exception:
-        log.msg('Module %s initialization FAILED: %s' % (variationModuleName, sys.exc_info()[1]))
+        log.msg('Variation module "%s" initialization FAILED: %s' % (variationModuleName, sys.exc_info()[1]))
     else:
-        log.msg('Module %s initialization OK' % variationModuleName)
+        log.msg('Variation module "%s" initialization OK' % variationModuleName)
 
 # Data file builder
 
@@ -454,14 +454,14 @@ for context in contexts:
     outputFile.close()
 
 if variationModule:
-    log.msg('Shutting down variation module %s...' % variationModuleName)
+    log.msg('Shutting down variation module "%s"...' % variationModuleName)
     try:
         variationModule['shutdown'](options=variationModuleOptions,
                                     mode='recording')
     except Exception:
-        log.msg('Variation module %s shutdown FAILED: %s' % (variationModuleName, sys.exc_info()[1]))
+        log.msg('Variation module "%s" shutdown FAILED: %s' % (variationModuleName, sys.exc_info()[1]))
     else:
-        log.msg('Variation module %s shutdown OK' % variationModuleName)
+        log.msg('Variation module "%s" shutdown OK' % variationModuleName)
 
 log.msg("""PCap statistics:
     packets snooped: %s

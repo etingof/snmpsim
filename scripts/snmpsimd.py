@@ -704,7 +704,7 @@ if not foregroundFlag:
 for variationModulesDir in confdir.variation:
     log.msg('Scanning "%s" directory for variation modules...' % variationModulesDir)
     if not os.path.exists(variationModulesDir):
-        log.msg('Directory %s does not exist' % variationModulesDir)
+        log.msg('Directory "%s" does not exist' % variationModulesDir)
         continue
     for dFile in os.listdir(variationModulesDir):
         if dFile[-3:] != '.py':
@@ -723,7 +723,7 @@ for variationModulesDir in confdir.variation:
 
         for alias, args in _toLoad:
             if alias in variationModules:
-                log.msg('WARNING: ignoring duplicate module %s at %s' %  (alias, mod))
+                log.msg('WARNING: ignoring duplicate variation module "%s" at "%s"' %  (alias, mod))
                 continue
 
             ctx = { 'path': mod,
@@ -737,7 +737,7 @@ for variationModulesDir in confdir.variation:
                 else:
                     execfile(mod, ctx)
             except Exception:
-                log.msg('Variation module %s execution failure: %s' %  (mod, sys.exc_info()[1]))
+                log.msg('Variation module "%s" execution failure: %s' %  (mod, sys.exc_info()[1]))
                 sys.exit(-1)
             else:
                 # moduleContext, agentContext, recordContext
@@ -752,10 +752,10 @@ if not os.path.exists(confdir.cache):
     try:
         os.makedirs(confdir.cache)
     except OSError:
-        log.msg('ERROR: failed to create cache directory %s: %s' % (confdir.cache, sys.exc_info()[1]))
+        log.msg('ERROR: failed to create cache directory "%s": %s' % (confdir.cache, sys.exc_info()[1]))
         sys.exit(-1)
     else:
-        log.msg('Cache directory %s created' % confdir.cache)
+        log.msg('Cache directory "%s" created' % confdir.cache)
 
 if variationModules:
     log.msg('Initializing variation modules...')
@@ -763,14 +763,14 @@ if variationModules:
         body = modulesContexts[0]
         for x in ('init', 'variate', 'shutdown'):
             if x not in body:
-                log.msg('ERROR: missing %s handler in %s!' % (x, name))
+                log.msg('ERROR: missing "%s" handler at variation module "%s"' % (x, name))
                 sys.exit(-1)
         try:
             body['init'](options=body['args'], mode='variating')
         except Exception:
-            log.msg('Module %s load FAILED: %s' % (name,sys.exc_info()[1]))
+            log.msg('Variation module "%s" load FAILED: %s' % (name,sys.exc_info()[1]))
         else:
-            log.msg('Modile %s loaded OK' % name)
+            log.msg('Variation module "%s" loaded OK' % name)
 
 # Build pysnmp Managed Objects base from data files information
 
@@ -783,7 +783,7 @@ def configureManagedObjects(dataDirs, dataIndexInstrumController,
         log.msg('Scanning "%s" directory for %s data files...' % (dataDir, ','.join([' *%s%s' % (os.path.extsep, x.ext) for x in recordSet.values()]))
         )
         if not os.path.exists(dataDir):
-            log.msg('Directory %s does not exist' % dataDir)
+            log.msg('Directory "%s" does not exist' % dataDir)
             continue
         log.msg('%s' % ('='*66,))
         for fullPath, textParser, communityName in getDataFiles(dataDir):
@@ -1291,9 +1291,9 @@ if variationModules:
         try:
             body['shutdown'](options=body['args'], mode='variation')
         except Exception:
-            log.msg('Module %s shutdown FAILED: %s' % (name, sys.exc_info()[1]))
+            log.msg('Variation module "%s" shutdown FAILED: %s' % (name, sys.exc_info()[1]))
         else:
-            log.msg('Module %s shutdown OK' % name)
+            log.msg('Variation module "%s" shutdown OK' % name)
 
 transportDispatcher.closeDispatcher()
 
