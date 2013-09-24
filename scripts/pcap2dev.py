@@ -30,6 +30,7 @@ startOID = univ.ObjectIdentifier('1.3.6')
 stopOID = None
 promiscuousMode = False
 outputDir = '.'
+transportIdOffset= 0
 variationModuleOptions = ""
 variationModuleName = variationModule = None
 listenInterface = captureFile = None
@@ -59,6 +60,7 @@ helpMessage = """Usage: %s [--help]
     [--logging-method=<stdout|stderr|syslog|file>[:args>]]
     [--start-oid=<OID>] [--stop-oid=<OID>]
     [--output-dir=<directory>]
+    [--transport-id-offset=<number>]
     [--capture-file=<filename.pcap>]
     [--listen-interface=<device>]
     [--promiscuous-mode]
@@ -70,9 +72,14 @@ helpMessage = """Usage: %s [--help]
 log.setLogger('pcap2dev', 'stdout')
 
 try:
-    opts, params = getopt.getopt(sys.argv[1:], 'hv',
-        ['help', 'version', 'quiet', 'logging-method=', 'start-oid=', 'stop-oid=', 'output-dir=', 'capture-file=', 'listen-interface=', 'promiscuous-mode', 'packet-filter=', 'variation-modules-dir=', 'variation-module=', 'variation-module-options=']
-        )
+    opts, params = getopt.getopt(sys.argv[1:], 'hv', [
+        'help', 'version', 'quiet', 'logging-method=',
+        'start-oid=', 'stop-oid=', 'output-dir=', 'transport-id-offset=',
+        'capture-file=', 'listen-interface=', 'promiscuous-mode',
+        'packet-filter=', 
+        'variation-modules-dir=', 'variation-module=',
+        'variation-module-options='
+    ])
 except Exception:
     sys.stderr.write('ERROR: %s\r\n%s\r\n' % (sys.exc_info()[1], helpMessage))
     sys.exit(-1)
@@ -117,6 +124,12 @@ Software documentation and support at http://snmpsim.sf.net
         stopOID = univ.ObjectIdentifier(opt[1])
     elif opt[0] == '--output-dir':
         outputDir = opt[1]
+    elif opt[0] == '--transport-id-offset':
+        try:
+            transportIdOffset = max(0, int(opt[1]))
+        except:
+            sys.stderr.write('ERROR: %s\r\n%s\r\n' % (sys.exc_info()[1], helpMessage))
+            sys.exit(-1)
     elif opt[0] == '--listen-interface':
         listenInterface = opt[1]
     elif opt[0] == '--promiscuous-mode':
@@ -308,7 +321,7 @@ def handleSnmpMessage(d, t, private={}):
         else:
             endpoint = d['source_address'], d['source_port']
             if endpoint not in endpoints:
-                endpoints[endpoint] = udp.domainName + (len(endpoints),)
+                endpoints[endpoint] = udp.domainName + (transportIdOffset + len(endpoints),)
                 stats['agents seen'] +=1
             context = '%s/%s' % (pMod.ObjectIdentifier(endpoints[endpoint]), pMod.apiMessage.getCommunity(rspMsg))
             if context not in contexts:
