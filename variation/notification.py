@@ -26,13 +26,16 @@ def _cbFun(sendRequestHandle,
           errorStatus, errorIndex,
           varBinds,
           cbCtx):
+    oid, value, ntfOrg = cbCtx
     if errorIndication or errorStatus:
-        oid, value = cbCtx
         log.msg('notification: for %s=%r failed with errorIndication %s, errorStatus %s' % (oid, value, errorIndication, errorStatus))
 
 def variate(oid, tag, value, **context):
     if 'snmpEngine' in context and context['snmpEngine']:
-        ntfOrg = ntforg.AsynNotificationOriginator(context['snmpEngine'])
+        snmpEngine = context['snmpEngine']
+        if snmpEngine not in recordContext:
+            recordContext[snmpEngine] = ntforg.AsynNotificationOriginator(snmpEngine)
+        ntfOrg = recordContext[snmpEngine]
     else:
         raise error.SnmpsimError('variation module not given snmpEngine')
 
@@ -164,10 +167,8 @@ def variate(oid, tag, value, **context):
         ntfOrg.sendNotification(
             authData, target, args['ntftype'],
             rfc1902.ObjectName(args['trapoid']),
-            varBinds, cbInfo=(_cbFun, (oid, value))
+            varBinds, cbInfo=(_cbFun, (oid, value, ntfOrg))
         )
-
-        ntfOrg.uncfgCmdGen()
 
         log.msg('notification: sending Notification to %s with credentials %s' % (authData, target))
 
