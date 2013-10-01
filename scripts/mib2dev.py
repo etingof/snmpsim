@@ -202,7 +202,8 @@ def getValue(syntax, hint='', automaticValues=automaticValues):
                 val = '?'
 
         try:
-            return syntax.clone(val)
+            if val is not None:
+                return syntax.clone(val)
         except PyAsn1Error:
             if makeGuess == 1:
                 sys.stderr.write(
