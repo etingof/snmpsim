@@ -89,7 +89,7 @@ class IPv4TransportEndpoints(TransportEndpointsBase):
         try:
             h, p = f(*addr.split(':'))
         except:
-            raise SnmpsimError('improper/busy IPv4/UDP endpoint %s' % addr)
+            raise SnmpsimError('improper IPv4/UDP endpoint %s' % addr)
         return udp.UdpTransport().openServerMode((h, p)), addr
 
 class IPv6TransportEndpoints(TransportEndpointsBase):
@@ -101,7 +101,7 @@ class IPv6TransportEndpoints(TransportEndpointsBase):
             try:
                 h, p = h[1:], int(p)
             except:
-                raise SnmpsimError('improper/busy IPv6/UDP endpoint %s' % addr)
+                raise SnmpsimError('improper IPv6/UDP endpoint %s' % addr)
         elif addr[0] == '[' and addr[-1] == ']':
             h, p = addr[1:-1], 161
         else:
@@ -673,7 +673,7 @@ for opt in tuple(v3Args):
             sys.exit(-1)
     elif opt[0] == '--agent-unix-endpoint':
         try:
-            v3Args.append((opt[0], UNIXTransportEndpoints().add(opt[1])))
+            v3Args.append((opt[0], UnixTransportEndpoints().add(opt[1])))
         except:
             sys.stderr.write('ERROR: %s\r\n%s\r\n' % (sys.exc_info()[1], helpMessage))
             sys.exit(-1)
@@ -1178,7 +1178,7 @@ else:  # v3 mode
                     )
                     log.msg('Listening at UDP/IPv4 endpoint %s, transport ID %s' % (agentUDPv4Endpoint[1], '.'.join([str(x) for x in transportDomain])))
 
-                for agentUDPv6Endpoint in range(len(agentUDPv6Endpoints)):
+                for agentUDPv6Endpoint in agentUDPv6Endpoints:
                     transportDomain = udp6.domainName + \
                             (transportIndex['udpv6'],)
                     transportIndex['udpv6'] += 1
@@ -1189,9 +1189,9 @@ else:  # v3 mode
                         snmpEngine,
                         transportDomain, agentUDPv6Endpoint[0]
                     )
-                    log.msg('Listening at UDP/IPv6 endpoint %s, transport ID %s' % (agentUDPv6Endpoint[1], '.'.join([str(x) for x in transportDomains[-1]])))
+                    log.msg('Listening at UDP/IPv6 endpoint %s, transport ID %s' % (agentUDPv6Endpoint[1], '.'.join([str(x) for x in transportDomain])))
 
-                for idx in range(len(agentUnixEndpoints)):
+                for agentUnixEndpoint in agentUnixEndpoints:
                     transportDomain = unix.domainName + \
                             (transportIndex['unix'],)
                     transportIndex['unix'] += 1
@@ -1200,9 +1200,9 @@ else:  # v3 mode
                     )
                     config.addSocketTransport(
                         snmpEngine,
-                        transportDomain, agentUNIXEndpoint[0]
+                        transportDomain, agentUnixEndpoint[0]
                     )
-                    log.msg('Listening at UNIX domain socket endpoint %s, transport ID %s' % (agentUNIXEndpoint[1], '.'.join([str(x) for x in transportDomains[-1]])))
+                    log.msg('Listening at UNIX domain socket endpoint %s, transport ID %s' % (agentUnixEndpoint[1], '.'.join([str(x) for x in transportDomain])))
 
                 # SNMP applications
                 GetCommandResponder(snmpEngine, snmpContext)
