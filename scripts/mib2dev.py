@@ -95,7 +95,7 @@ Software documentation and support at http://snmpsim.sf.net
 """ % (snmpsim.__version__, hasattr(pysnmp, '__version__') and pysnmp.__version__ or 'unknown', hasattr(pyasn1, '__version__') and pyasn1.__version__ or 'unknown', sys.version, helpMessage))
         sys.exit(-1)
     if opt[0] == '--debug':
-        debug.setLogger(debug.Debug(opt[1]))
+        debug.setLogger(debug.Debug(*opt[1].split(',')))
     if opt[0] == '--quiet':
         verboseFlag = False
     if opt[0] == '--pysnmp-mib-dir':
