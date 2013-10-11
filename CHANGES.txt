@@ -2,6 +2,7 @@
 -----
 
 - Multiple comma-separated debug options now supported.
+- PostgreSQL is now supported by sql variation module.
 
 0.2.4
 -----
