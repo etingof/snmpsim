@@ -1,6 +1,7 @@
 0.2.5
 -----
 
+- Fix to MIB selection code to prevent (and report) LCD access.
 - Multiple comma-separated debug options now supported.
 - PostgreSQL is now supported by sql variation module.
 

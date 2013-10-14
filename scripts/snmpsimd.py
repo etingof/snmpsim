@@ -948,9 +948,15 @@ else: # v3arch
                 pass
             else:
                 log.msg('Using %s selected by candidate %s; transport ID %s, source address %s, context name "%s"' % (mibInstrum, candidate, univ.ObjectIdentifier(transportDomain), transportAddress[0], probedContextName))
-                return probedContextName
+                contextName = probedContextName
+                break
+        else:
+            mibInstrum = self.snmpContext.getMibInstrum(contextName)
+            log.msg('Using %s selected by contextName "%s", transport ID %s, source address %s' % (mibInstrum, contextName, univ.ObjectIdentifier(transportDomain), transportAddress[0]))
 
-        log.msg('Using %s selected by contextName "%s", transport ID %s, source address %s' % (self.snmpContext.getMibInstrum(contextName), contextName, univ.ObjectIdentifier(transportDomain), transportAddress[0]))
+        if not isinstance(mibInstrum, (MibInstrumController, DataIndexInstrumController)):
+            log.msg('Warning: LCD access denied (contextName does not match any data file)')
+            raise NoDataNotification()
 
         return contextName
 
