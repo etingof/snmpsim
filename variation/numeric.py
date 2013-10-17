@@ -110,6 +110,7 @@ def variate(oid, tag, value, **context):
     elif v > recordContext['settings']['max']:
         if 'wrap' in recordContext['settings']:
             v %= recordContext['settings']['max']
+            v += recordContext['settings']['min']
         else:
             v = recordContext['settings']['max']
 
