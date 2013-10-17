@@ -43,7 +43,8 @@ class SnmprecGrammar(AbstractGrammar):
         if value.tagSet in (univ.OctetString.tagSet,
                             rfc1902.Opaque.tagSet,
                             rfc1902.IpAddress.tagSet):
-            nval = value.asNumbers()
-            if nval and nval[-1] == 32 or \
-                    [ x for x in nval if x < 32 or x > 126 ]:
-                return ''.join([ '%.2x' % x for x in nval ])
+            for x in value:
+                if not x.isalnum():
+                    return ''.join([ '%.2x' % x for x in value.asNumbers() ])
+            else:
+                return value
