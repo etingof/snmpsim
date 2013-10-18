@@ -502,7 +502,7 @@ Usage: %s [--help]
     [--daemonize]
     [--process-user=<uname>] [--process-group=<gname>]
     [--pid-file=<file>]
-    [--logging-method=<stdout|stderr|syslog|file>[:args>]]
+    [--logging-method=<%s[:args>]>]
     [--cache-dir=<dir>]
     [--variation-modules-dir=<dir>]
     [--variation-module-options=<module[=alias][:args]>] 
@@ -524,6 +524,7 @@ Usage: %s [--help]
     [--v3-priv-proto=<%s>]""" % (
         sys.argv[0],
         '|'.join([ x for x in debug.flagMap.keys() if x != 'mibview' ]),
+        '|'.join(log.gMap.keys()),
         '|'.join(authProtocols),
         '|'.join(privProtocols)
     )

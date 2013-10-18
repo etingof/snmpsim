@@ -57,7 +57,7 @@ stats = {
 helpMessage = """Usage: %s [--help]
     [--version]
     [--quiet]
-    [--logging-method=<stdout|stderr|syslog|file>[:args>]]
+    [--logging-method=<%s[:args]>]
     [--start-oid=<OID>] [--stop-oid=<OID>]
     [--output-dir=<directory>]
     [--transport-id-offset=<number>]
@@ -67,7 +67,8 @@ helpMessage = """Usage: %s [--help]
     [--packet-filter=<ruleset>]
     [--variation-modules-dir=<dir>]
     [--variation-module=<module>]
-    [--variation-module-options=<args>]""" % sys.argv[0] 
+    [--variation-module-options=<args>]""" % (sys.argv[0],
+                                              '|'.join(log.gMap.keys()))
 
 log.setLogger('pcap2dev', 'stdout')
 

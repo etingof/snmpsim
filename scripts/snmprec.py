@@ -71,7 +71,7 @@ helpMessage = """\
 Usage: %s [--help]
     [--version]
     [--debug=<%s>]
-    [--logging-method=<stdout|stderr|syslog|file>[:args>]]
+    [--logging-method=<%s[:args>]>]
     [--protocol-version=<1|2c|3>]
     [--community=<string>]
     [--v3-user=<username>]
@@ -92,6 +92,7 @@ Usage: %s [--help]
     [--variation-module-options=<args>]""" % (
         sys.argv[0],
         '|'.join([ x for x in debug.flagMap.keys() if x != 'mibview' ]),
+        '|'.join(log.gMap.keys()),
         '|'.join([ x for x in authProtocols if x != 'NONE' ]),
         '|'.join([ x for x in privProtocols if x != 'NONE' ])
     )
