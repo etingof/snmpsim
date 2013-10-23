@@ -81,14 +81,12 @@ class RecordIndex:
                 else:
                     break
             else:
-                log.msg('Failed to create %s for data file %s' % (self.__dbFile, self.__textFile))
-                raise error.SnmpsimError('Cant create data file %s' % self.__dbFile)
+                raise error.SnmpsimError('Failed to create %s for data file %s: %s' % (self.__dbFile, self.__textFile, sys.exc_info()[1]))
 
             try:
                 text = open(self.__textFile, 'rb')
             except:
-                log.msg('Failed to open data file %s: %s' % (self.__dbFile, sys.exc_info()[0]))
-                raise error.SnmpsimError()
+                raise error.SnmpsimError('Failed to open data file %s: %s' % (self.__dbFile, sys.exc_info()[0]))
 
             log.msg('Building index %s for data file %s (open flags \"%s\")...' % (self.__dbFile, self.__textFile, open_flags))
             sys.stdout.flush()
@@ -114,11 +112,7 @@ class RecordIndex:
                         os.remove(self.__dbFile)
                     except OSError:
                         pass
-                    raise error.SnmpsimError(
-                        'Data error at %s:%d: %s' % (
-                            self.__textFile, lineNo, exc
-                            )
-                        )
+                    raise error.SnmpsimError('Data error at %s:%d: %s' % (self.__textFile, lineNo, exc))
 
                 if validateData:
                     try:
@@ -130,11 +124,7 @@ class RecordIndex:
                             os.remove(self.__dbFile)
                         except OSError:
                             pass
-                        raise error.SnmpsimError(
-                            'OID error at %s:%d: %s' % (
-                                self.__textFile, lineNo, exc
-                                )
-                            )
+                        raise error.SnmpsimError('OID error at %s:%d: %s' % (self.__textFile, lineNo, exc))
                     try:
                         self.__textParser.evaluateValue(
                             oid, tag, val, dataValidation=True
