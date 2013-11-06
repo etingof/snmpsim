@@ -33,9 +33,9 @@ def _cbFun(sendRequestHandle,
 def variate(oid, tag, value, **context):
     if 'snmpEngine' in context and context['snmpEngine']:
         snmpEngine = context['snmpEngine']
-        if snmpEngine not in recordContext:
-            recordContext[snmpEngine] = ntforg.AsynNotificationOriginator(snmpEngine)
-        ntfOrg = recordContext[snmpEngine]
+        if snmpEngine not in moduleContext:
+            moduleContext[snmpEngine] = ntforg.AsynNotificationOriginator(snmpEngine)
+        ntfOrg = moduleContext[snmpEngine]
     else:
         raise error.SnmpsimError('variation module not given snmpEngine')
 
