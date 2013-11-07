@@ -35,6 +35,16 @@ def variate(oid, tag, value, **context):
         snmpEngine = context['snmpEngine']
         if snmpEngine not in moduleContext:
             moduleContext[snmpEngine] = ntforg.AsynNotificationOriginator(snmpEngine)
+            # register this SNMP Engine to handle our transports'
+            # receiver IDs
+            snmpEngine.registerTransportDispatcher(
+                snmpEngine.transportDispatcher,
+                ntforg.UdpTransportTarget.transportDomain
+            )
+            snmpEngine.registerTransportDispatcher(
+                snmpEngine.transportDispatcher,
+                ntforg.Udp6TransportTarget.transportDomain
+            )
         ntfOrg = moduleContext[snmpEngine]
     else:
         raise error.SnmpsimError('variation module not given snmpEngine')
@@ -99,7 +109,7 @@ def variate(oid, tag, value, **context):
        args['op'] == 'set' and context['setFlag'] or \
        args['op'] in ('any', '*'):
         if args['version'] in ('1', '2c'):
-            authData = ntforg.CommunityData(args['community'], args['version'] == '2c' and 1 or 0)
+            authData = ntforg.CommunityData(args['community'], mpModel=args['version'] == '2c' and 1 or 0)
         elif args['version'] == '3':
             if args['authproto'] == 'md5':
                 authProtocol = ntforg.usmHMACMD5AuthProtocol
