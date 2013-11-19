@@ -1087,6 +1087,21 @@ else:  # v3 mode
         v3Args.insert(0, ('--v3-engine-id', 'auto'))
     v3Args.append(('end-of-options', ''))
 
+    def registerTransportDispatcher(snmpEngine, transportDispatcher,
+                                    transportDomain):
+        if hasattr(transportDispatcher, 'registerRoutingCbFun'):
+            snmpEngine.registerTransportDispatcher(
+                transportDispatcher, transportDomain
+            )
+        else:
+            try:
+                snmpEngine.registerTransportDispatcher(
+                    transportDispatcher
+                )
+            except error.PySnmpError:
+                log.msg('WARNING: upgrade pysnmp to 4.2.5 or later get multi-engine ID feature working!')
+                raise
+ 
     snmpEngine = None
     transportIndex = { 'udpv4': transportIdOffset,
                        'udpv6': transportIdOffset,
@@ -1176,8 +1191,8 @@ else:  # v3 mode
                     transportDomain = udp.domainName + \
                             (transportIndex['udpv4'],)
                     transportIndex['udpv4'] += 1
-                    snmpEngine.registerTransportDispatcher(
-                        transportDispatcher, transportDomain
+                    registerTransportDispatcher(
+                        snmpEngine, transportDispatcher, transportDomain
                     )
                     config.addSocketTransport(
                         snmpEngine,
@@ -1189,8 +1204,8 @@ else:  # v3 mode
                     transportDomain = udp6.domainName + \
                             (transportIndex['udpv6'],)
                     transportIndex['udpv6'] += 1
-                    snmpEngine.registerTransportDispatcher(
-                        transportDispatcher, transportDomain
+                    registerTransportDispatcher(
+                        snmpEngine, transportDispatcher, transportDomain
                     )
                     config.addSocketTransport(
                         snmpEngine,
@@ -1202,8 +1217,8 @@ else:  # v3 mode
                     transportDomain = unix.domainName + \
                             (transportIndex['unix'],)
                     transportIndex['unix'] += 1
-                    snmpEngine.registerTransportDispatcher(
-                        transportDispatcher, transportDomain
+                    registerTransportDispatcher(
+                        snmpEngine, transportDispatcher, transportDomain
                     )
                     config.addSocketTransport(
                         snmpEngine,
