@@ -5,6 +5,7 @@ from snmpsim.grammar.abstract import AbstractGrammar
 from snmpsim import error
 
 class SnmprecGrammar(AbstractGrammar):
+    alnums = set(range(48,58)+range(65,91)+range(97,123))
     tagMap = {}
     for t in ( rfc1902.Gauge32,
                rfc1902.Integer32,
@@ -43,8 +44,9 @@ class SnmprecGrammar(AbstractGrammar):
         if value.tagSet in (univ.OctetString.tagSet,
                             rfc1902.Opaque.tagSet,
                             rfc1902.IpAddress.tagSet):
-            for x in value:
-                if not x.isalnum():
-                    return ''.join([ '%.2x' % x for x in value.asNumbers() ])
+            nval = value.asNumbers()
+            for x in self.alnums:
+                if x < 32 or x > 126:
+                    return ''.join([ '%.2x' % x for x in nval ])
             else:
                 return value
