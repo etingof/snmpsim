@@ -1,7 +1,7 @@
 from pysnmp.proto import rfc1902
 from pyasn1.type import univ
 from pyasn1.codec.ber import encoder
-from pyasn1.compat.octets import octs2str
+from pyasn1.compat.octets import octs2str, ints2octs
 from snmpsim.grammar import abstract
 from snmpsim import error
 
@@ -44,10 +44,10 @@ class WalkGrammar(abstract.AbstractGrammar):
             return [int(y, 16) for y in value.split(' ')]
 
     def __bitsFilter(value):
-        return ''.join(['%.2x' % int(y, 16) for y in value.split(' ')])
+        return ints2octs([int(y, 16) for y in value.split(' ')])
 
     def __hexStringFilter(value):
-        return ''.join([chr(int(y, 16)) for y in value.split(' ')])
+        return [int(y, 16) for y in value.split(' ')]
 
     def __netAddressFilter(value):
         return '.'.join([str(int(y, 16)) for y in value.split(':')])
