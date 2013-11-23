@@ -44,6 +44,7 @@ class WalkGrammar(abstract.AbstractGrammar):
             return [int(y, 16) for y in value.split(' ')]
 
     def __bitsFilter(value):
+        # rfc1902.Bits does not really initialize from sequences
         return ints2octs([int(y, 16) for y in value.split(' ')])
 
     def __hexStringFilter(value):
