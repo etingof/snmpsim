@@ -46,8 +46,8 @@ class SnmprecGrammar(AbstractGrammar):
                             rfc1902.Opaque.tagSet,
                             rfc1902.IpAddress.tagSet):
             nval = value.asNumbers()
-            for x in self.alnums:
-                if x < 32 or x > 126:
+            for x in nval:
+                if x in self.alnums:
                     return ''.join([ '%.2x' % x for x in nval ])
             else:
                 return value
