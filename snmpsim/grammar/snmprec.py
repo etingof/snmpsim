@@ -1,11 +1,12 @@
+from string import digits, ascii_letters
 from pysnmp.proto import rfc1902, rfc1905
-from pyasn1.compat.octets import octs2str, str2octs
+from pyasn1.compat.octets import octs2str, str2octs, octs2ints
 from pyasn1.type import univ
 from snmpsim.grammar.abstract import AbstractGrammar
 from snmpsim import error
 
 class SnmprecGrammar(AbstractGrammar):
-    alnums = set(range(48,58)+range(65,91)+range(97,123))
+    alnums = set(octs2ints(str2octs(ascii_letters+digits)))
     tagMap = {}
     for t in ( rfc1902.Gauge32,
                rfc1902.Integer32,
