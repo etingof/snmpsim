@@ -42,7 +42,7 @@ class WalkGrammar(abstract.AbstractGrammar):
         return ''.join(['%.2x' % int(y, 16) for y in value.split(' ')])
 
     def __hexStringFilter(value):
-        return [int(y, 16) for y in value.split(' ')]
+        return ''.join([chr(int(y, 16)) for y in value.split(' ')])
 
     def __netAddressFilter(value):
         return '.'.join([str(int(y, 16)) for y in value.split(':')])
@@ -76,4 +76,4 @@ class WalkGrammar(abstract.AbstractGrammar):
                 value = ''
             else:
                 tag = 'TimeTicks:'
-        return oid, tag.upper(), self.filterMap.get(tag, lambda x: x)(value.strip())
+        return oid, tag.upper(), self.filterMap.get(tag.upper(), lambda x: x)(value.strip())
