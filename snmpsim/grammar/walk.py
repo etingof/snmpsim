@@ -1,4 +1,6 @@
 from pysnmp.proto import rfc1902
+from pyasn1.type import univ
+from pyasn1.codec.ber import encoder
 from pyasn1.compat.octets import octs2str
 from snmpsim.grammar import abstract
 from snmpsim import error
@@ -36,7 +38,10 @@ class WalkGrammar(abstract.AbstractGrammar):
             return value
 
     def __opaqueFilter(value):
-        return [int(y, 16) for y in value.split(' ')]
+        if value.upper().startswith('FLOAT: '):
+            return encoder.encode(univ.Real(float(value[7:])))
+        else:
+            return [int(y, 16) for y in value.split(' ')]
 
     def __bitsFilter(value):
         return ''.join(['%.2x' % int(y, 16) for y in value.split(' ')])
