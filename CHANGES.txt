@@ -13,6 +13,7 @@
 - The snmpwalk OPAQUE: Float: syntax is now supported.
 - Fixes to make snmpsimd working with older version of pysnmp.
 - Fix to HEX value handling in snmpwalk format handler.
+- Fix to absolute file log path on Windows.
 
 0.2.4
 -----

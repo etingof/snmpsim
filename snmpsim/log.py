@@ -34,6 +34,10 @@ class FileLogger(AbstractLogger):
     def init(self, *priv):
         if not priv:
             raise error.SnmpsimError('Bad log file params, need filename')
+        if sys.platform[:3] == 'win':
+            # fix possibly corrupted absolute windows path
+            if len(priv[0]) == 1 and priv[0].isalpha() and len(priv) > 1:
+                priv = [ priv[0] + ':' + priv[1] ] + priv[2:]
         try:
             self._fileobj, self._file = open(priv[0], 'a'), priv[0]
         except:
