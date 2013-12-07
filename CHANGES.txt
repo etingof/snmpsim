@@ -4,6 +4,9 @@
 - When recording .snmprec data, hex everything if a non-alpha/numeric
   literal is present in a value. This eliminates possible issues with
   unescaped contents in a SQL-based recorder.
+- New --max-varbinds option can now be used for limiting the number
+  of variable bindings in SNMP response message on a per-engine-id
+  basis. Global default is now 256 var-bindings.
 - Fix to snmpEngine configuration code at notification.py variation module.
 - Fixes to --logging-method formatting in --help output.
 - Fix to numeric.py module value wrapping feature.

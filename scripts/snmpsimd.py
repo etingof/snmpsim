@@ -43,6 +43,7 @@ from snmpsim.record.search.database import RecordIndex
 # Settings
 forceIndexBuild = False
 validateData = False
+maxVarBinds = 256
 transportIdOffset= 0
 v2cArch = False
 v3Only = False
@@ -521,7 +522,8 @@ Usage: %s [--help]
     [--v3-auth-key=<key>]
     [--v3-auth-proto=<%s>]
     [--v3-priv-key=<key>]
-    [--v3-priv-proto=<%s>]""" % (
+    [--v3-priv-proto=<%s>]
+    [--max-varbinds=<number>]""" % (
         sys.argv[0],
         '|'.join([ x for x in debug.flagMap.keys() if x != 'mibview' ]),
         '|'.join(log.gMap.keys()),
@@ -539,12 +541,13 @@ try:
         'variation-module-options=',
         'args-from-file=',
         # this option starts new SNMPv3 engine configuration
-        'data-dir=',
         'v3-engine-id=',
+        'data-dir=',
         'agent-udpv4-endpoint=','agent-udpv6-endpoint=','agent-unix-endpoint=',
         'v3-user=',
         'v3-auth-key=', 'v3-auth-proto=', 
-        'v3-priv-key=', 'v3-priv-proto='
+        'v3-priv-key=', 'v3-priv-proto=',
+        'max-varbinds='
     ])
 except Exception:
     sys.stderr.write('ERROR: %s\r\n%s\r\n' % (sys.exc_info()[1], helpMessage))
@@ -646,6 +649,15 @@ Software documentation and support at http://snmpsim.sf.net
     elif opt[0] in ('--v3-engine-id', '--v3-user', '--v3-auth-key', 
                     '--v3-auth-proto', '--v3-priv-key', '--v3-priv-proto'):
         v3Args.append(opt)
+    elif opt[0] == '--max-varbinds':
+        try:
+            if '--v3-engine-id' in [ x[0] for x in v3Args ]:
+                v3Args.append((opt[0], max(1, int(opt[1]))))
+            else:
+                maxVarBinds = max(1, int(opt[1]))
+        except:
+            sys.stderr.write('ERROR: %s\r\n%s\r\n' % (sys.exc_info()[1], helpMessage))
+            sys.exit(-1)
     elif opt[0] == '--args-from-file':
         try:
             v3Args.extend(
@@ -837,7 +849,7 @@ if v2cArch:
         N = min(int(nonRepeaters), len(reqVarBinds))
         M = int(maxRepetitions)
         R = max(len(reqVarBinds)-N, 0)
-        if R: M = min(M, 100/R)  # maxVarBinds
+        if R: M = min(M, maxVarBinds/R)
 
         if N:
             rspVarBinds = readNextVars(reqVarBinds[:N])
@@ -1046,6 +1058,8 @@ if v2cArch:
         log.msg('ERROR: agent endpoint address(es) not specified for SNMP engine ID %s' % v3EngineId)
         sys.exit(-1)
 
+    log.msg('Maximum number of variable bindings in SNMP response: %s' % maxVarBinds)
+
     # Configure socket server
    
     transportIndex = transportIdOffset
@@ -1179,6 +1193,8 @@ else:  # v3 mode
                     'index', dataIndexInstrumController
                 )
 
+                log.msg('Maximum number of variable bindings in SNMP response: %s' % localMaxVarBinds)
+
                 # Configure socket server
 
                 if not agentUDPv4Endpoints and \
@@ -1230,7 +1246,7 @@ else:  # v3 mode
                 GetCommandResponder(snmpEngine, snmpContext)
                 SetCommandResponder(snmpEngine, snmpContext)
                 NextCommandResponder(snmpEngine, snmpContext)
-                BulkCommandResponder(snmpEngine, snmpContext)
+                BulkCommandResponder(snmpEngine, snmpContext).maxVarBinds = localMaxVarBinds
 
             if opt[0] == 'end-of-options':
                 break
@@ -1238,6 +1254,7 @@ else:  # v3 mode
             # Prepare for next engine ID configuration
 
             dataDirs = []
+            localMaxVarBinds = maxVarBinds
             v3Users = []
             v3AuthKeys = {}; v3AuthProtos = {}
             v3PrivKeys = {}; v3PrivProtos = {}
@@ -1264,6 +1281,8 @@ else:  # v3 mode
 
         elif opt[0] == '--data-dir':
             dataDirs.append(opt[1])
+        elif opt[0] == '--max-varbinds':
+            localMaxVarBinds = opt[1]
         elif opt[0] == '--v3-user':
             v3Users.append(opt[1])
             if None in v3AuthKeys:
