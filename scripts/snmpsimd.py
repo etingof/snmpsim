@@ -43,7 +43,7 @@ from snmpsim.record.search.database import RecordIndex
 # Settings
 forceIndexBuild = False
 validateData = False
-maxVarBinds = 256
+maxVarBinds = 64
 transportIdOffset= 0
 v2cArch = False
 v3Only = False
