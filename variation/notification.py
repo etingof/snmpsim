@@ -146,6 +146,10 @@ def variate(oid, tag, value, **context):
             log.msg('notification: unknown transport %s' % args['proto'])
             return context['origOid'], tag, context['errorStatus']
 
+        if 'bindaddr' in args and hasattr(target, 'setLocalAddress'):
+            log.msg('notification: binding to local address %s' % args['bindaddr'])
+            target.setLocalAddress((args['bindaddr'], 0))
+
         varBinds = []
 
         if 'uptime' in args:
