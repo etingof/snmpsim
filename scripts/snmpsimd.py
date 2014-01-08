@@ -402,15 +402,24 @@ class MibInstrumController:
             return { 'nextFlag': nextFlag,
                      'setFlag': setFlag }
 
-        acFun, acCtx = acInfo
-        ( snmpEngine,
-          transportDomain,
+        acFun, snmpEngine = acInfo  # we injected snmpEngine object earlier
+        execCtx = snmpEngine.observer.getExecutionContext(
+                'rfc3412.receiveMessage:request'
+        )
+        # this API is first introduced in pysnmp 4.2.6 
+        ( transportDomain,
           transportAddress,
           securityModel,
           securityName,
           securityLevel,
           contextName, 
-          pduType ) = acCtx  # this was built by our custom function below
+          pduType ) = ( execCtx['transportDomain'],
+                        execCtx['transportAddress'],
+                        execCtx['securityModel'],
+                        execCtx['securityName'],
+                        execCtx['securityLevel'],
+                        execCtx['contextName'],
+                        execCtx['pdu'].getTagSet() )
 
         log.msg('SNMP EngineID %s, transportDomain %s, transportAddress %s, securityModel %s, securityName %s, securityLevel %s' % (hasattr(snmpEngine, 'snmpEngineID') and snmpEngine.snmpEngineID.prettyPrint() or '<unknown>', transportDomain, transportAddress, securityModel, securityName, securityLevel))
 
@@ -977,19 +986,6 @@ else: # v3arch
 
         return contextName
 
-    # this API is first introduced in pysnmp 4.2.6 
-    def injectRequestDetails(snmpEngine, acInfo):
-        (acFun, acCtx) = acInfo
-        execCtx = snmpEngine.observer.getExecutionContext(
-                'rfc3412.receiveMessage:request'
-        )
-        acCtx = ( snmpEngine, 
-                  execCtx['transportDomain'], execCtx['transportAddress'], 
-                  execCtx['securityModel'], 
-                  execCtx['securityName'], execCtx['securityLevel'],
-                  execCtx['contextName'], execCtx['pdu'].getTagSet() )
-        return acFun, acCtx
-
     class GetCommandResponder(cmdrsp.GetCommandResponder):
         def handleMgmtOperation(
                 self, snmpEngine, stateReference, contextName, PDU, acInfo
@@ -1000,7 +996,7 @@ else: # v3arch
                     probeHashContext(
                         self, snmpEngine, stateReference, contextName
                     ),
-                    PDU, injectRequestDetails(snmpEngine, acInfo)
+                    PDU, (None, snmpEngine) # custom acInfo
                 )
             except NoDataNotification:
                 self.releaseStateInformation(stateReference)
@@ -1015,7 +1011,7 @@ else: # v3arch
                     probeHashContext(
                         self, snmpEngine, stateReference, contextName
                     ),
-                    PDU, injectRequestDetails(snmpEngine, acInfo)
+                    PDU, (None, snmpEngine) # custom acInfo
                 )
             except NoDataNotification:
                 self.releaseStateInformation(stateReference)
@@ -1030,7 +1026,7 @@ else: # v3arch
                     probeHashContext(
                         self, snmpEngine, stateReference, contextName
                     ),
-                    PDU, injectRequestDetails(snmpEngine, acInfo)
+                    PDU, (None, snmpEngine) # custom acInfo
                 )
             except NoDataNotification:
                 self.releaseStateInformation(stateReference)
@@ -1045,7 +1041,7 @@ else: # v3arch
                     probeHashContext(
                         self, snmpEngine, stateReference, contextName
                     ),
-                    PDU, injectRequestDetails(snmpEngine, acInfo)
+                    PDU, (None, snmpEngine) # custom acInfo
                 )
             except NoDataNotification:
                 self.releaseStateInformation(stateReference)
