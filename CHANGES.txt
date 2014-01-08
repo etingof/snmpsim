@@ -11,6 +11,8 @@
 - The sql variation module not switches default SQL transaction isolation
   level to 'READ COMMITTED'. Isolation level (0-3) could now be specified
   on per-instance basis through 'isolationlevel' option.
+- Switched to the latest pysnmp's requestObserver facility for getting
+  request details from pysnmp core.
 - Fix to snmpEngine configuration code at notification.py variation module.
 - Fixes to --logging-method formatting in --help output.
 - Fix to numeric.py module value wrapping feature.

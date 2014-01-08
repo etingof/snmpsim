@@ -408,7 +408,7 @@ class MibInstrumController:
           securityName,
           securityLevel,
           contextName, 
-          pduType ) = acCtx  # this is not [yet] documented
+          pduType ) = acCtx  # this was built by our custom function below
 
         log.msg('SNMP EngineID %s, securityModel %s, securityName %s, securityLevel %s' % (hasattr(snmpEngine, 'snmpEngineID') and snmpEngine.snmpEngineID.prettyPrint() or '<unknown>', securityModel, securityName, securityLevel))
 
@@ -973,6 +973,17 @@ else: # v3arch
 
         return contextName
 
+    # this API is first introduced in pysnmp 4.2.6 
+    def injectRequestDetails(snmpEngine, acInfo):
+        (acFun, acCtx) = acInfo
+        execCtx = snmpEngine.observer.getExecutionContext(
+                'rfc3412.receiveMessage:request'
+        )
+        acCtx = ( snmpEngine, execCtx['securityModel'], 
+                  execCtx['securityName'], execCtx['securityLevel'],
+                  execCtx['contextName'], execCtx['pdu'].getTagSet() )
+        return acFun, acCtx
+
     class GetCommandResponder(cmdrsp.GetCommandResponder):
         def handleMgmtOperation(
                 self, snmpEngine, stateReference, contextName, PDU, acInfo
@@ -980,8 +991,10 @@ else: # v3arch
             try:
                 cmdrsp.GetCommandResponder.handleMgmtOperation(
                     self, snmpEngine, stateReference, 
-                    probeHashContext(self, snmpEngine, stateReference, contextName),
-                    PDU, acInfo
+                    probeHashContext(
+                        self, snmpEngine, stateReference, contextName
+                    ),
+                    PDU, injectRequestDetails(snmpEngine, acInfo)
                 )
             except NoDataNotification:
                 self.releaseStateInformation(stateReference)
@@ -993,8 +1006,10 @@ else: # v3arch
             try:
                 cmdrsp.SetCommandResponder.handleMgmtOperation(
                     self, snmpEngine, stateReference, 
-                    probeHashContext(self, snmpEngine, stateReference, contextName),
-                    PDU, acInfo
+                    probeHashContext(
+                        self, snmpEngine, stateReference, contextName
+                    ),
+                    PDU, injectRequestDetails(snmpEngine, acInfo)
                 )
             except NoDataNotification:
                 self.releaseStateInformation(stateReference)
@@ -1006,8 +1021,10 @@ else: # v3arch
             try:
                 cmdrsp.NextCommandResponder.handleMgmtOperation(
                     self, snmpEngine, stateReference, 
-                    probeHashContext(self, snmpEngine, stateReference, contextName),
-                    PDU, acInfo
+                    probeHashContext(
+                        self, snmpEngine, stateReference, contextName
+                    ),
+                    PDU, injectRequestDetails(snmpEngine, acInfo)
                 )
             except NoDataNotification:
                 self.releaseStateInformation(stateReference)
@@ -1019,8 +1036,10 @@ else: # v3arch
             try:
                 cmdrsp.BulkCommandResponder.handleMgmtOperation(
                     self, snmpEngine, stateReference, 
-                    probeHashContext(self, snmpEngine, stateReference, contextName),
-                    PDU, acInfo
+                    probeHashContext(
+                        self, snmpEngine, stateReference, contextName
+                    ),
+                    PDU, injectRequestDetails(snmpEngine, acInfo)
                 )
             except NoDataNotification:
                 self.releaseStateInformation(stateReference)
