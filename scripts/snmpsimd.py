@@ -403,16 +403,20 @@ class MibInstrumController:
                      'setFlag': setFlag }
 
         acFun, acCtx = acInfo
-        ( snmpEngine, 
+        ( snmpEngine,
+          transportDomain,
+          transportAddress,
           securityModel,
           securityName,
           securityLevel,
           contextName, 
           pduType ) = acCtx  # this was built by our custom function below
 
-        log.msg('SNMP EngineID %s, securityModel %s, securityName %s, securityLevel %s' % (hasattr(snmpEngine, 'snmpEngineID') and snmpEngine.snmpEngineID.prettyPrint() or '<unknown>', securityModel, securityName, securityLevel))
+        log.msg('SNMP EngineID %s, transportDomain %s, transportAddress %s, securityModel %s, securityName %s, securityLevel %s' % (hasattr(snmpEngine, 'snmpEngineID') and snmpEngine.snmpEngineID.prettyPrint() or '<unknown>', transportDomain, transportAddress, securityModel, securityName, securityLevel))
 
         return { 'snmpEngine': snmpEngine,
+                 'transportDomain': transportDomain,
+                 'transportAddress': transportAddress,
                  'securityModel': securityModel,
                  'securityName': securityName,
                  'securityLevel': securityLevel,
@@ -979,7 +983,9 @@ else: # v3arch
         execCtx = snmpEngine.observer.getExecutionContext(
                 'rfc3412.receiveMessage:request'
         )
-        acCtx = ( snmpEngine, execCtx['securityModel'], 
+        acCtx = ( snmpEngine, 
+                  execCtx['transportDomain'], execCtx['transportAddress'], 
+                  execCtx['securityModel'], 
                   execCtx['securityName'], execCtx['securityLevel'],
                   execCtx['contextName'], execCtx['pdu'].getTagSet() )
         return acFun, acCtx

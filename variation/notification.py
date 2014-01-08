@@ -34,18 +34,24 @@ def variate(oid, tag, value, **context):
     if 'snmpEngine' in context and context['snmpEngine']:
         snmpEngine = context['snmpEngine']
         if snmpEngine not in moduleContext:
-            moduleContext[snmpEngine] = ntforg.AsynNotificationOriginator(snmpEngine)
+            moduleContext[snmpEngine] = {}
+            moduleContext[snmpEngine]['ntfOrg'] = ntforg.AsynNotificationOriginator(snmpEngine)
+        if context['transportDomain'] not in moduleContext[snmpEngine]:
             # register this SNMP Engine to handle our transports'
-            # receiver IDs
+            # receiver IDs (which we build by outbound and simulator
+            # transportDomains concatenation)
             snmpEngine.registerTransportDispatcher(
                 snmpEngine.transportDispatcher,
-                ntforg.UdpTransportTarget.transportDomain
+                ntforg.UdpTransportTarget.transportDomain + \
+                    context['transportDomain']
             )
             snmpEngine.registerTransportDispatcher(
                 snmpEngine.transportDispatcher,
-                ntforg.Udp6TransportTarget.transportDomain
+                ntforg.Udp6TransportTarget.transportDomain + \
+                    context['transportDomain']
             )
-        ntfOrg = moduleContext[snmpEngine]
+            moduleContext[snmpEngine][context['transportDomain']] = 1
+        ntfOrg = moduleContext[snmpEngine]['ntfOrg']
     else:
         raise error.SnmpsimError('variation module not given snmpEngine')
 
@@ -137,7 +143,7 @@ def variate(oid, tag, value, **context):
         if 'host' not in args:
             log.msg('notification: target hostname not configured for OID' % (oid,))
             return context['origOid'], tag, context['errorStatus']
-
+        
         if args['proto'] == 'udp':
             target = ntforg.UdpTransportTarget((args['host'], int(args['port'])))
         elif args['proto'] == 'udp6':
@@ -145,10 +151,27 @@ def variate(oid, tag, value, **context):
         else:
             log.msg('notification: unknown transport %s' % args['proto'])
             return context['origOid'], tag, context['errorStatus']
+       
+        localAddress = None
 
-        if 'bindaddr' in args and hasattr(target, 'setLocalAddress'):
-            log.msg('notification: binding to local address %s' % args['bindaddr'])
-            target.setLocalAddress((args['bindaddr'], 0))
+        if 'bindaddr' in args:
+            localAddress = args['bindaddr']
+        else:
+            if context['transportDomain'][:len(target.transportDomain)] == \
+                        target.transportDomain:
+                localAddress = snmpEngine.transportDispatcher.getTransport(context['transportDomain']).getLocalAddress()[0]
+            else:
+                log.msg('notification: incompatible network transport types used by CommandResponder vs NotificationOriginator')
+                if 'bindaddr' in args:
+                    localAddress = args['bindaddr']
+
+        if localAddress:
+            log.msg('notification: binding to local address %s' % localAddress)
+            target.setLocalAddress((localAddress, 0))
+
+        # this will make target objects different based on their bind address 
+        target.transportDomain = target.transportDomain + \
+                                 context['transportDomain']
 
         varBinds = []
 
