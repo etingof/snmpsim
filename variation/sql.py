@@ -10,13 +10,16 @@
 # CREATE TABLE <tablename> (oid text, tag text, value text, maxaccess text)
 #
 from snmpsim.grammar.snmprec import SnmprecGrammar
-from snmpsim import error
+from snmpsim import error, log
 
-dbConn = None
-dbTable = 'snmprec'
+isolationLevels = {
+    '0': 'READ UNCOMMITTED',
+    '1': 'READ COMMITTED',
+    '2': 'REPEATABLE READ',
+    '3': 'SERIALIZABLE'
+}
 
 def init(**context):
-    global dbConn, dbTable
     options = {}
     if context['options']:
         options.update(
@@ -39,9 +42,12 @@ def init(**context):
                 connectParams[k] = int(connectParams[k])
     if not connectParams:
         raise error.SnmpsimError('database connect parameters not specified')
-    dbConn = db.connect(**connectParams)
-    if 'dbtable' in options:
-        dbTable = options['dbtable']
+    moduleContext['dbConn'] = dbConn = db.connect(**connectParams)
+    moduleContext['dbTable'] = dbTable = options.get('dbtable', 'snmprec')
+    moduleContext['isolationLevel'] = options.get('isolationlevel', '1')
+    if moduleContext['isolationLevel'] not in isolationLevels:
+        raise error.SnmpsimError('unknown SQL transaction isolation level %s' % moduleContext['isolationLevel'])
+
     if 'mode' in context and context['mode'] == 'recording':
         cursor = dbConn.cursor()
 
@@ -65,12 +71,27 @@ def init(**context):
         cursor.close()
 
 def variate(oid, tag, value, **context):
-    if dbConn is None:
+    if 'dbConn' in moduleContext:
+        dbConn = moduleContext['dbConn']
+    else:
         raise error.SnmpsimError('variation module not initialized')
 
     cursor = dbConn.cursor()
 
-    dbTable, = value.split(',')
+    try:
+        cursor.execute(
+            'set session transaction isolation level %s' % moduleContext['isolationLevel']
+        )
+    except:  # non-MySQL/Postgres
+        pass
+
+    if value:
+        dbTable = value.split(',').pop(0)
+    elif 'dbTable' in moduleContext:
+        dbTable = moduleContext['dbTable']
+    else:
+        log.msg('SQL table not specified for OID %s' % (context['origOid'],))
+        return context['origOid'], tag, context['errorStatus']
 
     origOid = context['origOid']
     sqlOid = '.'.join(['%10s' % x for x in str(origOid).split('.')])
@@ -124,8 +145,12 @@ def variate(oid, tag, value, **context):
             return origOid, tag, context['errorStatus']
 
 def record(oid, tag, value, **context):
-    if dbConn is None:
+    if 'dbConn' in moduleContext:
+        dbConn = moduleContext['dbConn']
+    else:
         raise error.SnmpsimError('variation module not initialized')
+
+    dbTable = moduleContext['dbTable']
 
     if context['stopFlag']:
         raise error.NoDataNotification()
@@ -159,7 +184,8 @@ def record(oid, tag, value, **context):
         raise error.NoDataNotification()
 
 def shutdown(**context):
-    if dbConn is not None:
+    dbConn = moduleContext.get('dbConn')
+    if dbConn:
         if 'mode' in context and context['mode'] == 'recording':
             dbConn.commit()
         dbConn.close()

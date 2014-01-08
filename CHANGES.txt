@@ -8,6 +8,9 @@
   of variable bindings in SNMP response message on a per-engine-id
   basis. Global default is now 64 variable bindings.
 - The notification module now supports 'bindaddr' option.
+- The sql variation module not switches default SQL transaction isolation
+  level to 'READ COMMITTED'. Isolation level (0-3) could now be specified
+  on per-instance basis through 'isolationlevel' option.
 - Fix to snmpEngine configuration code at notification.py variation module.
 - Fixes to --logging-method formatting in --help output.
 - Fix to numeric.py module value wrapping feature.
