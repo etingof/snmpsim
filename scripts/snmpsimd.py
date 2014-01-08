@@ -403,10 +403,10 @@ class MibInstrumController:
                      'setFlag': setFlag }
 
         acFun, snmpEngine = acInfo  # we injected snmpEngine object earlier
+        # this API is first introduced in pysnmp 4.2.6 
         execCtx = snmpEngine.observer.getExecutionContext(
                 'rfc3412.receiveMessage:request'
         )
-        # this API is first introduced in pysnmp 4.2.6 
         ( transportDomain,
           transportAddress,
           securityModel,
@@ -964,9 +964,16 @@ if v2cArch:
 
 else: # v3arch
     def probeHashContext(self, snmpEngine, stateReference, contextName):
-        transportDomain, transportAddress = snmpEngine.msgAndPduDsp.getTransportInfo(stateReference)
+        # this API is first introduced in pysnmp 4.2.6 
+        execCtx = snmpEngine.observer.getExecutionContext(
+                                          'rfc3412.receiveMessage:request'
+                                      )
+        ( transportDomain,
+          transportAddress ) = ( execCtx['transportDomain'],
+                                 execCtx['transportAddress'] )
 
-        for candidate in probeContext(transportDomain, transportAddress, contextName):
+        for candidate in probeContext(transportDomain, transportAddress,
+                                      contextName):
             probedContextName = md5(candidate).hexdigest()
             try:
                 mibInstrum = self.snmpContext.getMibInstrum(probedContextName)
