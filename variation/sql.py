@@ -29,7 +29,8 @@ def init(**context):
         raise error.SnmpsimError('database type not specified')
     db = __import__(
         options['dbtype'], 
-        fromlist=options['dbtype'].split('.')[:-1]
+        globals(), locals(),
+        options['dbtype'].split('.')[:-1]
     )
     if 'dboptions' in options: # legacy
         connectParams = { 'database': options['dboptions'] }
