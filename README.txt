@@ -1101,11 +1101,11 @@ in .snmprec value field:
              math module such as sin, log, pow etc. The only requirement
              is that used function accepts a single integer argument. 
              Default is x = f(x).
-  rate - elapsed time scaler. Default is 1.
-  scale - function value scaler. Default is 1.
+  rate - elapsed time scaler. Default is 1.0.
+  scale - function value scaler. Default is 1.0.
   offset - constant value by which the return value increases on each
            invocation. Default is 0.
-  deviation - random deviation maximum. Default is 0 which means no
+  deviation - random deviation maximum. Default is 0.0 which means no
               deviation.
   cumulative - if non-zero sums up previous value with the newly generated one.
                This is important when simulating COUNTER values.
