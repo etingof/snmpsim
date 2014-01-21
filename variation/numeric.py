@@ -64,11 +64,10 @@ def variate(oid, tag, value, **context):
         if 'rate' not in recordContext['settings']:
             recordContext['settings']['rate'] = 1
         if 'function' in recordContext['settings']:
-            recordContext['settings']['function'] = getattr(
-                math, recordContext['settings']['function']
-            )
+            f = recordContext['settings']['function'].split('%')
+            recordContext['settings']['function'] = getattr(math, f[0]), f[1:]
         else:
-            recordContext['settings']['function'] = lambda x: x
+            recordContext['settings']['function'] = lambda x: x, ()
 
     vold, told = recordContext['settings'].get('initial', recordContext['settings']['min']), tboot
 
@@ -84,9 +83,19 @@ def variate(oid, tag, value, **context):
     else:
         t = tnow - tboot
 
-    v = recordContext['settings']['function'](
-        t * recordContext['settings']['rate']
-    )
+    f, args = recordContext['settings']['function']
+
+    _args = []
+    if args:
+        for x in args:
+            if x == '<time>':
+                _args.append(t*recordContext['settings']['rate'])
+            else:
+                _args.append(float(x))
+    else:
+        _args.append(t*recordContext['settings']['rate'])
+
+    v = f(*_args)
     
     if 'scale' in recordContext['settings']:
         v *= recordContext['settings']['scale']

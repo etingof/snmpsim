@@ -18,6 +18,7 @@
   on per-instance basis through 'isolationlevel' option.
 - Switched to the latest pysnmp's requestObserver facility for getting
   request details from pysnmp core.
+- Numeric module's 'function' parameter now accepts optional arguments.
 - Fix to snmpEngine configuration code at notification.py variation module.
 - Fixes to --logging-method formatting in --help output.
 - Fix to numeric.py module value wrapping feature.

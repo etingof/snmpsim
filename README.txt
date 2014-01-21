@@ -1098,9 +1098,14 @@ in .snmprec value field:
          generated value is reset to max's complement.
   function - defines elapsed-time-to-generated-value relationship. Can be
              any of reasonably suitable mathematical function from the
-             math module such as sin, log, pow etc. The only requirement
-             is that used function accepts a single integer argument. 
-             Default is x = f(x).
+             math module such as sin, log, pow etc. In its simple form,
+             given function is expected to accept just a single integer
+             argument (time will be passed). 
+             Alternatively, a list of positional arguments to
+             given function could be specified using '%' delimiter.
+             Current time could be passed in among other arguments by
+             including the '<time>' macro. For example: pow%<time>%2 is
+             equivalent to timeNow**2. Default is x = f(x).
   rate - elapsed time scaler. Default is 1.0.
   scale - function value scaler. Default is 1.0.
   offset - constant value by which the return value increases on each
