@@ -143,9 +143,13 @@ class SnmprecRecord(snmprec.SnmprecRecord):
                       recordContexts ) = context['variationModules'][modName]
                     if context['dataFile'] not in agentContexts:
                         agentContexts[context['dataFile']] = {}
+                    if context['dataFile'] not in recordContexts:
+                        recordContexts[context['dataFile']] = {}
                     variationModule['agentContext'] = agentContexts[context['dataFile']]
+                    recordContexts = recordContexts[context['dataFile']]
                     if oid not in recordContexts:
                         recordContexts[oid] = {}
+
                     variationModule['recordContext'] = recordContexts[oid]
 
                     # invoke variation module
@@ -766,7 +770,7 @@ for variationModulesDir in confdir.variation:
                 log.msg('Variation module "%s" execution failure: %s' %  (mod, sys.exc_info()[1]))
                 sys.exit(-1)
             else:
-                # moduleContext, agentContext, recordContext
+                # moduleContext, agentContexts, recordContexts
                 variationModules[alias] = ctx, {}, {}
 
     log.msg('A total of %s modules found in %s' % (len(variationModules), variationModulesDir))
