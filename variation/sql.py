@@ -83,6 +83,7 @@ def variate(oid, tag, value, **context):
         cursor.execute(
             'set session transaction isolation level %s' % moduleContext['isolationLevel']
         )
+        cursor.fetchall()
     except:  # non-MySQL/Postgres
         pass
 
@@ -105,7 +106,7 @@ def variate(oid, tag, value, **context):
             textTag = SnmprecGrammar().getTagByType(context['origValue'])
             textValue = str(context['origValue'])
         cursor.execute(
-            'select maxaccess,tag from %s where oid=\'%s\'' % (dbTable, sqlOid)
+            'select maxaccess,tag from %s where oid=\'%s\' limit 1' % (dbTable, sqlOid)
         )
         resultset = cursor.fetchone()
         if resultset:
@@ -136,7 +137,7 @@ def variate(oid, tag, value, **context):
                 cursor.close()
                 return origOid, tag, context['errorStatus']
 
-        cursor.execute('select tag, value from %s where oid=\'%s\'' % (dbTable, sqlOid))
+        cursor.execute('select tag, value from %s where oid=\'%s\' limit 1' % (dbTable, sqlOid))
         resultset = cursor.fetchone()
         cursor.close()
 

@@ -28,6 +28,7 @@
 - Multiple comma-separated debug options now supported.
 - PostgreSQL is now supported by sql variation module.
 - Fix to sql.py variation module to work with Python older than 2.5.
+- Fix to sql.py variation module to avoid 'Unread result found' MySQL error.
 - The snmpwalk OPAQUE: Float: syntax is now supported.
 - Fixes to make snmpsimd working with older version of pysnmp.
 - Fix to HEX value handling in snmpwalk format handler.
