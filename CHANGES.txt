@@ -19,6 +19,7 @@
 - Switched to the latest pysnmp's requestObserver facility for getting
   request details from pysnmp core.
 - Numeric module's 'function' parameter now accepts optional arguments.
+- Fix to pcap2dev.py not to loose the last trailing OID in capture.
 - Fix to variation module recordContexts isolation to make it dedicated
   to each Variaiton Module+Agent instance.
 - Fix to snmpEngine configuration code at notification.py variation module.

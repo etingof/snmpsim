@@ -397,6 +397,7 @@ for context in contexts:
     reqTime = time.time()
     oids = list(contexts[context].keys())
     oids.sort()
+    oids.append(oids[-1])  # duplicate last OID to trigger stopFlag
     while True:
         for oid in oids:
             timeline, values = contexts[context][oid]
@@ -420,7 +421,6 @@ for context in contexts:
                 'reqTime': reqTime,
                 'startOID': startOID,
                 'stopOID': stopOID,
-                # XXX -  last OID is dropped
                 'stopFlag': oids.index(oid) == len(oids)-1,
                 'variationModule': variationModule
             }
