@@ -84,7 +84,7 @@ def variate(oid, tag, value, **context):
     if e and e in errorTypes:
         log.msg('error: reporting %s for %s' % (e, oid))
         raise errorTypes[e](
-            name=oid, idx=context['varsTotal']-context['varsRemaining']
+            name=oid, idx=max(0, context['varsTotal']-context['varsRemaining']-1)
         )
 
     if context['setFlag']:

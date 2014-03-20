@@ -81,7 +81,7 @@ def variate(oid, tag, value, **context):
 
             if e in errorTypes:
                 raise errorTypes[e](
-                    name=oid, idx=context['varsTotal']-context['varsRemaining']
+                    name=oid, idx=max(0, context['varsTotal']-context['varsRemaining']-1)
                 )
 
         if moduleContext[oid]['type'].isSameTypeWith(context['origValue']):

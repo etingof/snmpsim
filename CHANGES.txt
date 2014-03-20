@@ -34,6 +34,8 @@
 - Fixes to make snmpsimd working with older version of pysnmp.
 - Fix to HEX value handling in snmpwalk format handler.
 - Fix to absolute file log path on Windows.
+- Fix to off-by-one errorIndex as reported by error.py and writecache.py
+  variation modules.
 
 0.2.4
 -----
