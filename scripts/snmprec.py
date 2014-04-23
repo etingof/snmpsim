@@ -30,6 +30,7 @@ from snmpsim import confdir, error, log
 
 # Defaults
 getBulkFlag = False
+continueOnErrorsFlag = False
 getBulkRepetitions = 25
 snmpVersion = 1
 snmpCommunity = 'public'
@@ -89,7 +90,8 @@ Usage: %s [--help]
     [--output-file=<filename>]
     [--variation-modules-dir=<dir>]
     [--variation-module=<module>]
-    [--variation-module-options=<args>]""" % (
+    [--variation-module-options=<args>]
+    [--continue-on-errors]""" % (
         sys.argv[0],
         '|'.join([ x for x in debug.flagMap.keys() if x != 'mibview' ]),
         '|'.join(log.gMap.keys()),
@@ -104,12 +106,12 @@ try:
         'help', 'version', 'debug=', 'logging-method=', 'quiet',
         'v1', 'v2c', 'v3', 'protocol-version=', 'community=', 
         'v3-user=', 'v3-auth-key=', 'v3-priv-key=', 'v3-auth-proto=',
-        'v3-priv-proto=', 'context=', 'use-getbulk', 'getbulk-repetitions=',
-        'agent-address=', 'agent-port=', 'agent-udpv4-endpoint=',
-        'agent-udpv6-endpoint=', 'agent-unix-endpoint=', 
-        'start-oid=', 'stop-oid=', 'output-file=',
+        'v3-priv-proto=', 'context=', 'use-getbulk',
+        'getbulk-repetitions=', 'agent-address=', 'agent-port=',
+        'agent-udpv4-endpoint=', 'agent-udpv6-endpoint=',
+        'agent-unix-endpoint=', 'start-oid=', 'stop-oid=', 'output-file=',
         'variation-modules-dir=', 'variation-module=',
-        'variation-module-options='
+        'variation-module-options=', 'continue-on-errors'
     ] )
 except Exception:
     sys.stderr.write('ERROR: %s\r\n%s\r\n' % (sys.exc_info()[1], helpMessage))
@@ -244,6 +246,8 @@ Software documentation and support at http://snmpsim.sf.net
         variationModuleName = opt[1]
     elif opt[0] == '--variation-module-options':
         variationModuleOptions = opt[1]
+    elif opt[0] == '--continue-on-errors':
+        continueOnErrorsFlag = True
  
 # Catch missing params
 
@@ -436,7 +440,31 @@ def cbFun(sendRequestHandle, errorIndication, errorStatus, errorIndex,
     # SNMPv1 response may contain noSuchName error *and* SNMPv2c exception,
     # so we ignore noSuchName error here
     if errorStatus and errorStatus != 2:
-        log.msg('Remote SNMP error: %s' % errorStatus.prettyPrint())
+        log.msg('Remote SNMP error %s for OID %s' %
+                (errorStatus.prettyPrint(), varBindTable[0][errorIndex-1][0]))
+        if continueOnErrorsFlag:
+            nextOID = varBindTable[-1][errorIndex-1][0]
+            if len(nextOID) < 4:
+                return
+            if nextOID[-1]:
+                nextOID = nextOID[:-2] + (nextOID[-2]+1,)
+            else:
+                nextOID = nextOID[:-2] + (nextOID[-2]+1, 0)
+            
+            log.msg('Retrying with OID %s...' % (nextOID,))
+            
+            # initiate another SNMP walk iteration
+            if getBulkFlag:
+                cmdGen.sendReq(
+                    snmpEngine, 'tgt', 0, getBulkRepetitions,
+                    ((nextOID, None),), cbFun, cbCtx,
+                    contextName=v3Context
+                )
+            else:
+                cmdGen.sendReq(
+                    snmpEngine, 'tgt', ((nextOID, None),), cbFun, cbCtx,
+                    contextName=v3Context
+                )
         return
 
     stopFlag = False

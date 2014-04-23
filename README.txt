@@ -126,6 +126,7 @@ Usage: scripts/snmprec.py [--help]
     [--variation-modules-dir=<dir>]
     [--variation-module=<module>]
     [--variation-module-options=<args>]
+    [--continue-on-errors]
 
 $ snmprec.py --agent-udpv4-endpoint=192.168.1.1 --start-oid=1.3.6.1.2.1 --stop-oid=1.3.6.1.2.1.5 --output-file=snmpsim/data/recorded/linksys-system.snmprec
 Scanning "/usr/local/share/snmpsim/variation" directory for variation modules...  none requested

@@ -1,5 +1,6 @@
-0.2.5
------
+
+Revision 0.2.5, 24-04-2014
+--------------------------
 
 - Simulator now depends on the latest pysnmp features introduced in 
   pysnmp version 4.2.6
@@ -19,6 +20,8 @@
 - Switched to the latest pysnmp's requestObserver facility for getting
   request details from pysnmp core.
 - Numeric module's 'function' parameter now accepts optional arguments.
+- The snmprec.py tool improved to optionally survive SNMP PDU-level errors
+  and keep walking remote Agent using an OID derived from the failed one.
 - Fix to pcap2dev.py not to loose the last trailing OID in capture.
 - Fix to variation module recordContexts isolation to make it dedicated
   to each Variaiton Module+Agent instance.
@@ -37,8 +40,8 @@
 - Fix to off-by-one errorIndex as reported by error.py and writecache.py
   variation modules.
 
-0.2.4
------
+Revision 0.2.4, 04-10-2014
+--------------------------
 
 - A tool for building SNMP Simulator data files from network
   packet captures added.
