@@ -519,6 +519,8 @@ def cbFun(sendRequestHandle, errorIndication, errorStatus, errorIndex,
                         snmpEngine, 'tgt', ((startOID, None),), cbFun, cbCtx,
                         contextName=v3Context
                     )
+
+                stopFlag = True  # stop current iteration
  
             except error.NoDataNotification:
                 pass
