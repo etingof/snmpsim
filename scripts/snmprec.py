@@ -2,7 +2,7 @@
 #
 # SNMP Snapshot Data Recorder
 #
-# Written by Ilya Etingof <ilya@glas.net>, 2010-2013
+# Written by Ilya Etingof <ilya@glas.net>, 2010-2014
 #
 
 import getopt

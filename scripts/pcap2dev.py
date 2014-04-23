@@ -2,7 +2,7 @@
 #
 # SNMP Simulator MIB to data file converter
 #
-# Written by Ilya Etingof <ilya@glas.net>, 2011-2013
+# Written by Ilya Etingof <ilya@glas.net>, 2011-2014
 #
 import getopt
 import sys
