@@ -3,6 +3,7 @@
 # Get/set managed value by invoking an external program
 import sys
 import subprocess
+from pysnmp.proto import rfc1902
 from snmpsim import log
 
 def init(**context):
@@ -17,7 +18,20 @@ def init(**context):
         moduleContext['settings']['shell'] = int(moduleContext['settings']['shell'])
  
 def variate(oid, tag, value, **context):
+    transportDomain = rfc1902.ObjectName(context['transportDomain']).prettyPrint() 
+    transportAddress = ':'.join([str(x) for x in context['transportAddress']])
+    securityModel = str(context['securityModel'])
+    securityName = str(context['securityName'])
+    securityLevel = str(context['securityLevel'])
+    contextName = str(context['contextName'])
+
     args = [ x\
+             .replace('@TRANSPORTDOMAIN@', transportDomain)\
+             .replace('@TRANSPORTADDRESS@', transportAddress)\
+             .replace('@SECURITYMODEL@', securityModel)\
+             .replace('@SECURITYNAME@', securityName)\
+             .replace('@SECURITYLEVEL@', securityLevel)\
+             .replace('@CONTEXTNAME@', contextName)\
              .replace('@DATAFILE@', context['dataFile'])\
              .replace('@OID@', str(oid))\
              .replace('@TAG@', tag)\

@@ -17,6 +17,8 @@ Revision 0.2.5, 24-04-2014
 - The sql variation module not switches default SQL transaction isolation
   level to 'READ COMMITTED'. Isolation level (0-3) could now be specified
   on per-instance basis through 'isolationlevel' option.
+- The subprocess variation module improved to expose more SNMP engine
+  parameters to user process.
 - Switched to the latest pysnmp's requestObserver facility for getting
   request details from pysnmp core.
 - Numeric module's 'function' parameter now accepts optional arguments.
