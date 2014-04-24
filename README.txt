@@ -1396,6 +1396,14 @@ Full list of supported macros follows:
   @SUBTREEFLAG@ - resolves into '1' if the .snmprec file line selected
                   for processing current request serves a subtree of
                   OIDs rather than a single specific OID
+  @TRANSPORTDOMAIN@ - SNMP transport domain as an OID. It has a one-to-one
+                      relationship with local interfaces Simulator is 
+                      configured to listen at
+  @TRANSPORTADDRESS@ - peer transport address
+  @SECURITYMODEL@ - SNMPv3 arch Security Model
+  @SECURITYNAME@ - SNMPv3 arch Security Name
+  @SECURITYLEVEL@ - SNMPv3 arch Security Level
+  @CONTEXTNAME@ - SNMPv3 arch Context Name
 
 Here's an example subprocess module use in a .snmprec file:
 
