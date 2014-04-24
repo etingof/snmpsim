@@ -18,12 +18,21 @@ def init(**context):
         moduleContext['settings']['shell'] = int(moduleContext['settings']['shell'])
  
 def variate(oid, tag, value, **context):
-    transportDomain = rfc1902.ObjectName(context['transportDomain']).prettyPrint() 
-    transportAddress = ':'.join([str(x) for x in context['transportAddress']])
-    securityModel = str(context['securityModel'])
-    securityName = str(context['securityName'])
-    securityLevel = str(context['securityLevel'])
-    contextName = str(context['contextName'])
+    # in --v2c-arch some of the items are not defined
+    transportDomain = transportAddress = securityModel = securityName = \
+                      securityLevel = contextName = '<undefined>'
+    if 'transportDomain' in context:
+        transportDomain = rfc1902.ObjectName(context['transportDomain']).prettyPrint()
+    if 'transportAddress' in context:
+        transportAddress = ':'.join([str(x) for x in context['transportAddress']])
+    if 'securityModel' in context:
+        securityModel = str(context['securityModel'])
+    if 'securityName' in context:
+        securityName = str(context['securityName'])
+    if 'securityLevel' in context:
+        securityLevel = str(context['securityLevel'])
+    if 'contextName' in context:
+        contextName = str(context['contextName'])
 
     args = [ x\
              .replace('@TRANSPORTDOMAIN@', transportDomain)\
