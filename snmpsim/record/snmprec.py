@@ -6,12 +6,16 @@ class SnmprecRecord(dump.DumpRecord):
     grammar = snmprec.SnmprecGrammar()
     ext = 'snmprec'
 
-    def evaluateValue(self, oid, tag, value, **context):
+    def unpackTag(self, tag):
         if tag and tag[-1] == 'x':
-            tag = tag[:-1]
-            hexvalue = value
+            return tag[:-1], True
         else:
-            hexvalue = None
+            return tag, None
+
+    def evaluateValue(self, oid, tag, value, **context):
+        tag, hexvalue = self.unpackTag(tag)
+        if hexvalue:
+            hexvalue = value
 
         try:
             if hexvalue is None:
