@@ -13,6 +13,7 @@
 # For successful operation each managed OID must be present in both
 # data structures
 #
+import time
 from snmpsim.grammar.snmprec import SnmprecGrammar
 from snmpsim.record.snmprec import SnmprecRecord
 from snmpsim import error, log
@@ -40,14 +41,27 @@ def init(**context):
     moduleContext['dbConn'] = StrictRedis(**connectParams)
     
     if context['mode'] == 'recording':
-        if 'key-space' in options:
-            moduleContext['keySpace'] = options['key-space']
+        if 'key-spaces-id' in options:
+            moduleContext['key-spaces-id'] = int(options['key-spaces-id'])
         else:    
             from random import randrange, seed
             seed()
-            moduleContext['keySpace'] = '%.10d' % randrange(0, 0xffffffff)
+            moduleContext['key-spaces-id'] = randrange(0, 0xffffffff)
 
-        log.msg('Using key-space ID %s' % moduleContext['keySpace'])
+        log.msg('redis: using key-spaces-id %s' % moduleContext['key-spaces-id'])
+        
+        if 'iterations' in options:
+            moduleContext['iterations'] = int(options['iterations'])
+        if 'period' in options:
+            moduleContext['period'] = float(options['period'])
+        else:
+            moduleContext['period'] = 60.0
+
+    elif context['mode'] == 'variating':
+        moduleContext['booted'] = time.time()
+
+    moduleContext['ready'] = True
+
 
 unpackTag = SnmprecRecord().unpackTag
 
@@ -57,19 +71,32 @@ def variate(oid, tag, value, **context):
     else:
         raise error.SnmpsimError('variation module not initialized')
 
-    if 'key-spaces' not in recordContext:
-        options = dict([ [kv for kv in token.split(':')] for token in value.split(',')])
-        if 'key-spaces' not in options:
-            log.msg('mandatory key-spaces option is missing')
+    if 'settings' not in recordContext:
+        settings = recordContext['settings'] = dict([ x.split('=') for x in value.split(',') ])
+        if 'key-spaces-id' not in settings:
+            log.msg('redis:mandatory key-spaces-id option is missing')
             return context['origOid'], tag, context['errorStatus']
-    
-        keySpaces = options['key-spaces'].split(';')
 
-        recordContext['key-spaces'] = keySpaces
+        settings['period'] = float(settings.get('period', 60))
+
+        recordContext['ready'] = True
+
+    if 'ready' not in recordContext:
+        return context['origOid'], tag, context['errorStatus']
+
+    keySpacesId = recordContext['settings']['key-spaces-id']
+    if recordContext['settings']['period']:
+        keySpaceIdx = int((time.time() - moduleContext['booted']) % (recordContext['settings']['period'] * int(dbConn.llen(keySpacesId))) // recordContext['settings']['period'])
     else:
-        keySpaces = recordContext['key-spaces']
+        keySpaceIdx = 0
+    keySpace = dbConn.lindex(keySpacesId, keySpaceIdx)
+    if 'current-keyspace' not in recordContext or \
+            recordContext['current-keyspace'] != keySpace:
+        log.msg('redis: now using keyspace %s (cycling period %s)' % (keySpace, recordContext['settings']['period'] or '<disabled>'))
+        recordContext['current-keyspace'] = keySpace
 
-    keySpace = keySpaces[0] # XXX
+    if keySpace is None:
+        return origOid, tag, context['errorStatus']
 
     origOid = context['origOid']
     dbOid = '.'.join(['%10s' % x for x in str(origOid).split('.')])
@@ -132,15 +159,34 @@ def getNextOid(dbConn, keySpace, dbOid, index=False):
     return not index and dbConn.lindex(listKey, idx) or idx
 
 def record(oid, tag, value, **context):
+    if 'ready' not in moduleContext:
+        raise error.SnmpsimError('module not initialized')
+
     if 'dbConn' in moduleContext:
         dbConn = moduleContext['dbConn']
     else:
         raise error.SnmpsimError('variation module not initialized')
 
-    if context['stopFlag']:
-        raise error.NoDataNotification()
+    if 'started' not in moduleContext:
+        moduleContext['started'] = time.time()
 
-    keySpace = moduleContext['keySpace']
+    keySpace = '%.10d' % (moduleContext['key-spaces-id'] + moduleContext.get('iterations', 0))
+
+    if context['stopFlag']:
+        dbConn.sort(keySpace + '-' + 'temp_oids_ordering', store=keySpace + '-' + 'oids_ordering', alpha=True)
+
+        dbConn.delete(keySpace + '-' + 'temp_oids_ordering')
+        dbConn.rpush(moduleContext['key-spaces-id'], keySpace)
+        log.msg('redis: done with key-space %s' % keySpace)
+        if 'iterations' in moduleContext and moduleContext['iterations']:
+            log.msg('redis: %s iterations remaining' % moduleContext['iterations'])
+            moduleContext['started'] = time.time()
+            moduleContext['iterations'] -= 1
+            wait = max(0, moduleContext['period'] - (time.time() - moduleContext['started']))
+
+            raise error.MoreDataNotification(period=wait)
+        else:
+            raise error.NoDataNotification()
 
     dbOid = '.'.join(['%10s' % x for x in oid.split('.')])
     if 'hexvalue' in context:
@@ -154,15 +200,19 @@ def record(oid, tag, value, **context):
     dbConn.set(keySpace + '-' + dbOid, textTag + '|' + textValue)
 
     if not context['count']:
-        return str(context['startOID']), ':redis', 'key-spaces:%s' % keySpace
+        settings = {
+            'key-spaces-id': moduleContext['key-spaces-id']
+        }
+        if 'period' in moduleContext:
+            settings['period'] = '%.2f' % float(moduleContext['period'])
+        if 'addon' in moduleContext:
+            settings.update(
+                dict([x.split('=') for x in moduleContext['addon']])
+            )
+        value = ','.join([ '%s=%s' % (k,v) for k,v in settings.items() ])
+        return str(context['startOID']), ':redis', value
     else:
         raise error.NoDataNotification()
 
 def shutdown(**context):
-    dbConn = moduleContext.pop('dbConn', None)
-    if dbConn:
-        if 'mode' in context and context['mode'] == 'recording':
-            keySpace = moduleContext['keySpace']
-            dbConn.sort(keySpace + '-' + 'temp_oids_ordering', store=keySpace + '-' + 'oids_ordering', alpha=True)
-
-            dbConn.delete(keySpace + '-' + 'temp_oids_ordering')
+    moduleContext.pop('dbConn')
