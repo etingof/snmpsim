@@ -51,7 +51,7 @@ def init(**context):
         log.msg('redis: using key-spaces-id %s' % moduleContext['key-spaces-id'])
         
         if 'iterations' in options:
-            moduleContext['iterations'] = int(options['iterations'])
+            moduleContext['iterations'] = max(0, int(options['iterations'])-1)
         if 'period' in options:
             moduleContext['period'] = float(options['period'])
         else:
@@ -166,7 +166,8 @@ def getNextOid(dbConn, keySpace, dbOid, index=False):
     oidKey = keySpace + '-' + dbOid
     maxlen = listsize = dbConn.llen(listKey)
     minlen = 0
-    while maxlen >= minlen:
+    while maxlen >= minlen and listsize:
+        listsize -= 1
         idx = minlen+(maxlen-minlen)//2
         nextOid = dbConn.lindex(listKey, idx)
         if nextOid < oidKey:
@@ -176,6 +177,8 @@ def getNextOid(dbConn, keySpace, dbOid, index=False):
         else:
             idx += 1
             break
+    if not listsize:
+        raise error.SnmpsimError('empty/unsorted %s' % listKey)
     return not index and dbConn.lindex(listKey, idx) or idx
 
 def record(oid, tag, value, **context):

@@ -33,7 +33,7 @@ def init(**context):
             log.msg('multiplex: creating %s...' % moduleContext['dir'])
             os.makedirs(moduleContext['dir'])
         if 'iterations' in moduleContext:
-            moduleContext['iterations'] = int(moduleContext['iterations'])
+            moduleContext['iterations'] = max(0, int(moduleContext['iterations'])-1)
         if 'period' in moduleContext:
             moduleContext['period'] = float(moduleContext['period'])
         else:
