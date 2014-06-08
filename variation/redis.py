@@ -21,7 +21,7 @@ from pysnmp.smi.error import WrongValueError
 try:
     from redis import StrictRedis
 except ImportError:
-    raise error.SnmpsimError('Redis module for Python must be installed!')
+    raise error.SnmpsimError('redis-py module for Python must be installed!')
 
 def init(**context):
     options = {}
@@ -30,7 +30,7 @@ def init(**context):
             dict([x.split(':') for x in context['options'].split(',')])
         )
     connectParams = dict(
-        [ (k,options[k]) for k in options if k in ('host', 'port', 'password', 'db''unix_socket') ]
+        [ (k,options[k]) for k in options if k in ('host', 'port', 'password', 'db', 'unix_socket') ]
     )
     for k in 'port', 'db':
         if k in connectParams:
@@ -57,6 +57,10 @@ def init(**context):
         else:
             moduleContext['period'] = 60.0
 
+        redisScript = options.get('evalsha')
+        if redisScript:
+            log.msg('redis: using server-side script %s' % redisScript)
+
     elif context['mode'] == 'variating':
         moduleContext['booted'] = time.time()
 
@@ -79,10 +83,17 @@ def variate(oid, tag, value, **context):
 
         settings['period'] = float(settings.get('period', 60))
 
+        if 'evalsha' in settings:
+            if not dbConn.script_exists(settings['evalsha']):
+                log.msg('redis: lua script %s does not exist at Redis' % settings['evalsha'])
+                return context['origOid'], tag, context['errorStatus']
+
         recordContext['ready'] = True
 
     if 'ready' not in recordContext:
         return context['origOid'], tag, context['errorStatus']
+
+    redisScript = recordContext['settings'].get('evalsha')
 
     keySpacesId = recordContext['settings']['key-spaces-id']
     if recordContext['settings']['period']:
@@ -109,7 +120,10 @@ def variate(oid, tag, value, **context):
             textTag = SnmprecGrammar().getTagByType(context['origValue'])
             textValue = str(context['origValue'])
 
-        prevTagAndValue = dbConn.get(keySpace + '-' + dbOid)
+        if redisScript:
+            prevTagAndValue = dbConn.evalsha(redisScript, 1, keySpace + '-' + dbOid)
+        else:
+            prevTagAndValue = dbConn.get(keySpace + '-' + dbOid)
         if prevTagAndValue:
             prevTag, prevValue = prevTagAndValue.split('|')
             if unpackTag(prevTag)[0] != unpackTag(textTag)[0]:
@@ -120,7 +134,10 @@ def variate(oid, tag, value, **context):
                            getNextOid(dbConn, keySpace, dbOid),
                            dbOid)
 
-        dbConn.set(keySpace + '-' + dbOid, textTag + '|' + textValue)
+        if redisScript:
+            dbConn.evalsha(redisScript, 1, keySpace + '-' + dbOid, textTag + '|' + textValue)
+        else:
+            dbConn.set(keySpace + '-' + dbOid, textTag + '|' + textValue)
 
         return origOid, textTag, context['origValue']
     else:
@@ -130,8 +147,11 @@ def variate(oid, tag, value, **context):
                                                index=True))
         else:
             textOid = keySpace + '-' + dbOid
-        
-        tagAndValue = dbConn.get(textOid)
+
+        if redisScript:
+            tagAndValue = dbConn.evalsha(redisScript, 1, textOid)
+        else:
+            tagAndValue = dbConn.get(textOid)
 
         if not tagAndValue:
             return origOid, tag, context['errorStatus']
@@ -170,6 +190,8 @@ def record(oid, tag, value, **context):
     if 'started' not in moduleContext:
         moduleContext['started'] = time.time()
 
+    redisScript = moduleContext.get('evalsha')
+
     keySpace = '%.10d' % (moduleContext['key-spaces-id'] + moduleContext.get('iterations', 0))
 
     if context['stopFlag']:
@@ -197,7 +219,10 @@ def record(oid, tag, value, **context):
         textValue = str(context['origValue'])
 
     dbConn.lpush(keySpace + '-temp_oids_ordering', keySpace + '-' + dbOid)
-    dbConn.set(keySpace + '-' + dbOid, textTag + '|' + textValue)
+    if redisScript:
+        dbConn.evalsha(redisScript, 1, keySpace + '-' + dbOid, textTag + '|' + textValue)
+    else:
+        dbConn.set(keySpace + '-' + dbOid, textTag + '|' + textValue)
 
     if not context['count']:
         settings = {
