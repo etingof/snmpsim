@@ -82,4 +82,6 @@ class WalkGrammar(abstract.AbstractGrammar):
                 value = ''
             else:
                 tag = 'TimeTicks:'
-        return oid, tag.upper(), self.filterMap.get(tag.upper(), lambda x: x)(value.strip())
+        if oid and tag:
+            return oid, tag.upper(), self.filterMap.get(tag.upper(), lambda x: x)(value.strip())
+        raise error.SnmpsimError('broken record <%s>' % line)

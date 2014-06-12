@@ -39,5 +39,7 @@ class DumpGrammar(abstract.AbstractGrammar):
         except:
             raise error.SnmpsimError('broken record <%s>' % line)
         else:
-            return oid, tag, self.filterMap.get(tag, lambda x: x)(value.strip())
+            if oid and tag:
+                return oid, tag, self.filterMap.get(tag, lambda x: x)(value.strip())
+            raise error.SnmpsimError('broken record <%s>' % line)
 

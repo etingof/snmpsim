@@ -39,11 +39,11 @@ Revision 0.2.5, 04-06-2014
 - Fix to sql.py variation module to work with Python older than 2.5.
 - Fix to sql.py variation module to avoid 'Unread result found' MySQL error.
 - The snmpwalk OPAQUE: Float: syntax is now supported.
-- Fixes to make snmpsimd working with older version of pysnmp.
 - Fix to HEX value handling in snmpwalk format handler.
 - Fix to absolute file log path on Windows.
 - Fix to off-by-one errorIndex as reported by error.py and writecache.py
   variation modules.
+- Fix to record parsers/builders to fail on empty values.
 
 Revision 0.2.4, 04-10-2014
 --------------------------

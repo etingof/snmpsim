@@ -23,7 +23,10 @@ class SnmprecGrammar(AbstractGrammar):
                rfc1905.EndOfMibView ):
         tagMap[str(sum([ x for x in t.tagSet[0] ]))] = t
 
-    def build(self, oid, tag, val): return str2octs('%s|%s|%s\n' % (oid, tag, val))
+    def build(self, oid, tag, val):
+        if oid and tag:
+            return str2octs('%s|%s|%s\n' % (oid, tag, val))
+        raise error.SnmpsimError('empty OID/tag <%s/%s>' % (oid, tag))
 
     def parse(self, line):
         try:
@@ -31,7 +34,9 @@ class SnmprecGrammar(AbstractGrammar):
         except:
             raise error.SnmpsimError('broken record <%s>' % line)
         else:
-            return oid, tag, value
+            if oid and tag:
+                return oid, tag, value
+            raise error.SnmpsimError('broken record <%s>' % line)
 
     # helper functions
 
