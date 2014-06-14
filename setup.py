@@ -123,7 +123,7 @@ if 'py2exe' in sys.argv:
     # additional modules used by snmpsimd but not seen by py2exe
     for m in ('dbm', 'gdbm', 'dbhash', 'dumbdb',
               'shelve', 'random', 'math', 'bisect',
-              'sqlite3', 'subprocess'):
+              'sqlite3', 'subprocess', 'redis'):
         try:
             __import__(m)
         except ImportError:
