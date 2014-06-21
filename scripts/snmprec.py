@@ -432,8 +432,8 @@ dataFileHandler = SnmprecRecord()
 
 # SNMP worker
 
-def cbFun(sendRequestHandle, errorIndication, errorStatus, errorIndex,
-          varBindTable, cbCtx):
+def cbFun(snmpEngine, sendRequestHandle, errorIndication,
+          errorStatus, errorIndex, varBindTable, cbCtx):
     if errorIndication and errorIndication != 'oidNotIncreasing':
         log.msg('SNMP Engine error: %s' % errorIndication)
         return
@@ -455,15 +455,21 @@ def cbFun(sendRequestHandle, errorIndication, errorStatus, errorIndex,
             
             # initiate another SNMP walk iteration
             if getBulkFlag:
-                cmdGen.sendReq(
-                    snmpEngine, 'tgt', 0, getBulkRepetitions,
-                    ((nextOID, None),), cbFun, cbCtx,
-                    contextName=v3Context
+                cmdGen.sendVarBinds(
+                    snmpEngine, 
+                    'tgt', 
+                    None, v3Context,
+                    0, getBulkRepetitions,
+                    [ (nextOID, None) ], 
+                    cbFun, cbCtx
                 )
             else:
-                cmdGen.sendReq(
-                    snmpEngine, 'tgt', ((nextOID, None),), cbFun, cbCtx,
-                    contextName=v3Context
+                cmdGen.sendVarBinds(
+                    snmpEngine,
+                   'tgt',
+                    None, v3Context,
+                    [ (nextOID, None) ],
+                    cbFun, cbCtx
                 )
         return
 
@@ -509,15 +515,21 @@ def cbFun(sendRequestHandle, errorIndication, errorStatus, errorIndex,
  
                 # initiate another SNMP walk iteration
                 if getBulkFlag:
-                    cmdGen.sendReq(
-                        snmpEngine, 'tgt', 0, getBulkRepetitions, 
-                        ((startOID, None),), cbFun, cbCtx,
-                        contextName=v3Context
+                    cmdGen.sendVarBinds(
+                        snmpEngine, 
+                        'tgt', 
+                        None, v3Context,
+                        0, getBulkRepetitions,
+                        [ (startOID, None) ], 
+                        cbFun, cbCtx
                     )
                 else:
-                    cmdGen.sendReq(
-                        snmpEngine, 'tgt', ((startOID, None),), cbFun, cbCtx,
-                        contextName=v3Context
+                    cmdGen.sendVarBinds(
+                        snmpEngine,
+                        'tgt',
+                        None, v3Context,
+                        [ (startOID, None) ],
+                        cbFun, cbCtx
                     )
 
                 stopFlag = True  # stop current iteration
@@ -552,16 +564,23 @@ cbCtx = {
 if getBulkFlag:
     cmdGen = cmdgen.BulkCommandGenerator()
 
-    cmdGen.sendReq(
-        snmpEngine, 'tgt', 0, getBulkRepetitions, ((startOID, None),), 
-        cbFun, cbCtx, contextName=v3Context
+    cmdGen.sendVarBinds(
+        snmpEngine,
+        'tgt',
+        None, v3Context,
+        0, getBulkRepetitions,
+        [ (startOID, None) ], 
+        cbFun, cbCtx
     )
 else:
     cmdGen = cmdgen.NextCommandGenerator()
 
-    cmdGen.sendReq(
-        snmpEngine, 'tgt', ((startOID, None),),
-        cbFun, cbCtx, contextName=v3Context
+    cmdGen.sendVarBinds(
+        snmpEngine,
+        'tgt',
+        None, v3Context,
+        [ (startOID, None) ],
+        cbFun, cbCtx
     )
 
 log.msg('Sending initial %s request....' % (getBulkFlag and 'GETBULK' or 'GETNEXT'))
