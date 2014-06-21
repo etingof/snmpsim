@@ -39,6 +39,7 @@ v3AuthKey = None
 v3PrivKey = None
 v3AuthProto = 'NONE'
 v3PrivProto = 'NONE'
+v3ContextEngineId = None
 v3Context = ''
 agentUDPv4Address = (None, 161)  # obsolete
 agentUDPv4Endpoint = None
@@ -80,7 +81,8 @@ Usage: %s [--help]
     [--v3-auth-proto=<%s>]
     [--v3-priv-key=<key>]
     [--v3-priv-proto=<%s>]
-    [--context=<string>]
+    [--context-engine-id=<[0x]string>]
+    [--context=<[0x]string>]
     [--use-getbulk]
     [--getbulk-repetitions=<number>]
     [--agent-udpv4-endpoint=<X.X.X.X:NNNNN>]
@@ -106,7 +108,7 @@ try:
         'help', 'version', 'debug=', 'logging-method=', 'quiet',
         'v1', 'v2c', 'v3', 'protocol-version=', 'community=', 
         'v3-user=', 'v3-auth-key=', 'v3-priv-key=', 'v3-auth-proto=',
-        'v3-priv-proto=', 'context=', 'use-getbulk',
+        'v3-priv-proto=', 'context-engine-id=', 'context=', 'use-getbulk',
         'getbulk-repetitions=', 'agent-address=', 'agent-port=',
         'agent-udpv4-endpoint=', 'agent-udpv6-endpoint=',
         'agent-unix-endpoint=', 'start-oid=', 'stop-oid=', 'output-file=',
@@ -187,8 +189,16 @@ Software documentation and support at http://snmpsim.sf.net
         if v3PrivProto not in privProtocols:
             sys.stderr.write('ERROR: bad v3 privacy protocol %s\r\n%s\r\n' % (v3PrivProto, helpMessage))
             sys.exit(-1)
+    elif opt[0] == '--context-engine-id':
+        if opt[1][:2] == '0x':
+            v3ContextEngineId = univ.OctetString(hexValue=opt[1][2:])
+        else:
+            v3ContextEngineId = univ.OctetString(opt[1])
     elif opt[0] == '--context':
-        v3Context = opt[1]
+        if opt[1][:2] == '0x':
+            v3Context = univ.OctetString(hexValue=opt[1][2:])
+        else:
+            v3Context = univ.OctetString(opt[1])
     elif opt[0] == '--use-getbulk':
         getBulkFlag = True
     elif opt[0] == '--getbulk-repetitions':
@@ -279,7 +289,10 @@ if snmpVersion == 3:
         if v3PrivKey is None:
             sys.stderr.write('ERROR: --v3-priv-key is missing\r\n%s\r\n' % helpMessage)
             sys.exit(-1)
- 
+else:
+    v3ContextEngineId = None
+    v3ContextName = ''
+
 if getBulkFlag and not snmpVersion:
     log.msg('WARNING: will be using GETNEXT with SNMPv1!')
     getBulkFlag = False
@@ -340,7 +353,7 @@ if snmpVersion == 3:
         authProtocols[v3AuthProto], v3AuthKey,
         privProtocols[v3PrivProto], v3PrivKey
         )
-    log.msg('SNMP version 3, Context name: %s, SecurityName: %s, SecurityLevel: %s, Authentication key/protocol: %s/%s, Encryption (privacy) key/protocol: %s/%s' % (v3Context == '' and '\'\'' or v3Context, v3User, secLevel, v3AuthKey is None and '<NONE>' or v3AuthKey, v3AuthProto, v3PrivKey is None and '<NONE>' or v3PrivKey, v3PrivProto))
+    log.msg('SNMP version 3, Context EngineID: %s Context name: %s, SecurityName: %s, SecurityLevel: %s, Authentication key/protocol: %s/%s, Encryption (privacy) key/protocol: %s/%s' % (v3ContextEngineId and v3ContextEngineId.prettyPrint() or '<default>', v3Context and v3Context.prettyPrint() or '<default>', v3User, secLevel, v3AuthKey is None and '<NONE>' or v3AuthKey, v3AuthProto, v3PrivKey is None and '<NONE>' or v3PrivKey, v3PrivProto))
 else:
     v3User = 'agt'
     secLevel = 'noAuthNoPriv'
@@ -458,7 +471,7 @@ def cbFun(snmpEngine, sendRequestHandle, errorIndication,
                 cmdGen.sendVarBinds(
                     snmpEngine, 
                     'tgt', 
-                    None, v3Context,
+                    v3ContextEngineId, v3Context,
                     0, getBulkRepetitions,
                     [ (nextOID, None) ], 
                     cbFun, cbCtx
@@ -467,7 +480,7 @@ def cbFun(snmpEngine, sendRequestHandle, errorIndication,
                 cmdGen.sendVarBinds(
                     snmpEngine,
                    'tgt',
-                    None, v3Context,
+                    v3ContextEngineId, v3Context,
                     [ (nextOID, None) ],
                     cbFun, cbCtx
                 )
@@ -518,7 +531,7 @@ def cbFun(snmpEngine, sendRequestHandle, errorIndication,
                     cmdGen.sendVarBinds(
                         snmpEngine, 
                         'tgt', 
-                        None, v3Context,
+                        v3ContextEngineId, v3Context,
                         0, getBulkRepetitions,
                         [ (startOID, None) ], 
                         cbFun, cbCtx
@@ -527,7 +540,7 @@ def cbFun(snmpEngine, sendRequestHandle, errorIndication,
                     cmdGen.sendVarBinds(
                         snmpEngine,
                         'tgt',
-                        None, v3Context,
+                        v3ContextEngineId, v3Context,
                         [ (startOID, None) ],
                         cbFun, cbCtx
                     )
@@ -567,7 +580,7 @@ if getBulkFlag:
     cmdGen.sendVarBinds(
         snmpEngine,
         'tgt',
-        None, v3Context,
+        v3ContextEngineId, v3Context,
         0, getBulkRepetitions,
         [ (startOID, None) ], 
         cbFun, cbCtx
@@ -578,7 +591,7 @@ else:
     cmdGen.sendVarBinds(
         snmpEngine,
         'tgt',
-        None, v3Context,
+        v3ContextEngineId, v3Context,
         [ (startOID, None) ],
         cbFun, cbCtx
     )
