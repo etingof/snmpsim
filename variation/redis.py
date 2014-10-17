@@ -16,6 +16,7 @@
 import time
 from snmpsim.grammar.snmprec import SnmprecGrammar
 from snmpsim.record.snmprec import SnmprecRecord
+from snmpsim.mltsplit import split
 from snmpsim import error, log
 from pysnmp.smi.error import WrongValueError
 try:
@@ -27,7 +28,7 @@ def init(**context):
     options = {}
     if context['options']:
         options.update(
-            dict([x.split(':') for x in context['options'].split(',')])
+            dict([split(x, ':') for x in split(context['options'], ',')])
         )
     connectParams = dict(
         [ (k,options[k]) for k in options if k in ('host', 'port', 'password', 'db', 'unix_socket') ]
@@ -76,7 +77,7 @@ def variate(oid, tag, value, **context):
         raise error.SnmpsimError('variation module not initialized')
 
     if 'settings' not in recordContext:
-        settings = recordContext['settings'] = dict([ x.split('=') for x in value.split(',') ])
+        settings = recordContext['settings'] = dict([split(x, '=') for x in split(value, ',')])
         if 'key-spaces-id' not in settings:
             log.msg('redis:mandatory key-spaces-id option is missing')
             return context['origOid'], tag, context['errorStatus']
@@ -235,7 +236,7 @@ def record(oid, tag, value, **context):
             settings['period'] = '%.2f' % float(moduleContext['period'])
         if 'addon' in moduleContext:
             settings.update(
-                dict([x.split('=') for x in moduleContext['addon']])
+                dict([split(x, '=') for x in moduleContext['addon']])
             )
         value = ','.join([ '%s=%s' % (k,v) for k,v in settings.items() ])
         return str(context['startOID']), ':redis', value

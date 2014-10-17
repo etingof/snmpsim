@@ -59,7 +59,7 @@ def variate(oid, tag, value, **context):
         return context['origOid'], tag, context['errorStatus']
 
     if 'settings' not in recordContext:
-        recordContext['settings'] = dict([ x.split('=') for x in value.split(',') ])
+        recordContext['settings'] = dict([split(x, '=') for x in split(value, ',')])
         for k,v in ( ('op', 'set'),
                      ('community', 'public'),
                      ('authkey', None),
@@ -77,7 +77,7 @@ def variate(oid, tag, value, **context):
 
         if 'vlist' in recordContext['settings']:
             vlist = {}
-            recordContext['settings']['vlist'] = recordContext['settings']['vlist'].split(':')
+            recordContext['settings']['vlist'] = split(recordContext['settings']['vlist'], ':')
             while recordContext['settings']['vlist']:
                 o,v = recordContext['settings']['vlist'][:2]
                 recordContext['settings']['vlist'] = recordContext['settings']['vlist'][2:]
@@ -194,7 +194,7 @@ def variate(oid, tag, value, **context):
                 )
 
         if 'varbinds' in args:
-            vbs = args['varbinds'].split(':') 
+            vbs = split(args['varbinds'], ':') 
             while vbs:
                 varBinds.append(
                     (rfc1902.ObjectName(vbs[0]), typeMap[vbs[1]](vbs[2]))

@@ -5,6 +5,7 @@ import sys
 import time
 import random
 from snmpsim.grammar.snmprec import SnmprecGrammar
+from snmpsim.mltsplit import split
 from snmpsim import log
 from snmpsim import error
 
@@ -16,7 +17,7 @@ def variate(oid, tag, value, **context):
         return context['origOid'], tag, context['errorStatus']
 
     if 'settings' not in recordContext:
-        recordContext['settings'] = dict([x.split('=') for x in value.split(',')])
+        recordContext['settings'] = dict([split(x, '=') for x in split(value, ',')])
 
         if 'hexvalue' in recordContext['settings']:
             recordContext['settings']['value'] = [int(recordContext['settings']['hexvalue'][x:x+2], 16) for x in range(0, len(recordContext['settings']['hexvalue']), 2)]
@@ -33,7 +34,7 @@ def variate(oid, tag, value, **context):
 
         if 'vlist' in recordContext['settings']:
             vlist = {}
-            recordContext['settings']['vlist'] = recordContext['settings']['vlist'].split(':')
+            recordContext['settings']['vlist'] = split(recordContext['settings']['vlist'], ':')
             while recordContext['settings']['vlist']:
                 o,v,d = recordContext['settings']['vlist'][:3]
                 recordContext['settings']['vlist'] = recordContext['settings']['vlist'][3:]
@@ -51,7 +52,7 @@ def variate(oid, tag, value, **context):
 
         if 'tlist' in recordContext['settings']:
             tlist = {}
-            recordContext['settings']['tlist'] = recordContext['settings']['tlist'].split(':')
+            recordContext['settings']['tlist'] = split(recordContext['settings']['tlist'], ':')
             while recordContext['settings']['tlist']:
                 o,v,d = recordContext['settings']['tlist'][:3]
                 recordContext['settings']['tlist'] = recordContext['settings']['tlist'][3:]

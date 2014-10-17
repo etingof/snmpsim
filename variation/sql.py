@@ -10,6 +10,7 @@
 # CREATE TABLE <tablename> (oid text, tag text, value text, maxaccess text)
 #
 from snmpsim.grammar.snmprec import SnmprecGrammar
+from snmpsim.mltsplit import split
 from snmpsim import error, log
 
 isolationLevels = {
@@ -23,7 +24,7 @@ def init(**context):
     options = {}
     if context['options']:
         options.update(
-            dict([x.split(':') for x in context['options'].split(',')])
+            dict([split(x, ':') for x in split(context['options'], ',')])
         )
     if 'dbtype' not in options:
         raise error.SnmpsimError('database type not specified')

@@ -11,12 +11,13 @@ from snmpsim.record.snmprec import SnmprecRecord
 from snmpsim.record.search.file import searchRecordByOid
 from snmpsim.record.search.database import RecordIndex
 from snmpsim import confdir
+from snmpsim.mltsplit import split
 from snmpsim import log
 from snmpsim import error
 
 def init(**context):
     if context['options']:
-        for k,v in [x.split(':') for x in context['options'].split(',')]:
+        for k,v in [split(x, ':') for x in split(context['options'], ',')]:
             if k == 'addon':
                 if k in moduleContext:
                     moduleContext[k].append(v)
@@ -43,7 +44,7 @@ def init(**context):
 
 def variate(oid, tag, value, **context):
     if 'settings' not in recordContext:
-        recordContext['settings'] = dict([ x.split('=') for x in value.split(',') ])
+        recordContext['settings'] = dict([split(x, '=') for x in split(value, ',')])
         if 'dir' not in recordContext['settings']:
             log.msg('multiplex: snapshot directory not specified')
             return context['origOid'], tag, context['errorStatus']
@@ -213,7 +214,7 @@ def record(oid, tag, value, **context):
             settings['period'] = '%.2f' % float(moduleContext['period'])
         if 'addon' in moduleContext:
             settings.update(
-                dict([x.split('=') for x in moduleContext['addon']])
+                dict([split(x, '=') for x in moduleContext['addon']])
             )
         value = ','.join([ '%s=%s' % (k,v) for k,v in settings.items() ])
         return str(context['startOID']), ':multiplex', value

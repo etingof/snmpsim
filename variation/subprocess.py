@@ -4,13 +4,14 @@
 import sys
 import subprocess
 from pysnmp.proto import rfc1902
+from snmpsim.mltsplit import split
 from snmpsim import log
 
 def init(**context):
     moduleContext['settings'] = {}
     if context['options']:
         moduleContext['settings'].update(
-            dict([x.split(':') for x in context['options'].split(',')])
+            dict([split(x, ':') for x in split(context['options'], ',')])
         )
     if 'shell' not in moduleContext['settings']:
         moduleContext['settings']['shell'] = sys.platform[:3] == 'win'
@@ -50,7 +51,7 @@ def variate(oid, tag, value, **context):
              .replace('@SETFLAG@', str(int(context['setFlag'])))\
              .replace('@NEXTFLAG@', str(int(context['nextFlag'])))\
              .replace('@SUBTREEFLAG@', str(int(context['subtreeFlag'])))\
-             for x in value.split(' ') ]
+             for x in split(value, ' ') ]
 
     log.msg('subprocess: executing external process "%s"' % ' '.join(args))
 

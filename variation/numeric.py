@@ -12,6 +12,7 @@ import math
 import time
 import random
 from pysnmp.proto import rfc1902, rfc1905
+from snmpsim.mltsplit import split
 from snmpsim import log
 from snmpsim import error
 
@@ -23,7 +24,7 @@ def init(**context):
     if context['mode'] == 'recording':
         moduleContext['settings'] = {}
         if context['options']:
-            for k,v in [x.split(':') for x in context['options'].split(',')]:
+            for k,v in [split(x, ':') for x in split(context['options'], ',')]:
                 if k == 'addon':
                     if k in moduleContext['settings']:
                         moduleContext['settings'][k].append(v)
@@ -50,7 +51,7 @@ def variate(oid, tag, value, **context):
         return context['origOid'], tag, context['errorStatus']
 
     if 'settings' not in recordContext:
-        recordContext['settings'] = dict([ x.split('=') for x in value.split(',') ])
+        recordContext['settings'] = dict([split(x, '=') for x in split(value, ',')])
         for k in recordContext['settings']:
             if k != 'function':
                 recordContext['settings'][k] = float(recordContext['settings'][k])
@@ -64,7 +65,7 @@ def variate(oid, tag, value, **context):
         if 'rate' not in recordContext['settings']:
             recordContext['settings']['rate'] = 1
         if 'function' in recordContext['settings']:
-            f = recordContext['settings']['function'].split('%')
+            f = split(recordContext['settings']['function'], '%')
             recordContext['settings']['function'] = getattr(math, f[0]), f[1:]
         else:
             recordContext['settings']['function'] = lambda x: x, ()
@@ -175,7 +176,7 @@ def record(oid, tag, value, **context):
             settings['rate'] = 0  # may be constants
         if 'addon' in moduleContext['settings']:
             settings.update(
-                dict([x.split('=') for x in moduleContext['settings']['addon']])
+                dict([split(x,'=') for x in moduleContext['settings']['addon']])
             )
 
         moduleContext[oid] = {}

@@ -4,6 +4,7 @@
 import shelve
 from pysnmp.smi import error
 from snmpsim.grammar.snmprec import SnmprecGrammar
+from snmpsim.mltsplit import split
 from snmpsim import log
 
 errorTypes = {
@@ -28,7 +29,7 @@ def init(**context):
     moduleContext['settings'] = {}
     if context['options']:
         moduleContext['settings'].update(
-            dict([x.split(':') for x in context['options'].split(',')])
+            dict([split(x, ':') for x in split(context['options'], ',')])
         )
     if 'file' in moduleContext['settings']:
         moduleContext['cache'] = shelve.open(moduleContext['settings']['file'])
@@ -40,11 +41,11 @@ def variate(oid, tag, value, **context):
         return context['origOid'], tag, context['errorStatus']
 
     if 'settings' not in recordContext:
-        recordContext['settings'] = dict([x.split('=') for x in value.split(',')])
+        recordContext['settings'] = dict([split(x, '=') for x in split(value, ',')])
 
         if 'vlist' in recordContext['settings']:
             vlist = {}
-            recordContext['settings']['vlist'] = recordContext['settings']['vlist'].split(':')
+            recordContext['settings']['vlist'] = split(recordContext['settings']['vlist'], ':')
             while recordContext['settings']['vlist']:
                 o,v,e = recordContext['settings']['vlist'][:3]
                 recordContext['settings']['vlist'] = recordContext['settings']['vlist'][3:]

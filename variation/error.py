@@ -5,6 +5,7 @@
 import sys
 from snmpsim.grammar.snmprec import SnmprecGrammar
 from snmpsim import log
+from snmpsim.mltsplit import split
 from pysnmp.smi import error
 
 errorTypes = {
@@ -32,7 +33,7 @@ def variate(oid, tag, value, **context):
         return context['origOid'], tag, context['errorStatus']
 
     if 'settings' not in recordContext:
-        recordContext['settings'] = dict([x.split('=') for x in value.split(',')])
+        recordContext['settings'] = dict([split(x, '=') for x in split(value, ',')])
 
         if 'hexvalue' in recordContext['settings']:
             recordContext['settings']['value'] = [int(recordContext['settings']['hexvalue'][x:x+2], 16) for x in range(0, len(recordContext['settings']['hexvalue']), 2)]
@@ -45,7 +46,7 @@ def variate(oid, tag, value, **context):
 
         if 'vlist' in recordContext['settings']:
             vlist = {}
-            recordContext['settings']['vlist'] = recordContext['settings']['vlist'].split(':')
+            recordContext['settings']['vlist'] = split(recordContext['settings']['vlist'], ':')
             while recordContext['settings']['vlist']:
                 o,v,e = recordContext['settings']['vlist'][:3]
                 recordContext['settings']['vlist'] = recordContext['settings']['vlist'][3:]

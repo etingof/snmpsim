@@ -1,5 +1,5 @@
 
-Revision 0.2.5, 04-06-2014
+Revision 0.2.5, 16-10-2014
 --------------------------
 
 - Simulator now depends on the latest pysnmp features introduced in 
@@ -29,6 +29,8 @@ Revision 0.2.5, 04-06-2014
   and keep walking remote Agent using an OID derived from the failed one.
 - The --context-engine-id option support added to snmprec.py tool.
 - Hex values can now be passed to --v3-context-* options to snmprec.py tool
+- Variation modules options separators can now be escaped by doubling or
+  tripling them.
 - Fix to pcap2dev.py not to loose the last trailing OID in capture.
 - Fix to variation module recordContexts isolation to make it dedicated
   to each Variaiton Module+Agent instance.
