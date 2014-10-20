@@ -7,6 +7,7 @@ else:
     import dbm
     whichdb = dbm.whichdb
 from snmpsim import confdir, log, error
+from snmpsim.record.search.file import getRecord
 
 class RecordIndex:
     def __init__(self, textFile, textParser):
@@ -95,7 +96,7 @@ class RecordIndex:
             offset = 0
             prevOffset = -1
             while 1:
-                line = text.readline()
+                line, lineNo, offset = getRecord(text, lineNo, offset)
                 if not line:
                     # reference to last OID in data file
                     db['last'] = '%d,%d,%d' % (offset, 0, prevOffset)

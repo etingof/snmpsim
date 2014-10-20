@@ -1,5 +1,21 @@
 from pyasn1.compat.octets import str2octs
 
+# read lines from text file ignoring #comments and blank lines
+def getRecord(fileObj, lineNo=None, offset=None):
+    line = fileObj.readline()
+    while line:
+        tline = line.strip()
+        # skip comment or blanl line
+        if not tline or tline.startswith('#'):
+            if lineNo is not None:
+                lineNo += 1
+            if offset is not None:
+                offset += len(line)
+            line = fileObj.readline()
+        else:
+            break
+    return line, lineNo, offset
+
 # In-place, by-OID binary search
 def searchRecordByOid(oid, fileObj, textParser, eol=str2octs('\n')):
     lo = mid = 0; prev_mid = -1
@@ -19,10 +35,12 @@ def searchRecordByOid(oid, fileObj, textParser, eol=str2octs('\n')):
             break
         if mid >= sz:
             return sz
-        line = fileObj.readline()
+        line, _, skippedOffset = getRecord(fileObj, offset=mid)
+        if not line:
+            return hi
         midval, _ = textParser.evaluate(line, oidOnly=True)
         if midval < oid:
-            lo = mid + len(line)
+            lo = mid + skippedOffset + len(line)
         elif midval > oid:
             hi = mid
         else:

@@ -37,7 +37,7 @@ from pysnmp import debug
 from snmpsim.error import SnmpsimError, NoDataNotification
 from snmpsim import confdir, log, daemon
 from snmpsim.record import dump, mvc, sap, walk, snmprec
-from snmpsim.record.search.file import searchRecordByOid
+from snmpsim.record.search.file import searchRecordByOid, getRecord
 from snmpsim.record.search.database import RecordIndex
 
 # Settings
@@ -272,12 +272,12 @@ class DataFile(AbstractLayout):
 
             varsRemaining -= 1
 
-            line = text.readline()  # matched line
+            line, _, _ = getRecord(text)  # matched line
  
             while True:
                 if exactMatch:
                     if context.get('nextFlag') and not subtreeFlag:
-                        _nextLine = text.readline() # next line
+                        _nextLine, _, _ = getRecord(text) # next line
                         if _nextLine:
                             _nextOid, _ = self.__textParser.evaluate(_nextLine, oidOnly=True)
                             try:
@@ -309,7 +309,7 @@ class DataFile(AbstractLayout):
                         # previous line serves a subtree?
                         if _prevOffset >= 0:
                             text.seek(_prevOffset)
-                            _prevLine = text.readline()
+                            _prevLine, _, _ = getRecord(text)
                             _prevOid, _ = self.__textParser.evaluate(
                                 _prevLine, oidOnly=True
                             )

@@ -7,12 +7,13 @@
 import getopt
 import sys
 from pyasn1.type import univ
+from snmpsim.record.search.file import getRecord
 from snmpsim.record import snmprec, dump, mvc, sap, walk
 from snmpsim import error
 
 # Defaults
 verboseFlag = True
-sortRecords = ignoreBrokenRecords = deduplicateRecords = False
+sortRecords = ignoreBrokenRecords = deduplicateRecords = lostComments = False
 startOID = stopOID = None
 srcRecordType = dstRecordType = 'snmprec'
 inputFiles = []
@@ -133,7 +134,16 @@ if not inputFiles:
 recordsList = []
 
 for inputFile in inputFiles:
-    for line in inputFile.readlines():
+    lineNo = 0
+    while True:
+        line, recLineNo, _ = getRecord(inputFile, lineNo)
+        if not line:
+            break
+        if recLineNo != lineNo:
+            if verboseFlag:
+                sys.stderr.write('# Losing comment at line %s (input file #%s)\r\n' % (inputFiles.index(inputFile), recLineNo))
+            lineNo = recLineNo
+            lostComments += 1
         backdoor = {}
         try:
             oid, value = recordsSet[srcRecordType].evaluate(line, backdoor=backdoor)
@@ -185,7 +195,7 @@ for record in recordsList:
 
 if verboseFlag:
     sys.stderr.write(
-        '# Records: written %s, filtered out %s, deduplicated %s, broken %s, variated %s\r\n' % (writtenCount, skippedCount, duplicateCount, brokenCount, variationCount)
+        '# Records: written %s, filtered out %s, deduped %s, ignored %s, broken %s, variated %s\r\n' % (writtenCount, skippedCount, duplicateCount, lostComments, brokenCount, variationCount)
     )
 
 outputFile.flush()
