@@ -1,34 +1,39 @@
 import sys
 import os
 import time
-try:
-    import syslog
-except ImportError:
-    syslog = None
+import logging
+from logging import handlers
 from snmpsim import error
 
 class AbstractLogger:
     def __init__(self, progId, *priv):
-        self.progId = progId
+        self._logger = logging.getLogger(progId)
+        self._logger.setLevel(logging.DEBUG)
         self.init(*priv)
-    def __call__(self, s): pass
+    def __call__(self, s): self._logger.debug(s)
     def init(self, *priv): pass
 
 class SyslogLogger(AbstractLogger):
     def init(self, *priv): 
-        if not syslog:
-            raise error.SnmpsimError('syslog not supported on this platform')
+        if len(priv) < 1:
+            raise error.SnmpsimError('Bad syslog params, need at least facility, also accept priority, host, port')
         if len(priv) < 2:
-            raise error.SnmpsimError('Bad syslog params, need facility and priority')
+            priv = [ priv[0], 'debug' ]
+        if len(priv) < 3:
+            priv = [ priv[0], priv[1], 'localhost', 514 ]
+        if len(priv) < 4:
+            if not priv[2].startswith('/'):
+                priv = [ priv[0], priv[1], priv[2], 514 ]
+        if not priv[2].startswith('/'):
+            priv = [ priv[0], priv[1], priv[2], int(priv[3]) ]
+
         try:
-            self.facility = getattr(syslog, 'LOG_%s' % priv[0].upper())
-            self.priority = getattr(syslog, 'LOG_%s' % priv[1].upper())
-        except AttributeError:
-            raise error.SnmpsimError('Unknown syslog option, need facility and priority names')
+            handler = handlers.SysLogHandler(priv[2].startswith('/') and priv[2] or (priv[2], int(priv[3])), priv[0].lower())
 
-        syslog.openlog(self.progId, 0, self.facility)
-
-    def __call__(self, s): syslog.syslog(self.priority, s)
+        except:
+            raise error.SnmpsimError('Bad syslog option(s): %s' % sys.exc_info()[1])
+        handler.setFormatter(logging.Formatter('%(asctime)s %(name)s: %(message)s'))
+        self._logger.addHandler(handler)
 
 class FileLogger(AbstractLogger):
     def init(self, *priv):
@@ -38,90 +43,66 @@ class FileLogger(AbstractLogger):
             # fix possibly corrupted absolute windows path
             if len(priv[0]) == 1 and priv[0].isalpha() and len(priv) > 1:
                 priv = [ priv[0] + ':' + priv[1] ] + priv[2:]
-        try:
-            self._fileobj, self._file = open(priv[0], 'a'), priv[0]
-        except:
-            raise error.SnmpsimError(
-                'Log file %s open failure: %s' % (priv[0], sys.exc_info()[1])
-            )
-        self._maxsize = 0
-        self._maxage = 0
-        self._lastrotate = 0
+
+        maxsize = 0
+        maxage = ('D', 7)
         if len(priv) > 1 and priv[1]:
             localtime = time.localtime()
             if priv[1][-1] in ('k', 'K'):
-                self._maxsize = int(priv[1][:-1]) * 1024
+                maxsize = int(priv[1][:-1]) * 1024
             elif priv[1][-1] in ('m', 'M'):
-                self._maxsize = int(priv[1][:-1]) * 1024 * 1024
+                maxsize = int(priv[1][:-1]) * 1024 * 1024
             elif priv[1][-1] in ('g', 'G'):
-                self._maxsize = int(priv[1][:-1]) * 1024 * 1024 * 1024
+                maxsize = int(priv[1][:-1]) * 1024 * 1024 * 1024
             elif priv[1][-1] in ('h', 'H'):
-                self._maxage = int(priv[1][:-1]) * 3600
-                self._lastrotatefun = lambda: time.mktime(localtime[:4]+(0,0)+localtime[6:])
+                maxage = ('H', int(priv[1][:-1]))
             elif priv[1][-1] in ('d', 'D'):
-                self._maxage = int(priv[1][:-1]) * 3600 * 24
-                self._lastrotatefun = lambda: time.mktime(localtime[:3]+(0,0,0)+localtime[6:])
+                maxage = ('D', int(priv[1][:-1]))
             else:
                 raise error.SnmpsimError(
-                    'Unknown log rotation criteria %s, use K,M,G for size and H,M for time limits' % priv[1]
+                    'Unknown log rotation criteria %s, use K,M,G for size and H,D for time limits' % priv[1]
                 )
 
-            self._lastrotate = self._lastrotatefun()
-            self._infomsg = 'Log file %s, rotation rules are: age: %s mins, size %sKB' % (self._file, self._maxage/60, self._maxsize/1024)
-            self(self._infomsg)
-
-    def timestamp(self, now):
-        return time.strftime('%Y-%m-%d %H:%M:%S', time.localtime()) + \
-               '.%.3d' % ((now % 1) * 1000,)
-
-    def __call__(self, s):
-        now = time.time()
-        if self._maxsize:
-            try:
-                size = os.stat(self._file)[6]
-            except:
-                size = 0
-        if self._maxsize and size >= self._maxsize or \
-                self._maxage and now - self._lastrotate >= self._maxage:
-            newName = self._file + '.%d%.2d%.2d%.2d%.2d' % time.localtime()[:5]
-            if not os.path.exists(newName):
-                self._fileobj.close()
-                try:
-                    os.rename(self._file, newName)
-                except:
-                    pass
-
-                try: 
-                    self._fileobj = open(self._file, 'a')
-                except:
-                    return  # losing log message
-
-                if self._maxage:
-                    self._lastrotate = self._lastrotatefun()
-
-                self(self._infomsg)
-
         try:
-            self._fileobj.write('%s %s[%s]: %s\n' % (self.timestamp(now), self.progId, getattr(os, 'getpid', lambda x: 0)(), s))
-        except IOError:
-            pass # losing log
+            if maxsize:
+                handler = handlers.RotatingFileHandler(priv[0], backupCount=30, maxBytes=maxsize)
+            else:
+                handler = handlers.TimedRotatingFileHandler(priv[0], backupCount=30, when=maxage[0], interval=maxage[1])
 
-        self._fileobj.flush()
+        except AttributeError:
+            raise error.SnmpsimError(
+                'Bad log rotation criteria: %s' % sys.exc_info()[1]
+            )
 
-class ProtoStdLogger(FileLogger):
-    stdfile = None
+        handler.setFormatter(logging.Formatter('%(asctime)s %(name)s: %(message)s'))
+        self._logger.addHandler(handler)
+ 
+        self('Log file %s, rotation rules: %s' % (priv[0], maxsize and '> %sKB' % (maxsize/1024) or '%s%s' % (maxage[1], maxage[0])))
+
+class StreamLogger(AbstractLogger):
+    stream = sys.stderr
     def init(self, *priv):
-        self._fileobj = self.stdfile
+        try:
+            handler = logging.StreamHandler(self.stream)
 
-    def __call__(self, s): self._fileobj.write(s + '\n')
+        except AttributeError:
+            raise error.SnmpsimError(
+                'Stream logger failure: %s' % sys.exc_info()[1]
+            )
 
-class StdoutLogger(ProtoStdLogger):
-    stdfile = sys.stdout
+        handler.setFormatter(logging.Formatter('%(message)s'))
+        self._logger.addHandler(handler)
+ 
+class StdoutLogger(StreamLogger):
+    stream = sys.stdout
 
-class StderrLogger(ProtoStdLogger):
-    stdfile = sys.stderr
+class StderrLogger(StreamLogger):
+    stream = sys.stderr
 
-class NullLogger(AbstractLogger): pass
+class NullLogger(AbstractLogger):
+    def init(self, *priv):
+        handler = logging.NullHandler()
+    def __call__(self, s): pass
 
 gMap = {
     'syslog': SyslogLogger,
@@ -133,9 +114,10 @@ gMap = {
 
 msg = lambda x: None
 
-def setLogger(progId, *priv):
+def setLogger(progId, *priv, **options):
     global msg
     if priv[0] in gMap:
-        msg = gMap[priv[0]](progId, *priv[1:])
+        if not isinstance(msg, AbstractLogger) or options.get('force'):
+            msg = gMap[priv[0]](progId, *priv[1:])
     else:
         raise error.SnmpsimError('Unknown logging method "%s", known methods are: %s' % (priv[0], ', '.join(gMap.keys())))

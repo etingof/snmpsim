@@ -24,7 +24,8 @@ try:
 except ImportError:
     unix = None
 from pysnmp.entity.rfc3413 import cmdgen
-from pysnmp import debug
+from pyasn1 import debug as pyasn1_debug
+from pysnmp import debug as pysnmp_debug
 from snmpsim.record import snmprec
 from snmpsim import confdir, error, log
 
@@ -73,6 +74,7 @@ helpMessage = """\
 Usage: %s [--help]
     [--version]
     [--debug=<%s>]
+    [--debug-asn1=<%s>]
     [--logging-method=<%s[:args>]>]
     [--protocol-version=<1|2c|3>]
     [--community=<string>]
@@ -95,17 +97,16 @@ Usage: %s [--help]
     [--variation-module-options=<args>]
     [--continue-on-errors]""" % (
         sys.argv[0],
-        '|'.join([ x for x in debug.flagMap.keys() if x != 'mibview' ]),
+        '|'.join([ x for x in pysnmp_debug.flagMap.keys() if x != 'mibview' ]),
+        '|'.join([ x for x in pyasn1_debug.flagMap.keys() ]),
         '|'.join(log.gMap.keys()),
         '|'.join([ x for x in authProtocols if x != 'NONE' ]),
         '|'.join([ x for x in privProtocols if x != 'NONE' ])
     )
 
-log.setLogger('snmprec', 'stderr')
-
 try:
     opts, params = getopt.getopt(sys.argv[1:], 'hv', [
-        'help', 'version', 'debug=', 'logging-method=', 'quiet',
+        'help', 'version', 'debug=', 'debug-asn1=', 'logging-method=', 'quiet',
         'v1', 'v2c', 'v3', 'protocol-version=', 'community=', 
         'v3-user=', 'v3-auth-key=', 'v3-priv-key=', 'v3-auth-proto=',
         'v3-priv-proto=', 'context-engine-id=', 'context=', 'use-getbulk',
@@ -145,16 +146,18 @@ Software documentation and support at http://snmpsim.sf.net
 %s
 """ % (snmpsim.__version__, hasattr(pysnmp, '__version__') and pysnmp.__version__ or 'unknown', hasattr(pyasn1, '__version__') and pyasn1.__version__ or 'unknown', sys.version, helpMessage))
         sys.exit(-1)
-    elif opt[0] == '--debug':
-        debug.setLogger(debug.Debug(*opt[1].split(',')))
+    elif opt[0] in ('--debug', '--debug-snmp'):
+        pysnmp_debug.setLogger(pysnmp_debug.Debug(*opt[1].split(','), loggerName='snmprec.pysnmp'))
+    elif opt[0] == '--debug-asn1':
+        pyasn1_debug.setLogger(pyasn1_debug.Debug(*opt[1].split(','), loggerName='snmprec.pyasn1'))
     elif opt[0] == '--logging-method':
         try:
-            log.setLogger('snmprec', *opt[1].split(':'))
+            log.setLogger('snmprec', *opt[1].split(':'), force=True)
         except error.SnmpsimError:
             sys.stderr.write('%s\r\n%s\r\n' % (sys.exc_info()[1], helpMessage))
             sys.exit(-1)
     elif opt[0] == '--quiet':
-        log.setLogger('snmprec', 'null') 
+        log.setLogger('snmprec', 'null', force=True) 
     elif opt[0] == '--v1':
         snmpVersion = 0
     elif opt[0] == '--v2c':
@@ -292,6 +295,8 @@ if snmpVersion == 3:
 else:
     v3ContextEngineId = None
     v3ContextName = ''
+
+log.setLogger('snmprec', 'stderr')
 
 if getBulkFlag and not snmpVersion:
     log.msg('WARNING: will be using GETNEXT with SNMPv1!')

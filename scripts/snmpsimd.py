@@ -33,7 +33,8 @@ from pysnmp.smi import exval, indices
 from pysnmp.smi.error import MibOperationError
 from pysnmp.proto import rfc1902, rfc1905, api
 from pysnmp import error
-from pysnmp import debug
+from pyasn1 import debug as pyasn1_debug
+from pysnmp import debug as pysnmp_debug
 from snmpsim.error import SnmpsimError, NoDataNotification
 from snmpsim import confdir, log, daemon
 from snmpsim.record import dump, mvc, sap, walk, snmprec
@@ -517,6 +518,7 @@ helpMessage = """\
 Usage: %s [--help]
     [--version ]
     [--debug=<%s>]
+    [--debug-asn1=<%s>]
     [--daemonize]
     [--process-user=<uname>] [--process-group=<gname>]
     [--pid-file=<file>]
@@ -542,7 +544,8 @@ Usage: %s [--help]
     [--v3-priv-proto=<%s>]
     [--max-varbinds=<number>]""" % (
         sys.argv[0],
-        '|'.join([ x for x in debug.flagMap.keys() if x != 'mibview' ]),
+        '|'.join([ x for x in pysnmp_debug.flagMap.keys() if x != 'mibview' ]),
+        '|'.join([ x for x in pyasn1_debug.flagMap.keys() ]),
         '|'.join(log.gMap.keys()),
         '|'.join(authProtocols),
         '|'.join(privProtocols)
@@ -550,9 +553,9 @@ Usage: %s [--help]
 
 try:
     opts, params = getopt.getopt(sys.argv[1:], 'hv', [
-        'help', 'version', 'debug=', 'daemonize', 'process-user=',
-        'process-group=', 'pid-file=', 'logging-method=', 'device-dir=',
-        'cache-dir=', 'variation-modules-dir=', 
+        'help', 'version', 'debug=', 'debug-snmp=', 'debug-asn1=', 'daemonize',
+        'process-user=', 'process-group=', 'pid-file=', 'logging-method=',
+        'device-dir=', 'cache-dir=', 'variation-modules-dir=', 
         'force-index-rebuild', 'validate-device-data', 'validate-data',
         'v2c-arch', 'v3-only', 'transport-id-offset=', 
         'variation-module-options=',
@@ -573,8 +576,6 @@ except Exception:
 if params:
     sys.stderr.write('ERROR: extra arguments supplied %s\r\n%s\r\n' % (params, helpMessage))
     sys.exit(-1)
-
-log.setLogger('snmpsimd', 'stderr')
 
 v3Args = []
 
@@ -600,8 +601,10 @@ Software documentation and support at http://snmpsim.sf.net
 %s
 """ % (snmpsim.__version__, hasattr(pysnmp, '__version__') and pysnmp.__version__ or 'unknown', hasattr(pyasn1, '__version__') and pyasn1.__version__ or 'unknown', sys.version, helpMessage))
         sys.exit(-1)
-    elif opt[0] == '--debug':
-        debug.setLogger(debug.Debug(*opt[1].split(',')))
+    elif opt[0] in ('--debug', '--debug-snmp'):
+        pysnmp_debug.setLogger(pysnmp_debug.Debug(*opt[1].split(','), loggerName='snmpsimd.pysnmp'))
+    elif opt[0] == '--debug-asn1':
+        pyasn1_debug.setLogger(pyasn1_debug.Debug(*opt[1].split(','), loggerName='snmpsimd.pyasn1'))
     elif opt[0] == '--daemonize':
         foregroundFlag = False
     elif opt[0] == '--process-user':
@@ -612,7 +615,7 @@ Software documentation and support at http://snmpsim.sf.net
         pidFile = opt[1]
     elif opt[0] == '--logging-method':
         try:
-            log.setLogger('snmpsimd', *opt[1].split(':'))
+            log.setLogger('snmpsimd', *opt[1].split(':'), force=True)
         except SnmpsimError:
             sys.stderr.write('%s\r\n%s\r\n' % (sys.exc_info()[1], helpMessage))
             sys.exit(-1)
@@ -715,6 +718,8 @@ if v3Args[:len(v3Args)//2] == v3Args[len(v3Args)//2:]:
     sys.exit(-1)
 else:
     v3Args = v3Args[len(v3Args)//2:]
+
+log.setLogger('snmpsimd', 'stderr')
 
 try:
     daemon.dropPrivileges(procUser, procGroup)

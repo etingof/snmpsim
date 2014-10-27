@@ -21,6 +21,8 @@ from pyasn1.codec.ber import decoder
 from pyasn1.error import PyAsn1Error
 from pysnmp.proto import api, rfc1905
 from pysnmp.carrier.asynsock.dgram import udp
+from pyasn1 import debug as pyasn1_debug
+from pysnmp import debug as pysnmp_debug
 from snmpsim.record import snmprec
 from snmpsim import confdir, error, log
 
@@ -56,6 +58,8 @@ stats = {
 
 helpMessage = """Usage: %s [--help]
     [--version]
+    [--debug=<%s>]
+    [--debug-asn1=<%s>]
     [--quiet]
     [--logging-method=<%s[:args]>]
     [--start-oid=<OID>] [--stop-oid=<OID>]
@@ -67,15 +71,18 @@ helpMessage = """Usage: %s [--help]
     [--packet-filter=<ruleset>]
     [--variation-modules-dir=<dir>]
     [--variation-module=<module>]
-    [--variation-module-options=<args>]""" % (sys.argv[0],
-                                              '|'.join(log.gMap.keys()))
-
-log.setLogger('pcap2dev', 'stdout')
+    [--variation-module-options=<args>]""" % (
+        sys.argv[0],
+        '|'.join([ x for x in pysnmp_debug.flagMap.keys() if x != 'mibview' ]),
+        '|'.join([ x for x in pyasn1_debug.flagMap.keys() ]),
+        '|'.join(log.gMap.keys())
+    )
 
 try:
     opts, params = getopt.getopt(sys.argv[1:], 'hv', [
-        'help', 'version', 'quiet', 'logging-method=',
-        'start-oid=', 'stop-oid=', 'output-dir=', 'transport-id-offset=',
+        'help', 'version', 'debug=', 'debug-snmp=', 'debug-asn1=',
+        'quiet', 'logging-method=', 'start-oid=', 'stop-oid=', 
+        'output-dir=', 'transport-id-offset=',
         'capture-file=', 'listen-interface=', 'promiscuous-mode',
         'packet-filter=', 
         'variation-modules-dir=', 'variation-module=',
@@ -111,14 +118,18 @@ Software documentation and support at http://snmpsim.sf.net
 %s
 """ % (snmpsim.__version__, hasattr(pysnmp, '__version__') and pysnmp.__version__ or 'unknown', hasattr(pyasn1, '__version__') and pyasn1.__version__ or 'unknown', sys.version, helpMessage))
         sys.exit(-1)
-    if opt[0] == '--quiet':
-        verboseFlag = False
+    elif opt[0] in ('--debug', '--debug-snmp'):
+        pysnmp_debug.setLogger(pysnmp_debug.Debug(*opt[1].split(','), loggerName='pcap2dev.pysnmp'))
+    elif opt[0] == '--debug-asn1':
+        pyasn1_debug.setLogger(pyasn1_debug.Debug(*opt[1].split(','), loggerName='pcap2dev.pyasn1'))
     elif opt[0] == '--logging-method':
         try:
-            log.setLogger('snmprec', *opt[1].split(':'))
+            log.setLogger('pcap2dev', *opt[1].split(':'), force=True)
         except error.SnmpsimError:
             sys.stderr.write('%s\r\n%s\r\n' % (sys.exc_info()[1], helpMessage))
             sys.exit(-1)
+    if opt[0] == '--quiet':
+        verboseFlag = False
     elif opt[0] == '--start-oid':
         startOID = univ.ObjectIdentifier(opt[1])
     elif opt[0] == '--stop-oid':
@@ -153,6 +164,8 @@ if params:
 if not pcap:
     sys.stderr.write('ERROR: pylibpcap package is missing!\r\nGet it from http://sourceforge.net/projects/pylibpcap/\r\n%s\r\n' % helpMessage)
     sys.exit(-1)
+
+log.setLogger('pcap2dev', 'stdout')
 
 # Load variation module
 
