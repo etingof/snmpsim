@@ -45,7 +45,7 @@ class FileLogger(AbstractLogger):
                 priv = [ priv[0] + ':' + priv[1] ] + priv[2:]
 
         maxsize = 0
-        maxage = ('D', 7)
+        maxage = None
         if len(priv) > 1 and priv[1]:
             localtime = time.localtime()
             if priv[1][-1] in ('k', 'K'):
@@ -60,14 +60,16 @@ class FileLogger(AbstractLogger):
                 maxage = ('D', int(priv[1][:-1]))
             else:
                 raise error.SnmpsimError(
-                    'Unknown log rotation criteria %s, use K,M,G for size and H,D for time limits' % priv[1]
+                    'Unknown log rotation criteria %s, use <NNN>K,M,G for size or <NNN>H,D for time limits' % priv[1]
                 )
 
         try:
             if maxsize:
                 handler = handlers.RotatingFileHandler(priv[0], backupCount=30, maxBytes=maxsize)
-            else:
+            elif maxage:
                 handler = handlers.TimedRotatingFileHandler(priv[0], backupCount=30, when=maxage[0], interval=maxage[1])
+            else:
+                handler = handlers.WatchedFileHandler(priv[0])
 
         except AttributeError:
             raise error.SnmpsimError(

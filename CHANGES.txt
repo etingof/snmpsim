@@ -32,8 +32,8 @@ Revision 0.2.5, 16-10-2014
 - Hex values can now be passed to --v3-context-* options to snmprec.py tool
 - Variation modules options separators can now be escaped by doubling or
   tripling them.
-- All logging moved to Python logging framework. Low-level SNMP and ASN.1
-  debugging implemented.
+- All logging moved to Python logging framework. Some more log targets added.
+  Low-level SNMP and ASN.1 debugging implemented.
 - Fix to pcap2dev.py not to loose the last trailing OID in capture.
 - Fix to variation module recordContexts isolation to make it dedicated
   to each Variaiton Module+Agent instance.
