@@ -35,6 +35,7 @@ Revision 0.2.5, 16-10-2014
 - All logging moved to Python logging framework. Some more log targets (such
   as remote syslog) added.
 - Low-level SNMP and ASN.1 debugging implemented for all relevant scripts.
+- Fix to log file autorotation feature.
 - Fix to pcap2dev.py not to loose the last trailing OID in capture.
 - Fix to variation module recordContexts isolation to make it dedicated
   to each Variaiton Module+Agent instance.
