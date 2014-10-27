@@ -8,7 +8,7 @@ import os, sys, time, bisect
 from pyasn1.compat.octets import str2octs
 from pysnmp.proto import rfc1902
 from snmpsim.record.snmprec import SnmprecRecord
-from snmpsim.record.search.file import searchRecordByOid
+from snmpsim.record.search.file import searchRecordByOid, getRecord
 from snmpsim.record.search.database import RecordIndex
 from snmpsim import confdir
 from snmpsim.mltsplit import split
@@ -153,11 +153,11 @@ def variate(oid, tag, value, **context):
 
     text.seek(int(offset))
 
-    line = text.readline()  # matched line
+    line, _, _ = getRecord(text)  # matched line
 
     if context['nextFlag']:
         if exactMatch:
-            line = text.readline()
+            line, _, _ = getRecord(text)
     else:
         if not exactMatch:
             return context['origOid'], tag, context['errorStatus']
