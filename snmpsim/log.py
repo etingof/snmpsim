@@ -2,6 +2,7 @@ import sys
 import os
 import time
 import logging
+import socket
 from logging import handlers
 from snmpsim import error
 
@@ -16,19 +17,20 @@ class AbstractLogger:
 class SyslogLogger(AbstractLogger):
     def init(self, *priv): 
         if len(priv) < 1:
-            raise error.SnmpsimError('Bad syslog params, need at least facility, also accept priority, host, port')
+            raise error.SnmpsimError('Bad syslog params, need at least facility, also accept priority, host, port, socktype (tcp|udp)')
         if len(priv) < 2:
             priv = [ priv[0], 'debug' ]
         if len(priv) < 3:
-            priv = [ priv[0], priv[1], 'localhost', 514 ]
-        if len(priv) < 4:
-            if not priv[2].startswith('/'):
-                priv = [ priv[0], priv[1], priv[2], 514 ]
+            priv = [ priv[0], priv[1], 'localhost', 514, 'udp']
         if not priv[2].startswith('/'):
-            priv = [ priv[0], priv[1], priv[2], int(priv[3]) ]
+            if len(priv) < 4:
+                priv = [ priv[0], priv[1], priv[2], 514, 'udp' ]
+            if len(priv) < 5:
+                priv = [ priv[0], priv[1], priv[2], 514, 'udp' ]
+            priv = [ priv[0], priv[1], priv[2], int(priv[3]), priv[4] ]
 
         try:
-            handler = handlers.SysLogHandler(priv[2].startswith('/') and priv[2] or (priv[2], int(priv[3])), priv[0].lower())
+            handler = handlers.SysLogHandler(priv[2].startswith('/') and priv[2] or (priv[2], int(priv[3])), priv[0].lower(), len(priv) > 4 and priv[4] == 'tcp' and socket.SOCK_STREAM or socket.SOCK_DGRAM)
 
         except:
             raise error.SnmpsimError('Bad syslog option(s): %s' % sys.exc_info()[1])
