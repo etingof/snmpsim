@@ -22,7 +22,7 @@ from pysnmp.smi.error import WrongValueError
 try:
     from redis import StrictRedis
 except ImportError:
-    raise error.SnmpsimError('redis-py module for Python must be installed!')
+    StrictRedis = None
 
 def init(**context):
     options = {}
@@ -38,6 +38,9 @@ def init(**context):
             connectParams[k] = int(connectParams[k])
     if not connectParams:
         raise error.SnmpsimError('Redis connect parameters not specified')
+
+    if StrictRedis is None:
+        raise error.SnmpsimError('redis-py Python package must be installed!')
 
     moduleContext['dbConn'] = StrictRedis(**connectParams)
     
