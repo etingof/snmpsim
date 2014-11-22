@@ -247,4 +247,4 @@ def record(oid, tag, value, **context):
         raise error.NoDataNotification()
 
 def shutdown(**context):
-    moduleContext.pop('dbConn')
+    if 'dbConn' in moduleContext: moduleContext.pop('dbConn')
