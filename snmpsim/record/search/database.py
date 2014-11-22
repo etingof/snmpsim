@@ -101,9 +101,7 @@ class RecordIndex:
                     # reference to last OID in data file
                     db['last'] = '%d,%d,%d' % (offset, 0, prevOffset)
                     break
-            
-                lineNo += 1
-
+             
                 try:
                     oid, tag, val = self.__textParser.grammar.parse(line)
                 except Exception:
@@ -149,7 +147,7 @@ class RecordIndex:
             text.close()
             db.close()
        
-            log.msg('...%d entries indexed' % (lineNo - 1,))
+            log.msg('...%d entries indexed' % lineNo)
 
         self.__textFileTime = os.stat(self.__textFile)[8]
 

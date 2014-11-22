@@ -3,15 +3,15 @@ from pyasn1.compat.octets import str2octs
 # read lines from text file ignoring #comments and blank lines
 def getRecord(fileObj, lineNo=None, offset=None):
     line = fileObj.readline()
+    if lineNo is not None and line: lineNo += 1
     while line:
         tline = line.strip()
-        # skip comment or blanl line
+        # skip comment or blank line
         if not tline or tline.startswith('#'):
-            if lineNo is not None:
-                lineNo += 1
             if offset is not None:
                 offset += len(line)
             line = fileObj.readline()
+            if lineNo is not None and line: lineNo += 1
         else:
             break
     return line, lineNo, offset
