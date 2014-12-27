@@ -14,6 +14,9 @@ Revision 0.2.5, 16-10-2014
 - New --max-varbinds option can now be used for limiting the number
   of variable bindings in SNMP response message on a per-engine-id
   basis. Global default is now 64 variable bindings.
+- Multiple SNMP ContextEngineID can now be configured per each of possibly
+  many SNMP Engine IDs.
+- SNMP configuration logging reworked foro better clarity.
 - The notification module now binds to the same local interface through
   which Simulator received CommandRequest triggering notification. 
   Also it supports 'bindaddr' option to override the above behaviour on

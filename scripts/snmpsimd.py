@@ -528,21 +528,22 @@ Usage: %s [--help]
     [--variation-module-options=<module[=alias][:args]>] 
     [--force-index-rebuild]
     [--validate-data]
+    [--args-from-file=<file>]
+    [--transport-id-offset=<number>]
     [--v2c-arch]
     [--v3-only]
-    [--transport-id-offset=<number>]
-    [--args-from-file=<file>]
     [--v3-engine-id=<hexvalue>]
-    [--data-dir=<dir>]
-    [--agent-udpv4-endpoint=<X.X.X.X:NNNNN>]
-    [--agent-udpv6-endpoint=<[X:X:..X]:NNNNN>]
-    [--agent-unix-endpoint=</path/to/named/pipe>]
+    [--v3-context-engine-id=<hexvalue>]
     [--v3-user=<username>]
     [--v3-auth-key=<key>]
     [--v3-auth-proto=<%s>]
     [--v3-priv-key=<key>]
     [--v3-priv-proto=<%s>]
-    [--max-varbinds=<number>]""" % (
+    [--data-dir=<dir>]
+    [--max-varbinds=<number>]
+    [--agent-udpv4-endpoint=<X.X.X.X:NNNNN>]
+    [--agent-udpv6-endpoint=<[X:X:..X]:NNNNN>]
+    [--agent-unix-endpoint=</path/to/named/pipe>]""" % (
         sys.argv[0],
         '|'.join([ x for x in pysnmp_debug.flagMap.keys() if x != 'mibview' ]),
         '|'.join([ x for x in pyasn1_debug.flagMap.keys() ]),
@@ -562,12 +563,13 @@ try:
         'args-from-file=',
         # this option starts new SNMPv3 engine configuration
         'v3-engine-id=',
-        'data-dir=',
-        'agent-udpv4-endpoint=','agent-udpv6-endpoint=','agent-unix-endpoint=',
+        'v3-context-engine-id=',
         'v3-user=',
         'v3-auth-key=', 'v3-auth-proto=', 
         'v3-priv-key=', 'v3-priv-proto=',
-        'max-varbinds='
+        'data-dir=',
+        'max-varbinds=',
+        'agent-udpv4-endpoint=','agent-udpv6-endpoint=','agent-unix-endpoint='
     ])
 except Exception:
     sys.stderr.write('ERROR: %s\r\n%s\r\n' % (sys.exc_info()[1], helpMessage))
@@ -666,8 +668,9 @@ Software documentation and support at http://snmpsim.sf.net
                     '--agent-unix-endpoints-list'):
         sys.stderr.write('ERROR: use --args-from-file=<file> option to list many endpoints\r\n%s\r\n' % helpMessage)
         sys.exit(-1)
-    elif opt[0] in ('--v3-engine-id', '--v3-user', '--v3-auth-key', 
-                    '--v3-auth-proto', '--v3-priv-key', '--v3-priv-proto'):
+    elif opt[0] in ('--v3-engine-id', '--v3-context-engine-id',
+                    '--v3-user', '--v3-auth-key', '--v3-auth-proto',
+                    '--v3-priv-key', '--v3-priv-proto'):
         v3Args.append(opt)
     elif opt[0] == '--max-varbinds':
         try:
@@ -820,7 +823,7 @@ def configureManagedObjects(dataDirs, dataIndexInstrumController,
         if not os.path.exists(dataDir):
             log.msg('Directory "%s" does not exist' % dataDir)
             continue
-        log.msg('%s' % ('='*66,))
+        log.msg.incIdent()
         for fullPath, textParser, communityName in getDataFiles(dataDir):
             if communityName in _dataFiles:
                 log.msg('WARNING: ignoring duplicate Community/ContextName "%s" for data file %s (%s already loaded)' % (communityName, fullPath, _dataFiles[communityName]))
@@ -859,10 +862,10 @@ def configureManagedObjects(dataDirs, dataIndexInstrumController,
                     fullPath, communityName, contextName
                 )
                          
-                log.msg('SNMPv3 context name: %s' % (contextName,))
-                
-            log.msg('%s' % ('-+' * 33,))
-                
+                log.msg('SNMPv3 Context Name: %s' % (contextName,))
+
+        log.msg.decIdent()
+
     del _mibInstrums
     del _dataFiles
 
@@ -1152,7 +1155,7 @@ else:  # v3 mode
             except error.PySnmpError:
                 log.msg('WARNING: upgrade pysnmp to 4.2.5 or later get multi-engine ID feature working!')
                 raise
- 
+
     snmpEngine = None
     transportIndex = { 'udpv4': transportIdOffset,
                        'udpv6': transportIdOffset,
@@ -1161,21 +1164,39 @@ else:  # v3 mode
     for opt in v3Args:
         if opt[0] in ('--v3-engine-id', 'end-of-options'):
             if snmpEngine:
-                log.msg('%s' % ('*'*66,))
+                log.msg('--- SNMP Engine configuration') 
 
-                dataIndexInstrumController = DataIndexInstrumController()
+                log.msg('SNMPv3 EngineID: %s' % (hasattr(snmpEngine, 'snmpEngineID') and snmpEngine.snmpEngineID.prettyPrint() or '<unknown>',))
 
-                configureManagedObjects(dataDirs and dataDirs or confdir.data, 
-                                        dataIndexInstrumController,
-                                        snmpEngine,
-                                        snmpContext)
+                if not v3ContextEngineIds:
+                    v3ContextEngineIds.append((None, []))
+
+                log.msg.incIdent()
+
+                log.msg('--- Data directories configuration')
+
+                for v3ContextEngineId, ctxDataDirs in v3ContextEngineIds:
+                    snmpContext = context.SnmpContext(
+                        snmpEngine, v3ContextEngineId
+                    )
+
+                    log.msg('SNMPv3 Context Engine ID: %s' % snmpContext.contextEngineId.prettyPrint())
+
+                    dataIndexInstrumController = DataIndexInstrumController()
+
+                    configureManagedObjects(
+                        ctxDataDirs or dataDirs or confdir.data, 
+                        dataIndexInstrumController,
+                        snmpEngine,
+                        snmpContext
+                    )
 
                 # Configure access to data index
 
                 config.addV1System(snmpEngine, 'index',
                                    'index', contextName='index')
 
-                log.msg('SNMPv3 EngineID: %s' % (hasattr(snmpEngine, 'snmpEngineID') and snmpEngine.snmpEngineID.prettyPrint() or '<unknown>',))
+                log.msg('--- SNMPv3 USM configuration')
 
                 if not v3Users:
                     v3Users = [ 'simulator' ]
@@ -1232,7 +1253,7 @@ else:  # v3 mode
 
                 log.msg('Maximum number of variable bindings in SNMP response: %s' % localMaxVarBinds)
 
-                # Configure socket server
+                log.msg('--- Transport configuration')
 
                 if not agentUDPv4Endpoints and \
                         not agentUDPv6Endpoints and \
@@ -1285,11 +1306,14 @@ else:  # v3 mode
                 NextCommandResponder(snmpEngine, snmpContext)
                 BulkCommandResponder(snmpEngine, snmpContext).maxVarBinds = localMaxVarBinds
 
+                log.msg.decIdent()
+
             if opt[0] == 'end-of-options':
                 break
 
             # Prepare for next engine ID configuration
 
+            v3ContextEngineIds = []
             dataDirs = []
             localMaxVarBinds = maxVarBinds
             v3Users = []
@@ -1314,10 +1338,13 @@ else:  # v3 mode
             
             config.addContext(snmpEngine, '')
 
-            snmpContext = context.SnmpContext(snmpEngine)
-
+        elif opt[0] == '--v3-context-engine-id':
+            v3ContextEngineIds.append((univ.OctetString(hexValue=opt[1]), []))
         elif opt[0] == '--data-dir':
-            dataDirs.append(opt[1])
+            if v3ContextEngineIds:
+                v3ContextEngineIds[-1][1].append(opt[1])
+            else:
+                dataDirs.append(opt[1])
         elif opt[0] == '--max-varbinds':
             localMaxVarBinds = opt[1]
         elif opt[0] == '--v3-user':

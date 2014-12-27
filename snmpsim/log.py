@@ -10,8 +10,15 @@ class AbstractLogger:
     def __init__(self, progId, *priv):
         self._logger = logging.getLogger(progId)
         self._logger.setLevel(logging.DEBUG)
+        self.__ident = 0
         self.init(*priv)
-    def __call__(self, s): self._logger.debug(s)
+    def __call__(self, s): self._logger.debug(' '*self.__ident + s)
+    def incIdent(self, amount=2): 
+        self.__ident += amount
+    def decIdent(self, amount=2):
+        self.__ident -= amount
+        if self.__ident < 0:
+            self.__ident = 0
     def init(self, *priv): pass
 
 class SyslogLogger(AbstractLogger):
