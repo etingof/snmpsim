@@ -622,7 +622,8 @@ Software documentation and support at http://snmpsim.sf.net
             sys.stderr.write('%s\r\n%s\r\n' % (sys.exc_info()[1], helpMessage))
             sys.exit(-1)
     elif opt[0] in ('--device-dir', '--data-dir'):
-        if '--v3-engine-id' in [ x[0] for x in v3Args ]:
+        if [ x for x in v3Args if x[0] in ('--v3-engine-id',
+                                           '--v3-context-engine-id') ]:
             v3Args.append(opt)
         else:
             confdir.data.insert(0, opt[1])
