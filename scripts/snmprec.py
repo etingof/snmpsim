@@ -83,8 +83,8 @@ Usage: %s [--help]
     [--v3-auth-proto=<%s>]
     [--v3-priv-key=<key>]
     [--v3-priv-proto=<%s>]
-    [--context-engine-id=<[0x]string>]
-    [--context=<[0x]string>]
+    [--v3-context-engine-id=<[0x]string>]
+    [--v3-context-name=<[0x]string>]
     [--use-getbulk]
     [--getbulk-repetitions=<number>]
     [--agent-udpv4-endpoint=<X.X.X.X:NNNNN>]
@@ -109,8 +109,10 @@ try:
         'help', 'version', 'debug=', 'debug-asn1=', 'logging-method=', 'quiet',
         'v1', 'v2c', 'v3', 'protocol-version=', 'community=', 
         'v3-user=', 'v3-auth-key=', 'v3-priv-key=', 'v3-auth-proto=',
-        'v3-priv-proto=', 'context-engine-id=', 'context=', 'use-getbulk',
-        'getbulk-repetitions=', 'agent-address=', 'agent-port=',
+        'v3-priv-proto=',
+        'context-engine-id=', 'v3-context-engine-id=',
+        'context=', 'v3-context-name=',
+        'use-getbulk', 'getbulk-repetitions=', 'agent-address=', 'agent-port=',
         'agent-udpv4-endpoint=', 'agent-udpv6-endpoint=',
         'agent-unix-endpoint=', 'start-oid=', 'stop-oid=', 'output-file=',
         'variation-modules-dir=', 'variation-module=',
@@ -192,12 +194,12 @@ Software documentation and support at http://snmpsim.sf.net
         if v3PrivProto not in privProtocols:
             sys.stderr.write('ERROR: bad v3 privacy protocol %s\r\n%s\r\n' % (v3PrivProto, helpMessage))
             sys.exit(-1)
-    elif opt[0] == '--context-engine-id':
+    elif opt[0] in ('--v3-context-engine-id', '--context-engine-id'):
         if opt[1][:2] == '0x':
             v3ContextEngineId = univ.OctetString(hexValue=opt[1][2:])
         else:
             v3ContextEngineId = univ.OctetString(opt[1])
-    elif opt[0] == '--context':
+    elif opt[0] in ('--v3-context-name', '--context'):
         if opt[1][:2] == '0x':
             v3Context = univ.OctetString(hexValue=opt[1][2:])
         else:
