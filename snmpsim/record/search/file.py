@@ -1,15 +1,14 @@
 from pyasn1.compat.octets import str2octs
 
 # read lines from text file ignoring #comments and blank lines
-def getRecord(fileObj, lineNo=None, offset=None):
+def getRecord(fileObj, lineNo=None, offset=0):
     line = fileObj.readline()
     if lineNo is not None and line: lineNo += 1
     while line:
         tline = line.strip()
         # skip comment or blank line
         if not tline or tline.startswith('#'):
-            if offset is not None:
-                offset += len(line)
+            offset += len(line)
             line = fileObj.readline()
             if lineNo is not None and line: lineNo += 1
         else:
@@ -35,7 +34,7 @@ def searchRecordByOid(oid, fileObj, textParser, eol=str2octs('\n')):
             break
         if mid >= sz:
             return sz
-        line, _, skippedOffset = getRecord(fileObj, offset=mid)
+        line, _, skippedOffset = getRecord(fileObj)
         if not line:
             return hi
         midval, _ = textParser.evaluate(line, oidOnly=True)
@@ -50,4 +49,3 @@ def searchRecordByOid(oid, fileObj, textParser, eol=str2octs('\n')):
         return lo
     else:
         return hi
-
