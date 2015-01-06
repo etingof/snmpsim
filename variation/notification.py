@@ -5,6 +5,7 @@ import sys
 from pysnmp.entity.rfc3413.oneliner import ntforg
 from pysnmp.proto import rfc1902
 from snmpsim.grammar.snmprec import SnmprecGrammar
+from snmpsim.mltsplit import split
 from snmpsim import error, log
 
 def init(**context): pass
