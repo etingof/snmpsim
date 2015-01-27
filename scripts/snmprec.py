@@ -459,9 +459,11 @@ def cbFun(snmpEngine, sendRequestHandle, errorIndication,
         return
     # SNMPv1 response may contain noSuchName error *and* SNMPv2c exception,
     # so we ignore noSuchName error here
-    if errorStatus and errorStatus != 2:
+    if errorStatus and errorStatus != 2 or \
+            errorIndication == 'oidNotIncreasing':
         log.msg('Remote SNMP error %s for OID %s' %
-                (errorStatus.prettyPrint(), varBindTable[0][errorIndex-1][0]))
+                (errorIndication or errorStatus.prettyPrint(),
+                 varBindTable[0][errorIndex-1][0]))
         if continueOnErrorsFlag:
             nextOID = varBindTable[-1][errorIndex-1][0]
             if len(nextOID) < 4:
