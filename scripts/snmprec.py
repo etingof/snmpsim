@@ -460,9 +460,9 @@ def cbFun(snmpEngine, sendRequestHandle, errorIndication,
     # SNMPv1 response may contain noSuchName error *and* SNMPv2c exception,
     # so we ignore noSuchName error here
     if errorStatus and errorStatus != 2 or errorIndication:
-        log.msg('Remote SNMP error %s for OID %s' %
-                (errorIndication or errorStatus.prettyPrint(),
-                 varBindTable[0][errorIndex-1][0]))
+        log.msg('Remote SNMP error %s' % (errorIndication or errorStatus.prettyPrint()))
+        if errorIndex and varBindTable:
+            log.msg('Failed OID: %s' % varBindTable[0][errorIndex-1][0])
         if continueOnErrorsFlag:
             if errorIndication:
                 nextOID = varBindTable[-1][0][0]
