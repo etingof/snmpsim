@@ -458,8 +458,8 @@ for context in contexts:
             else:
                 outputFile.write(line)
 
-            count += 1
-            total += 1
+                count += 1
+                total += 1
 
         else:
             break

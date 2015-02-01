@@ -56,7 +56,7 @@ Revision 0.2.5, 26-12-2014
 - Fix to off-by-one errorIndex as reported by error.py and writecache.py
   variation modules.
 - Fix to record parsers/builders to fail on empty values.
-- Fix to snmprec.py processed OIDs counting.
+- Fix to snmprec.py & pcap2dev.py in part of processed OIDs counting.
 
 Revision 0.2.4, 04-10-2014
 --------------------------
