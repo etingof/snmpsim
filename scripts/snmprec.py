@@ -568,11 +568,11 @@ def cbFun(snmpEngine, sendRequestHandle, errorIndication,
             else:
                 outputFile.write(line)
 
-            cbCtx['count'] += 1
-            cbCtx['total'] += 1
+                cbCtx['count'] += 1
+                cbCtx['total'] += 1
 
-            if cbCtx['count'] % 100 == 0:
-                log.msg('OIDs dumped: %s/%s' % (cbCtx['iteration'], cbCtx['count']))
+                if cbCtx['count'] % 100 == 0:
+                    log.msg('OIDs dumped: %s/%s' % (cbCtx['iteration'], cbCtx['count']))
 
     # Next request time
     cbCtx['reqTime'] = time.time()
