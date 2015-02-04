@@ -31,7 +31,7 @@ from snmpsim import confdir, error, log
 
 # Defaults
 getBulkFlag = False
-continueOnErrorsFlag = False
+continueOnErrors = 0
 getBulkRepetitions = 25
 snmpVersion = 1
 snmpCommunity = 'public'
@@ -95,7 +95,7 @@ Usage: %s [--help]
     [--variation-modules-dir=<dir>]
     [--variation-module=<module>]
     [--variation-module-options=<args>]
-    [--continue-on-errors]""" % (
+    [--continue-on-errors=<max-errors>]""" % (
         sys.argv[0],
         '|'.join([ x for x in pysnmp_debug.flagMap.keys() if x != 'mibview' ]),
         '|'.join([ x for x in pyasn1_debug.flagMap.keys() ]),
@@ -116,7 +116,7 @@ try:
         'agent-udpv4-endpoint=', 'agent-udpv6-endpoint=',
         'agent-unix-endpoint=', 'start-oid=', 'stop-oid=', 'output-file=',
         'variation-modules-dir=', 'variation-module=',
-        'variation-module-options=', 'continue-on-errors'
+        'variation-module-options=', 'continue-on-errors='
     ] )
 except Exception:
     sys.stderr.write('ERROR: %s\r\n%s\r\n' % (sys.exc_info()[1], helpMessage))
@@ -262,7 +262,10 @@ Software documentation and support at http://snmpsim.sf.net
     elif opt[0] == '--variation-module-options':
         variationModuleOptions = opt[1]
     elif opt[0] == '--continue-on-errors':
-        continueOnErrorsFlag = True
+        try:
+            continueOnErrors = int(opt[1])
+        except:
+            sys.stderr.write('ERROR: improper --continue-on-errors retries count %s\r\n%s\r\n' % (opt[1], helpMessage))
  
 # Catch missing params
 
@@ -454,30 +457,31 @@ dataFileHandler = SnmprecRecord()
 
 def cbFun(snmpEngine, sendRequestHandle, errorIndication,
           errorStatus, errorIndex, varBindTable, cbCtx):
-    if errorIndication and errorIndication != 'oidNotIncreasing':
+    if errorIndication and not cbCtx['retries']:
         log.msg('SNMP Engine error: %s' % errorIndication)
         return
     # SNMPv1 response may contain noSuchName error *and* SNMPv2c exception,
     # so we ignore noSuchName error here
     if errorStatus and errorStatus != 2 or errorIndication:
         log.msg('Remote SNMP error %s' % (errorIndication or errorStatus.prettyPrint()))
-        if errorIndex and varBindTable:
-            log.msg('Failed OID: %s' % varBindTable[0][errorIndex-1][0])
-        if continueOnErrorsFlag:
-            if errorIndication:
+        if cbCtx['retries']:
+            try:
                 nextOID = varBindTable[-1][0][0]
-                # skip non-increasing OID
+            except IndexError:
+                nextOID = cbCtx['lastOID']
+            else:
+                log.msg('Failed OID: %s' % nextOID)
+            if len(nextOID) < 4:
+                pass
+            elif nextOID[-1]:
                 nextOID = nextOID[:-1] + (nextOID[-1]+1,)
             else:
-                nextOID = varBindTable[-1][errorIndex-1][0]
-                if len(nextOID) < 4:
-                    return
-                if nextOID[-1]:
-                    nextOID = nextOID[:-2] + (nextOID[-2]+1,)
-                else:
-                    nextOID = nextOID[:-2] + (nextOID[-2]+1, 0)
-            
-            log.msg('Retrying with OID %s...' % (nextOID,))
+                nextOID = nextOID[:-2] + (nextOID[-2]+1, 0)
+
+            cbCtx['retries'] -= 1
+            cbCtx['lastOID'] = nextOID
+
+            log.msg('Retrying with OID %s (%s retries left)...' % (nextOID, cbCtx['retries']))
             
             # initiate another SNMP walk iteration
             if getBulkFlag:
@@ -498,6 +502,12 @@ def cbFun(snmpEngine, sendRequestHandle, errorIndication,
                     cbFun, cbCtx
                 )
         return
+
+    if continueOnErrors != cbCtx['retries']:
+        cbCtx['retries'] += 1
+
+    if varBindTable and varBindTable[-1] and varBindTable[-1][0]:
+        cbCtx['lastOID'] = varBindTable[-1][0][0]
 
     stopFlag = False
 
@@ -584,7 +594,9 @@ cbCtx = {
     'total': 0,
     'count': 0,
     'iteration': 0,
-    'reqTime': time.time()
+    'reqTime': time.time(),
+    'retries': continueOnErrors,
+    'lastOID': startOID
 }
 
 if getBulkFlag:
