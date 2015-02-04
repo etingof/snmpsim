@@ -46,6 +46,8 @@ agentUDPv4Address = (None, 161)  # obsolete
 agentUDPv4Endpoint = None
 agentUDPv6Endpoint = None
 agentUNIXEndpoint = None
+timeout = 300  # 1/100 sec
+retryCount = 3
 startOID = univ.ObjectIdentifier('1.3.6')
 stopOID = None
 outputFile = sys.stdout
@@ -90,12 +92,13 @@ Usage: %s [--help]
     [--agent-udpv4-endpoint=<X.X.X.X:NNNNN>]
     [--agent-udpv6-endpoint=<[X:X:..X]:NNNNN>]
     [--agent-unix-endpoint=</path/to/named/pipe>]
+    [--timeout=<seconds>] [--retries=<count>]
     [--start-oid=<OID>] [--stop-oid=<OID>]
     [--output-file=<filename>]
     [--variation-modules-dir=<dir>]
     [--variation-module=<module>]
     [--variation-module-options=<args>]
-    [--continue-on-errors=<max-errors>]""" % (
+    [--continue-on-errors=<max-sustained-errors>]""" % (
         sys.argv[0],
         '|'.join([ x for x in pysnmp_debug.flagMap.keys() if x != 'mibview' ]),
         '|'.join([ x for x in pyasn1_debug.flagMap.keys() ]),
@@ -114,7 +117,8 @@ try:
         'context=', 'v3-context-name=',
         'use-getbulk', 'getbulk-repetitions=', 'agent-address=', 'agent-port=',
         'agent-udpv4-endpoint=', 'agent-udpv6-endpoint=',
-        'agent-unix-endpoint=', 'start-oid=', 'stop-oid=', 'output-file=',
+        'agent-unix-endpoint=', 'timeout=', 'retries=',
+        'start-oid=', 'stop-oid=', 'output-file=',
         'variation-modules-dir=', 'variation-module=',
         'variation-module-options=', 'continue-on-errors='
     ] )
@@ -249,6 +253,18 @@ Software documentation and support at http://snmpsim.sf.net
             sys.stderr.write('This system does not support UNIX domain sockets\r\n')
             sys.exit(-1)
         agentUNIXEndpoint = opt[1]
+    elif opt[0] == '--timeout':
+        try:
+            timeout = float(opt[1])*100
+        except:
+            sys.stderr.write('ERROR: improper --timeout value %s\r\n%s\r\n' % (opt[1], helpMessage))
+            sys.exit(-1)
+    elif opt[0] == '--retries':
+        try:
+            retryCount = int(opt[1])
+        except:
+            sys.stderr.write('ERROR: improper --retries value %s\r\n%s\r\n' % (opt[1], helpMessage))
+            sys.exit(-1)
     elif opt[0] == '--start-oid':
         startOID = univ.ObjectIdentifier(opt[1])
     elif opt[0] == '--stop-oid':
@@ -266,6 +282,7 @@ Software documentation and support at http://snmpsim.sf.net
             continueOnErrors = int(opt[1])
         except:
             sys.stderr.write('ERROR: improper --continue-on-errors retries count %s\r\n%s\r\n' % (opt[1], helpMessage))
+            sys.exit(-1)
  
 # Catch missing params
 
@@ -381,7 +398,8 @@ if agentUDPv6Endpoint:
         udp6.Udp6SocketTransport().openClientMode()
     )
     config.addTargetAddr(
-        snmpEngine, 'tgt', udp6.domainName, agentUDPv6Endpoint, 'pms'
+        snmpEngine, 'tgt', udp6.domainName, agentUDPv6Endpoint, 'pms',
+        timeout, retryCount
     )
     log.msg('Querying UDP/IPv6 agent at [%s]:%s' % agentUDPv6Endpoint)
 elif agentUNIXEndpoint:
@@ -391,7 +409,8 @@ elif agentUNIXEndpoint:
         unix.UnixSocketTransport().openClientMode()
     )
     config.addTargetAddr(
-        snmpEngine, 'tgt', unix.domainName, agentUNIXEndpoint, 'pms'
+        snmpEngine, 'tgt', unix.domainName, agentUNIXEndpoint, 'pms',
+        timeout, retryCount
     )
     log.msg('Querying UNIX named pipe agent at %s' % agentUNIXEndpoint)
 elif agentUDPv4Endpoint:
@@ -401,9 +420,12 @@ elif agentUDPv4Endpoint:
         udp.UdpSocketTransport().openClientMode()
     )
     config.addTargetAddr(
-        snmpEngine, 'tgt', udp.domainName, agentUDPv4Endpoint, 'pms'
+        snmpEngine, 'tgt', udp.domainName, agentUDPv4Endpoint, 'pms',
+        timeout, retryCount
     )
     log.msg('Querying UDP/IPv4 agent at %s:%s' % agentUDPv4Endpoint)
+
+log.msg('Agent response timeout: %.2f secs, retries: %s' % (timeout/100, retryCount))
 
 # Variation module initialization
 
@@ -501,6 +523,9 @@ def cbFun(snmpEngine, sendRequestHandle, errorIndication,
                     [ (nextOID, None) ],
                     cbFun, cbCtx
                 )
+
+        cbCtx['errors'] += 1
+
         return
 
     if continueOnErrors != cbCtx['retries']:
@@ -593,6 +618,7 @@ def cbFun(snmpEngine, sendRequestHandle, errorIndication,
 cbCtx = {
     'total': 0,
     'count': 0,
+    'errors': 0,
     'iteration': 0,
     'reqTime': time.time(),
     'retries': continueOnErrors,
@@ -653,7 +679,7 @@ t = time.time() - t
 
 cbCtx['total'] += cbCtx['count']
 
-log.msg('OIDs dumped: %s, elapsed: %.2f sec, rate: %.2f OIDs/sec' % (cbCtx['total'], t, t and cbCtx['count']//t or 0))
+log.msg('OIDs dumped: %s, elapsed: %.2f sec, rate: %.2f OIDs/sec, errors: %d' % (cbCtx['total'], t, t and cbCtx['count']//t or 0, cbCtx['errors']))
 
 if exc_info:
     for line in traceback.format_exception(*exc_info):

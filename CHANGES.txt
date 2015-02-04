@@ -31,6 +31,8 @@ Revision 0.2.5, 04-02-2015
 - Numeric module's 'function' parameter now accepts optional arguments.
 - The snmprec.py tool improved to optionally survive SNMP PDU-level errors
   and keep walking remote Agent using an OID derived from the failed one.
+- Configurable SNMP request timeout and retry count settings now supported
+  by the snmprec.py tool.
 - The --context-engine-id option support added to snmprec.py tool.
 - Hex values can now be passed to --v3-context-* options to snmprec.py tool
 - Variation modules options separators can now be escaped by doubling or
