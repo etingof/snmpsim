@@ -494,8 +494,11 @@ def cbFun(snmpEngine, sendRequestHandle, errorIndication,
                 nextOID = cbCtx['lastOID']
             else:
                 log.msg('Failed OID: %s' % nextOID)
+            # fuzzy logic of walking a broken OID
             if len(nextOID) < 4:
                 pass
+            elif (continueOnErrors-cbCtx['retries'])*10/continueOnErrors > 5:
+                nextOID = nextOID[:-2] + (nextOID[-2]+1,)
             elif nextOID[-1]:
                 nextOID = nextOID[:-1] + (nextOID[-1]+1,)
             else:
