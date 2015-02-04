@@ -7,7 +7,7 @@ def getRecord(fileObj, lineNo=None, offset=0):
     while line:
         tline = line.strip()
         # skip comment or blank line
-        if not tline or tline.startswith('#'):
+        if not tline or tline.startswith(str2octs('#')):
             offset += len(line)
             line = fileObj.readline()
             if lineNo is not None and line: lineNo += 1
