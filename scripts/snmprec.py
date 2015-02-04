@@ -480,6 +480,7 @@ dataFileHandler = SnmprecRecord()
 def cbFun(snmpEngine, sendRequestHandle, errorIndication,
           errorStatus, errorIndex, varBindTable, cbCtx):
     if errorIndication and not cbCtx['retries']:
+        cbCtx['errors'] += 1
         log.msg('SNMP Engine error: %s' % errorIndication)
         return
     # SNMPv1 response may contain noSuchName error *and* SNMPv2c exception,
