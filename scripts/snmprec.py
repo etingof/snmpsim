@@ -149,12 +149,12 @@ Software documentation and support at http://snmpsim.sf.net
 """ % (snmpsim.__version__, hasattr(pysnmp, '__version__') and pysnmp.__version__ or 'unknown', hasattr(pyasn1, '__version__') and pyasn1.__version__ or 'unknown', sys.version, helpMessage))
         sys.exit(-1)
     elif opt[0] in ('--debug', '--debug-snmp'):
-        pysnmp_debug.setLogger(pysnmp_debug.Debug(*opt[1].split(','), loggerName='snmprec.pysnmp'))
+        pysnmp_debug.setLogger(pysnmp_debug.Debug(*opt[1].split(','), **dict(loggerName='snmprec.pysnmp')))
     elif opt[0] == '--debug-asn1':
-        pyasn1_debug.setLogger(pyasn1_debug.Debug(*opt[1].split(','), loggerName='snmprec.pyasn1'))
+        pyasn1_debug.setLogger(pyasn1_debug.Debug(*opt[1].split(','), **dict(loggerName='snmprec.pyasn1')))
     elif opt[0] == '--logging-method':
         try:
-            log.setLogger('snmprec', *opt[1].split(':'), force=True)
+            log.setLogger('snmprec', *opt[1].split(':'), **dict(force=True))
         except error.SnmpsimError:
             sys.stderr.write('%s\r\n%s\r\n' % (sys.exc_info()[1], helpMessage))
             sys.exit(-1)
