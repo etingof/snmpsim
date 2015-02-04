@@ -87,8 +87,8 @@ class FileLogger(AbstractLogger):
 
         handler.setFormatter(logging.Formatter('%(asctime)s %(name)s: %(message)s'))
         self._logger.addHandler(handler)
- 
-        self('Log file %s, rotation rules: %s' % (priv[0], maxsize and '> %sKB' % (maxsize/1024) or '%s%s' % (maxage[1], maxage[0])))
+
+        self('Log file %s, rotation rules: %s' % (priv[0], maxsize and '> %sKB' % (maxsize/1024) or maxage and '%s%s' % (maxage[1], maxage[0]) or '<none>'))
 
 class StreamLogger(AbstractLogger):
     stream = sys.stderr
