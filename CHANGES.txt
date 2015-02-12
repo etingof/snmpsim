@@ -1,6 +1,6 @@
 
-Revision 0.2.5, 04-02-2015
---------------------------
+Revision 0.2.5rc3, 04-02-2015
+-----------------------------
 
 - Simulator now depends on the latest pysnmp features introduced in 
   pysnmp version 4.2.6
