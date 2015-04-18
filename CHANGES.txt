@@ -40,9 +40,9 @@ Revision 0.2.5rc3, 14-04-2015
 - All logging moved to Python logging framework. Some more log targets (such
   as remote syslog) added.
 - Low-level SNMP and ASN.1 debugging implemented for all relevant scripts.
-- Perform conditional MD5 hashing on snmpCommunityName/contextName -- only
-  when target string is longer than 32 octets. That might ease ContextName
-  usage for Agent addressing.
+- Configure both plain-text and hashed versions of snmpCommunityName,
+  contextName whenever its length does not exceed 32 chars. That might ease
+  ContextName usage for Agent addressing.
 - Fix to log file autorotation feature.
 - Fix to pcap2dev.py not to loose the last trailing OID in capture.
 - Fix to variation module recordContexts isolation to make it dedicated

@@ -850,24 +850,24 @@ def configureManagedObjects(dataDirs, dataIndexInstrumController,
                     fullPath, communityName
                 )
             else:
-                # snmpCommunityTable::snmpCommunityIndex can't be > 32
-                if len(communityName) > 32:
-                    agentName = contextName = md5(univ.OctetString(communityName).asOctets()).hexdigest()
-                else:
-                    agentName = contextName = univ.OctetString(communityName).asOctets()
+                agentName = contextName = md5(univ.OctetString(communityName).asOctets()).hexdigest()
 
                 if not v3Only:
+                    # snmpCommunityTable::snmpCommunityIndex can't be > 32
                     config.addV1System(
                         snmpEngine, agentName, communityName, contextName=contextName
                     )
 
                 snmpContext.registerContextName(contextName, mibInstrum)
+                
+                if len(communityName) <= 32:
+                    snmpContext.registerContextName(communityName, mibInstrum)
                          
                 dataIndexInstrumController.addDataFile(
                     fullPath, communityName, contextName
                 )
                          
-                log.msg('SNMPv3 Context Name: %s' % (contextName,))
+                log.msg('SNMPv3 Context Name: %s%s' % (contextName, len(communityName) <= 32 and ' or %s' % communityName or ''))
 
         log.msg.decIdent()
 
