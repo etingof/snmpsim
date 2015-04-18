@@ -850,7 +850,11 @@ def configureManagedObjects(dataDirs, dataIndexInstrumController,
                     fullPath, communityName
                 )
             else:
-                agentName = contextName = md5(univ.OctetString(communityName).asOctets()).hexdigest()
+                # snmpCommunityTable::snmpCommunityIndex can't be > 32
+                if len(communityName) > 32:
+                    agentName = contextName = md5(univ.OctetString(communityName).asOctets()).hexdigest()
+                else:
+                    agentName = contextName = univ.OctetString(communityName).asOctets()
 
                 if not v3Only:
                     config.addV1System(
@@ -987,7 +991,10 @@ else: # v3arch
 
         for candidate in probeContext(transportDomain, transportAddress,
                                       contextName):
-            probedContextName = md5(candidate).hexdigest()
+            if len(candidate) > 32:
+                probedContextName = md5(candidate).hexdigest()
+            else:
+                probedContextName = candidate
             try:
                 mibInstrum = self.snmpContext.getMibInstrum(probedContextName)
             except error.PySnmpError:

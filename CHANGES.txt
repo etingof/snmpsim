@@ -1,5 +1,5 @@
 
-Revision 0.2.5rc3, 04-02-2015
+Revision 0.2.5rc3, 14-04-2015
 -----------------------------
 
 - Simulator now depends on the latest pysnmp features introduced in 
@@ -40,6 +40,9 @@ Revision 0.2.5rc3, 04-02-2015
 - All logging moved to Python logging framework. Some more log targets (such
   as remote syslog) added.
 - Low-level SNMP and ASN.1 debugging implemented for all relevant scripts.
+- Perform conditional MD5 hashing on snmpCommunityName/contextName -- only
+  when target string is longer than 32 octets. That might ease ContextName
+  usage for Agent addressing.
 - Fix to log file autorotation feature.
 - Fix to pcap2dev.py not to loose the last trailing OID in capture.
 - Fix to variation module recordContexts isolation to make it dedicated
