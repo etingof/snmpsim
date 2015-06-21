@@ -2,14 +2,15 @@
 #
 # SNMP Simulator MIB to data file converter
 #
-# Written by Ilya Etingof <ilya@glas.net>, 2011-2014
+# Written by Ilya Etingof <ilya@glas.net>, 2011-2015
 #
 import getopt
 import sys
 import random
 from pyasn1.type import univ
 from pyasn1.error import PyAsn1Error
-from pysnmp.smi import builder, view, error
+from pysnmp.smi import compiler, builder, view, error
+from pysnmp.smi.rfc1902 import ObjectIdentity
 from pysnmp.proto import rfc1902
 from pysnmp import debug
 from snmpsim.record import snmprec
@@ -18,6 +19,8 @@ from snmpsim.error import SnmpsimError
 # Defaults
 verboseFlag = True
 startOID = stopOID = None
+mibSources = []
+defaultMibSources = [ 'http://mibs.snmplabs.com/asn1/@mib@' ]
 outputFile = sys.stdout
 if hasattr(outputFile, 'buffer'):
     outputFile = outputFile.buffer
@@ -37,8 +40,10 @@ helpMessage = """Usage: %s [--help]
     [--version]
     [--debug=<%s>]
     [--quiet]
-    [--pysnmp-mib-dir=<path>] [--mib-module=<name>]
-    [--start-oid=<OID>] [--stop-oid=<OID>]
+    [--mib-source=<url>]
+    [--mib-module=<MIB-NAME>]
+    [--start-object=<MIB-NAME::[symbol-name]|OID>]
+    [--stop-object=<MIB-NAME::[symbol-name]|OID>]
     [--manual-values]
     [--automatic-values=<max-probes>]
     [--table-size=<number>]
@@ -58,6 +63,7 @@ try:
     opts, params = getopt.getopt(sys.argv[1:], 'hv', [
         'help', 'version', 'debug=', 'quiet', 
         'pysnmp-mib-dir=', 'mib-module=', 'start-oid=', 'stop-oid=',
+        'mib-source=', 'start-object=', 'stop-object=',
         'manual-values', 'automatic-values=', 'table-size=', 
         'output-file=', 'string-pool=', 'integer32-range=',
         'counter-range=', 'counter64-range=', 'gauge-range=',
@@ -76,8 +82,7 @@ for opt in opts:
         sys.stderr.write("""\
 Synopsis:
   Converts MIB modules into SNMP Simulator data files.
-  Takes MIB module in PySNMP format and produces data file for SNMP Simulator
-  to playback. Chooses random values or can ask for them interactively.
+  Chooses random values or can ask for them interactively.
   Able to fill SNMP conceptual tables with consistent indices.
 Documentation:
   http://snmpsim.sourceforge.net/simulation-based-on-mibs.html
@@ -85,14 +90,14 @@ Documentation:
 """ % helpMessage)
         sys.exit(-1)
     if opt[0] == '-v' or opt[0] == '--version':
-        import snmpsim, pysnmp, pyasn1
+        import snmpsim, pysmi, pysnmp, pyasn1
         sys.stderr.write("""\
 SNMP Simulator version %s, written by Ilya Etingof <ilya@glas.net>
-Using foundation libraries: pysnmp %s, pyasn1 %s.
+Using foundation libraries: pysmi %s, pysnmp %s, pyasn1 %s.
 Python interpreter: %s
 Software documentation and support at http://snmpsim.sf.net
 %s
-""" % (snmpsim.__version__, hasattr(pysnmp, '__version__') and pysnmp.__version__ or 'unknown', hasattr(pyasn1, '__version__') and pyasn1.__version__ or 'unknown', sys.version, helpMessage))
+""" % (snmpsim.__version__, hasattr(pysmi, '__version__') and pysmi.__version__ or 'unknown', hasattr(pysnmp, '__version__') and pysnmp.__version__ or 'unknown', hasattr(pyasn1, '__version__') and pyasn1.__version__ or 'unknown', sys.version, helpMessage))
         sys.exit(-1)
     if opt[0] == '--debug':
         debug.setLogger(debug.Debug(*opt[1].split(',')))
@@ -102,10 +107,18 @@ Software documentation and support at http://snmpsim.sf.net
         mibDirs.append(opt[1])
     if opt[0] == '--mib-module':
         modNames.append(opt[1])
+    # obsolete begin
     if opt[0] == '--start-oid':
         startOID = univ.ObjectIdentifier(opt[1])
     if opt[0] == '--stop-oid':
         stopOID = univ.ObjectIdentifier(opt[1])
+    # obsolete end
+    if opt[0] == '--mib-source':
+        mibSources.append(opt[1])
+    if opt[0] == '--start-object':
+        startOID = ObjectIdentity(*opt[1].split('::'))
+    if opt[0] == '--stop-object':
+        stopOID = ObjectIdentity(*opt[1].split('::'), last=True)
     if opt[0] == '--manual-values':
         automaticValues = 0
     if opt[0] == '--automatic-values':
@@ -253,22 +266,28 @@ mibBuilder.setMibSources(
     'MibTableColumn'
     )
 
-mibView = view.MibViewController(mibBuilder)
+mibViewController = view.MibViewController(mibBuilder)
+
+compiler.addMibCompiler(
+    mibBuilder, sources=mibSources or defaultMibSources
+)
+if isinstance(startOID, ObjectIdentity):
+    startOID.resolveWithMib(mibViewController)
+if isinstance(stopOID, ObjectIdentity):
+    stopOID.resolveWithMib(mibViewController)
 
 output = []
 
 # MIBs walk
 for modName in modNames:
     if verboseFlag:
-        sys.stderr.write('# MIB module: %s\r\n' % modName)
-    mibBuilder.loadModules(modName)
-    modOID = oid = univ.ObjectIdentifier(
-        mibView.getFirstNodeName(modName)[0]
-        )
+        sys.stderr.write('# MIB module: %s, from %s till %s\r\n' % (modName, startOID or 'the beginning', stopOID or 'the end'))
+    modOID = oid = ObjectIdentity(modName).resolveWithMib(mibViewController)
+    hint = ''
     rowOID = None
     while modOID.isPrefixOf(oid):
         try:
-            oid, label, _ = mibView.getNextNodeName(oid)
+            oid, label, _ = mibViewController.getNextNodeName(oid)
         except error.NoSuchObjectError:
             break
 
@@ -304,8 +323,8 @@ for modName in modNames:
             continue # skip on premature OID
         if stopOID and oid > stopOID:
             break  # stop on out of range condition
- 
-        mibName, symName, _ = mibView.getNodeLocation(oid)
+
+        mibName, symName, _ = mibViewController.getNodeLocation(oid)
         node, = mibBuilder.importSymbols(mibName, symName)
     
         if isinstance(node, MibTable):
@@ -333,10 +352,12 @@ for modName in modNames:
             else:
                 val = getValue(node.syntax, verboseFlag and rowHint + '# Column %s::%s (type %s)\r\n' % (mibName, symName, node.syntax.__class__.__name__) or '')
         elif isinstance(node, MibScalar):
+            hint = ''
             oid = node.name
             suffix = (0,)
             val = getValue(node.syntax, verboseFlag and '# Scalar %s::%s (type %s)\r\n' % (mibName, symName, node.syntax.__class__.__name__) or '')
         else:
+            hint = ''
             continue
   
         output.append((oid + suffix, val))

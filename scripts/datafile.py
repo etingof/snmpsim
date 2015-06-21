@@ -2,17 +2,20 @@
 #
 # SNMP Simulator data file management tool
 #
-# Written by Ilya Etingof <ilya@glas.net>, 2011-2014
+# Written by Ilya Etingof <ilya@glas.net>, 2011-2015
 #
 import getopt
 import sys
 from pyasn1.type import univ
+from pysnmp.smi import builder, rfc1902, view, compiler
 from snmpsim.record.search.file import getRecord
 from snmpsim.record import snmprec, dump, mvc, sap, walk
 from snmpsim import error
 
 # Defaults
 verboseFlag = True
+mibSources = []
+defaultMibSources = [ 'http://mibs.snmplabs.com/asn1/@mib@' ]
 sortRecords = ignoreBrokenRecords = deduplicateRecords = lostComments = False
 startOID = stopOID = None
 srcRecordType = dstRecordType = 'snmprec'
@@ -53,7 +56,9 @@ Usage: %s [--help]
     [--sort-records]
     [--ignore-broken-records]
     [--deduplicate-records]
-    [--start-oid=<OID>] [--stop-oid=<OID>]
+    [--mib-source=<url>]
+    [--start-object=<MIB-NAME::[symbol-name]|OID>]
+    [--stop-object=<MIB-NAME::[symbol-name]|OID>]
     [--source-record-type=<%s>]
     [--destination-record-type=<%s>]
     [--input-file=<filename>]
@@ -65,8 +70,8 @@ try:
     opts, params = getopt.getopt(sys.argv[1:], 'hv',
         ['help', 'version', 'quiet', 'sort-records', 
          'ignore-broken-records', 'deduplicate-records',
-         'start-oid=', 'stop-oid=',
-         'source-record-type=', 'destination-record-type=',
+         'start-oid=', 'stop-oid=', 'start-object=', 'stop-object=',
+         'mib-source=', 'source-record-type=', 'destination-record-type=',
          'input-file=', 'output-file=']
     )
 except Exception:
@@ -90,14 +95,14 @@ Documentation:
 """ % helpMessage)
         sys.exit(-1)
     if opt[0] == '-v' or opt[0] == '--version':
-        import snmpsim, pysnmp, pyasn1
+        import snmpsim, pysmi, pysnmp, pyasn1
         sys.stderr.write("""\
 SNMP Simulator version %s, written by Ilya Etingof <ilya@glas.net>
-Using foundation libraries: pysnmp %s, pyasn1 %s.
+Using foundation libraries: pysmi %s, pysnmp %s, pyasn1 %s.
 Python interpreter: %s
 Software documentation and support at http://snmpsim.sf.net
 %s
-""" % (snmpsim.__version__, hasattr(pysnmp, '__version__') and pysnmp.__version__ or 'unknown', hasattr(pyasn1, '__version__') and pyasn1.__version__ or 'unknown', sys.version, helpMessage))
+""" % (snmpsim.__version__, hasattr(pysmi, '__version__') and pysmi.__version__ or 'unknown', hasattr(pysnmp, '__version__') and pysnmp.__version__ or 'unknown', hasattr(pyasn1, '__version__') and pyasn1.__version__ or 'unknown', sys.version, helpMessage))
         sys.exit(-1)
     if opt[0] == '--quiet':
         verboseFlag = False
@@ -107,10 +112,18 @@ Software documentation and support at http://snmpsim.sf.net
         ignoreBrokenRecords = True
     if opt[0] == '--deduplicate-records':
         deduplicateRecords = True
+    # obsolete begin
     if opt[0] == '--start-oid':
         startOID = univ.ObjectIdentifier(opt[1])
     if opt[0] == '--stop-oid':
         stopOID = univ.ObjectIdentifier(opt[1])
+    # obsolete end
+    if opt[0] == '--mib-source':
+        mibSources.append(opt[1])
+    if opt[0] == '--start-object':
+        startOID = rfc1902.ObjectIdentity(*opt[1].split('::'))
+    if opt[0] == '--stop-object':
+        stopOID = rfc1902.ObjectIdentity(*opt[1].split('::'), last=True)
     if opt[0] == '--source-record-type':
         if opt[1] not in recordsSet:
             if verboseFlag:
@@ -131,9 +144,25 @@ Software documentation and support at http://snmpsim.sf.net
 if not inputFiles:
     inputFiles.append(sys.stdin)
 
+if isinstance(startOID, rfc1902.ObjectIdentity) or \
+        isinstance(stopOID, rfc1902.ObjectIdentity):
+    mibBuilder = builder.MibBuilder()
+
+    mibViewController = view.MibViewController(mibBuilder)
+
+    compiler.addMibCompiler(
+        mibBuilder, sources=mibSources or defaultMibSources
+    )
+    if isinstance(startOID, rfc1902.ObjectIdentity):
+        startOID.resolveWithMib(mibViewController)
+    if isinstance(stopOID, rfc1902.ObjectIdentity):
+        stopOID.resolveWithMib(mibViewController)
+
 recordsList = []
 
 for inputFile in inputFiles:
+    if verboseFlag:
+        sys.stderr.write('# Input file #%s, processing records from %s till %s\r\n' % (inputFiles.index(inputFile), startOID or 'the beginning', stopOID or 'the end'))
     lineNo = 0
     while True:
         line, recLineNo, _ = getRecord(inputFile, lineNo)

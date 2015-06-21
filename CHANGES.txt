@@ -4,6 +4,9 @@ Revision 0.2.5rc3, 14-04-2015
 
 - Simulator now depends on the latest pysnmp features introduced in 
   pysnmp version 4.2.6
+- Introducing initial MIB compiler (PySMI) integration. Most command-line
+  tools can now be given MIB symbols rather than OIDs. Requested
+  MIBs will be automatically downloaded from http://mibs.snmplabs.com/ .
 - New Redis-backed variation module implemented to let users record into
   and replay simulation data from noSQL key-value store optionally
   involving server-side Lua scripting.
@@ -16,7 +19,7 @@ Revision 0.2.5rc3, 14-04-2015
   basis. Global default is now 64 variable bindings.
 - Multiple SNMP ContextEngineID can now be configured per each of possibly
   many SNMP Engine IDs.
-- SNMP configuration logging reworked foro better clarity.
+- SNMP configuration logging reworked for better clarity.
 - The notification module now binds to the same local interface through
   which Simulator received CommandRequest triggering notification. 
   Also it supports 'bindaddr' option to override the above behaviour on

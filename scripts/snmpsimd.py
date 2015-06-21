@@ -2,7 +2,7 @@
 #
 # SNMP Agent Simulator
 #
-# Written by Ilya Etingof <ilya@glas.net>, 2010-2014
+# Written by Ilya Etingof <ilya@glas.net>, 2010-2015
 #
 import os
 import stat

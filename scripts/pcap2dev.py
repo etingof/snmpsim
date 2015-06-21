@@ -2,7 +2,7 @@
 #
 # SNMP Simulator MIB to data file converter
 #
-# Written by Ilya Etingof <ilya@glas.net>, 2011-2014
+# Written by Ilya Etingof <ilya@glas.net>, 2011-2015
 #
 import getopt
 import sys
@@ -20,6 +20,7 @@ from pyasn1.type import univ
 from pyasn1.codec.ber import decoder
 from pyasn1.error import PyAsn1Error
 from pysnmp.proto import api, rfc1905
+from pysnmp.smi import builder, rfc1902, view, compiler
 from pysnmp.carrier.asynsock.dgram import udp
 from pyasn1 import debug as pyasn1_debug
 from pysnmp import debug as pysnmp_debug
@@ -28,6 +29,8 @@ from snmpsim import confdir, error, log
 
 # Defaults
 verboseFlag = True
+mibSources = []
+defaultMibSources = [ 'http://mibs.snmplabs.com/asn1/@mib@' ]
 startOID = univ.ObjectIdentifier('1.3.6')
 stopOID = None
 promiscuousMode = False
@@ -62,7 +65,9 @@ helpMessage = """Usage: %s [--help]
     [--debug-asn1=<%s>]
     [--quiet]
     [--logging-method=<%s[:args]>]
-    [--start-oid=<OID>] [--stop-oid=<OID>]
+    [--mib-source=<url>]
+    [--start-object=<MIB-NAME::[symbol-name]|OID>]
+    [--stop-object=<MIB-NAME::[symbol-name]|OID>]
     [--output-dir=<directory>]
     [--transport-id-offset=<number>]
     [--capture-file=<filename.pcap>]
@@ -82,6 +87,7 @@ try:
     opts, params = getopt.getopt(sys.argv[1:], 'hv', [
         'help', 'version', 'debug=', 'debug-snmp=', 'debug-asn1=',
         'quiet', 'logging-method=', 'start-oid=', 'stop-oid=', 
+         'start-object=', 'stop-object=', 'mib-source=',
         'output-dir=', 'transport-id-offset=',
         'capture-file=', 'listen-interface=', 'promiscuous-mode',
         'packet-filter=', 
@@ -109,14 +115,14 @@ Documentation:
 """ % helpMessage)
         sys.exit(-1)
     if opt[0] == '-v' or opt[0] == '--version':
-        import snmpsim, pysnmp, pyasn1
+        import snmpsim, pysmi, pysnmp, pyasn1
         sys.stderr.write("""\
 SNMP Simulator version %s, written by Ilya Etingof <ilya@glas.net>
-Using foundation libraries: pysnmp %s, pyasn1 %s.
+Using foundation libraries: pysmi %s, pysnmp %s, pyasn1 %s.
 Python interpreter: %s
 Software documentation and support at http://snmpsim.sf.net
 %s
-""" % (snmpsim.__version__, hasattr(pysnmp, '__version__') and pysnmp.__version__ or 'unknown', hasattr(pyasn1, '__version__') and pyasn1.__version__ or 'unknown', sys.version, helpMessage))
+""" % (snmpsim.__version__, hasattr(pysmi, '__version__') and pysmi.__version__ or 'unknown', hasattr(pysnmp, '__version__') and pysnmp.__version__ or 'unknown', hasattr(pyasn1, '__version__') and pyasn1.__version__ or 'unknown', sys.version, helpMessage))
         sys.exit(-1)
     elif opt[0] in ('--debug', '--debug-snmp'):
         pysnmp_debug.setLogger(pysnmp_debug.Debug(*opt[1].split(','), **dict(loggerName='pcap2dev.pysnmp')))
@@ -130,10 +136,18 @@ Software documentation and support at http://snmpsim.sf.net
             sys.exit(-1)
     if opt[0] == '--quiet':
         verboseFlag = False
+    # obsolete begin
     elif opt[0] == '--start-oid':
         startOID = univ.ObjectIdentifier(opt[1])
     elif opt[0] == '--stop-oid':
         stopOID = univ.ObjectIdentifier(opt[1])
+    # obsolete end
+    if opt[0] == '--mib-source':
+        mibSources.append(opt[1])
+    if opt[0] == '--start-object':
+        startOID = rfc1902.ObjectIdentity(*opt[1].split('::'))
+    if opt[0] == '--stop-object':
+        stopOID = rfc1902.ObjectIdentity(*opt[1].split('::'), last=True)
     elif opt[0] == '--output-dir':
         outputDir = opt[1]
     elif opt[0] == '--transport-id-offset':
@@ -166,6 +180,20 @@ if not pcap:
     sys.exit(-1)
 
 log.setLogger('pcap2dev', 'stdout')
+
+if isinstance(startOID, rfc1902.ObjectIdentity) or \
+        isinstance(stopOID, rfc1902.ObjectIdentity):
+    mibBuilder = builder.MibBuilder()
+
+    mibViewController = view.MibViewController(mibBuilder)
+
+    compiler.addMibCompiler(
+        mibBuilder, sources=mibSources or defaultMibSources
+    )
+    if isinstance(startOID, rfc1902.ObjectIdentity):
+        startOID.resolveWithMib(mibViewController)
+    if isinstance(stopOID, rfc1902.ObjectIdentity):
+        stopOID.resolveWithMib(mibViewController)
 
 # Load variation module
 
@@ -270,6 +298,9 @@ if packetFilter:
     if verboseFlag:
         log.msg('Applying packet filter \"%s\"' % packetFilter)
     pcapObj.setfilter(packetFilter, 0, 0)
+
+if verboseFlag:
+    log.msg('Processing records from %s till %s' % (startOID or 'the beginning', stopOID or 'the end'))
 
 def parsePacket(s):
     d={}

@@ -2,7 +2,7 @@
 #
 # SNMP Snapshot Data Recorder
 #
-# Written by Ilya Etingof <ilya@glas.net>, 2010-2014
+# Written by Ilya Etingof <ilya@glas.net>, 2010-2015
 #
 
 import getopt
@@ -24,6 +24,7 @@ try:
 except ImportError:
     unix = None
 from pysnmp.entity.rfc3413 import cmdgen
+from pysnmp.smi import rfc1902, view, compiler
 from pyasn1 import debug as pyasn1_debug
 from pysnmp import debug as pysnmp_debug
 from snmpsim.record import snmprec
@@ -50,6 +51,8 @@ timeout = 300  # 1/100 sec
 retryCount = 3
 startOID = univ.ObjectIdentifier('1.3.6')
 stopOID = None
+mibSources = []
+defaultMibSources = [ 'http://mibs.snmplabs.com/asn1/@mib@' ]
 outputFile = sys.stdout
 if hasattr(outputFile, 'buffer'):
     outputFile = outputFile.buffer
@@ -93,7 +96,9 @@ Usage: %s [--help]
     [--agent-udpv6-endpoint=<[X:X:..X]:NNNNN>]
     [--agent-unix-endpoint=</path/to/named/pipe>]
     [--timeout=<seconds>] [--retries=<count>]
-    [--start-oid=<OID>] [--stop-oid=<OID>]
+    [--mib-source=<url>]
+    [--start-object=<MIB-NAME::[symbol-name]|OID>]
+    [--stop-object=<MIB-NAME::[symbol-name]|OID>]
     [--output-file=<filename>]
     [--variation-modules-dir=<dir>]
     [--variation-module=<module>]
@@ -118,7 +123,10 @@ try:
         'use-getbulk', 'getbulk-repetitions=', 'agent-address=', 'agent-port=',
         'agent-udpv4-endpoint=', 'agent-udpv6-endpoint=',
         'agent-unix-endpoint=', 'timeout=', 'retries=',
-        'start-oid=', 'stop-oid=', 'output-file=',
+        'start-oid=', 'stop-oid=',
+        'mib-source=',
+        'start-object=', 'stop-object=',
+        'output-file=',
         'variation-modules-dir=', 'variation-module=',
         'variation-module-options=', 'continue-on-errors='
     ] )
@@ -146,11 +154,11 @@ Documentation:
         import snmpsim, pysnmp, pyasn1
         sys.stderr.write("""\
 SNMP Simulator version %s, written by Ilya Etingof <ilya@glas.net>
-Using foundation libraries: pysnmp %s, pyasn1 %s.
+Using foundation libraries: pysmi %s, pysnmp %s, pyasn1 %s.
 Python interpreter: %s
 Software documentation and support at http://snmpsim.sf.net
 %s
-""" % (snmpsim.__version__, hasattr(pysnmp, '__version__') and pysnmp.__version__ or 'unknown', hasattr(pyasn1, '__version__') and pyasn1.__version__ or 'unknown', sys.version, helpMessage))
+""" % (snmpsim.__version__, hasattr(pysmi, '__version__') and pysmi.__version__ or 'unknown', hasattr(pysnmp, '__version__') and pysnmp.__version__ or 'unknown', hasattr(pyasn1, '__version__') and pyasn1.__version__ or 'unknown', sys.version, helpMessage))
         sys.exit(-1)
     elif opt[0] in ('--debug', '--debug-snmp'):
         pysnmp_debug.setLogger(pysnmp_debug.Debug(*opt[1].split(','), **dict(loggerName='snmprec.pysnmp')))
@@ -265,10 +273,18 @@ Software documentation and support at http://snmpsim.sf.net
         except:
             sys.stderr.write('ERROR: improper --retries value %s\r\n%s\r\n' % (opt[1], helpMessage))
             sys.exit(-1)
+    # obsolete begin
     elif opt[0] == '--start-oid':
         startOID = univ.ObjectIdentifier(opt[1])
     elif opt[0] == '--stop-oid':
         stopOID = univ.ObjectIdentifier(opt[1])
+    # obsolete end
+    elif opt[0] == '--mib-source':
+        mibSources.append(opt[1])
+    elif opt[0] == '--start-object':
+        startOID = rfc1902.ObjectIdentity(*opt[1].split('::'))
+    elif opt[0] == '--stop-object':
+        stopOID = rfc1902.ObjectIdentity(*opt[1].split('::'), last=True)
     elif opt[0] == '--output-file':
         outputFile = open(opt[1], 'wb')
     elif opt[0] == '--variation-modules-dir':
@@ -426,6 +442,18 @@ elif agentUDPv4Endpoint:
     log.msg('Querying UDP/IPv4 agent at %s:%s' % agentUDPv4Endpoint)
 
 log.msg('Agent response timeout: %.2f secs, retries: %s' % (timeout/100, retryCount))
+
+if isinstance(startOID, rfc1902.ObjectIdentity) or \
+        isinstance(stopOID, rfc1902.ObjectIdentity):
+    compiler.addMibCompiler(
+        snmpEngine.getMibBuilder(),
+        sources=mibSources or defaultMibSources
+    )
+    mibViewController = view.MibViewController(snmpEngine.getMibBuilder())
+    if isinstance(startOID, rfc1902.ObjectIdentity):
+        startOID.resolveWithMib(mibViewController)
+    if isinstance(stopOID, rfc1902.ObjectIdentity):
+        stopOID.resolveWithMib(mibViewController)
 
 # Variation module initialization
 
@@ -651,7 +679,7 @@ else:
         cbFun, cbCtx
     )
 
-log.msg('Sending initial %s request....' % (getBulkFlag and 'GETBULK' or 'GETNEXT'))
+log.msg('Sending initial %s request for %s (stop at %s)....' % (getBulkFlag and 'GETBULK' or 'GETNEXT', startOID, stopOID or '<end-of-mib>'))
 
 t = time.time()
 
