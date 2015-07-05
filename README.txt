@@ -107,34 +107,39 @@ Documentation:
 Usage: scripts/snmprec.py [--help]
     [--version]
     [--debug=<mibbuild|all|app|msgproc|proxy|io|secmod|dsp|acl|mibinstrum>]
-    [--logging-method=<stdout|stderr|syslog|file>[:args>]]
-    [--version=<1|2c|3>]
+    [--debug-asn1=<all|decoder|encoder>]
+    [--logging-method=<syslog|null|stderr|file|stdout[:args>]>]
+    [--protocol-version=<1|2c|3>]
     [--community=<string>]
     [--v3-user=<username>]
     [--v3-auth-key=<key>]
     [--v3-auth-proto=<SHA|MD5>]
     [--v3-priv-key=<key>]
     [--v3-priv-proto=<3DES|AES256|DES|AES|AES128|AES192>]
-    [--context=<string>]
+    [--v3-context-engine-id=<[0x]string>]
+    [--v3-context-name=<[0x]string>]
     [--use-getbulk]
     [--getbulk-repetitions=<number>]
     [--agent-udpv4-endpoint=<X.X.X.X:NNNNN>]
     [--agent-udpv6-endpoint=<[X:X:..X]:NNNNN>]
     [--agent-unix-endpoint=</path/to/named/pipe>]
-    [--start-oid=<OID>] [--stop-oid=<OID>]
+    [--timeout=<seconds>] [--retries=<count>]
+    [--mib-source=<url>]
+    [--start-object=<MIB-NAME::[symbol-name]|OID>]
+    [--stop-object=<MIB-NAME::[symbol-name]|OID>]
     [--output-file=<filename>]
     [--variation-modules-dir=<dir>]
     [--variation-module=<module>]
     [--variation-module-options=<args>]
-    [--continue-on-errors]
+    [--continue-on-errors=<max-sustained-errors>]
 
-$ snmprec.py --agent-udpv4-endpoint=192.168.1.1 --start-oid=1.3.6.1.2.1 --stop-oid=1.3.6.1.2.1.5 --output-file=snmpsim/data/recorded/linksys-system.snmprec
+$ scripts/snmprec.py  --agent-udpv4-endpoint=demo.snmplabs.com --start-object=SNMPv2-MIB::system --stop-object=1.3.6.1.2.1.2 --output-file=snmpsim/data/recorded/linksys-system.snmprec
 Scanning "/usr/local/share/snmpsim/variation" directory for variation modules...  none requested
-SNMP version 2c
-Community name: public
-Querying UDP/IPv4 agent at 192.168.1.1:161
-Sending initial GETNEXT request....
-OIDs dumped: 304, elapsed: 1.94 sec, rate: 157.00 OIDs/sec
+SNMP version 2c, Community name: public
+Querying UDP/IPv4 agent at 195.218.195.228:161
+Agent response timeout: 3.00 secs, retries: 3
+Sending initial GETNEXT request for 1.3.6.1.2.1.1 (stop at 1.3.6.1.2.1.2)....
+OIDs dumped: 22, elapsed: 1.73 sec, rate: 6.00 OIDs/sec, errors: 0
 $
 $ ls -l data/recorded/linksys-system.snmprec 
 -rw-r--r-- 1 ilya users 16252 Oct 26 14:49 data/recorded/linksys-system.snmprec 
@@ -150,30 +155,14 @@ $ head data/recorded/linksys-system.snmprec
 
 There are no special requirements for data file name and location. Note,
 that Simulator treats data file path as an SNMPv1/v2c community string
-and its MD5 hash constitutes SNMPv3 context name.
-
-If you don't readily have SNMP Agent to play with, you're welcome to 
-use online SNMP Simulator:
-
-$ snmprec.py --agent-udpv4-endpoint=demo.snmplabs.com --community=public
-SNMP version 2c, Community name: public
-Querying UDP/IPv4 agent at 195.218.195.228:161
-Sending initial GETNEXT request....
-1.3.6.1.2.1.1.1.0|4|SunOS zeus.snmplabs.com 4.1.3_U1 1 sun4m
-1.3.6.1.2.1.1.2.0|6|1.3.6.1.4.1.20408
-1.3.6.1.2.1.1.3.0|67|137765775
-1.3.6.1.2.1.1.4.0|4|SNMP Laboratories, info@snmplabs.com
-1.3.6.1.2.1.1.5.0|4|zeus.snmplabs.com
-1.3.6.1.2.1.1.6.0|4|Moscow, Russia
-...
-1.3.6.1.2.1.11.31.0|65|0
-1.3.6.1.2.1.11.32.0|65|0
-OIDs dumped: 86, elapsed: 2.00 sec, rate: 42.00 OIDs/sec
+and SNMPv3 context name. Additionally, Simulator configures MD5 hash of
+data file path as an alternative (or the only, if path length exceeds 32 
+characters) SNMPv3 context name.
 
 About three times faster snapshot recording may be achieved by using SNMP's
 GETBULK operation:
 
-$ snmprec.py --agent-udpv4-endpoint=127.0.0.1 --use-getbulk --output-file=data/recorded/linksys-system.snmprec
+$ snmprec.py --agent-udpv4-endpoint=demo.snmplabs.com --use-getbulk --output-file=data/recorded/linksys-system.snmprec
 
 Faster recording may be important for capturing changes to Managed Objects
 at better resolution.
@@ -217,6 +206,7 @@ tables.
 Device file generation from a MIB file would look like this:
 
 $ mib2dev.py -h
+
 Synopsis:
   Converts MIB modules into SNMP Simulator data files.
   Takes MIB module in PySNMP format and produces data file for SNMP Simulator
@@ -228,8 +218,10 @@ Usage: scripts/mib2dev.py [--help]
     [--version]
     [--debug=<mibbuild|all|mibview|mibinstrum>]
     [--quiet]
-    [--pysnmp-mib-dir=<path>] [--mib-module=<name>]
-    [--start-oid=<OID>] [--stop-oid=<OID>]
+    [--mib-source=<url>]
+    [--mib-module=<MIB-NAME>]
+    [--start-object=<MIB-NAME::[symbol-name]|OID>]
+    [--stop-object=<MIB-NAME::[symbol-name]|OID>]
     [--manual-values]
     [--automatic-values=<max-probes>]
     [--table-size=<number>]
@@ -242,14 +234,10 @@ Usage: scripts/mib2dev.py [--help]
     [--unsigned-range=<min,max>]
     [--integer32-range=<min,max>]
 
-Please note that to run mib2dev.py you would first have to convert an ASN.1
-(e.g. text) MIB into a pysnmp module (with the libsmi2pysnmp tool shipped
-with pysnmp disitribution).
-
 Here we produce values for a portion of OID space of SNMPv2-MIB:
 
 $ mib2dev.py --mib-module=SNMPv2-MIB --start-oid=1.3.6.1.2.1.1.1 --stop-oid=1.3.6.1.2.1.1.8
-# MIB module: SNMPv2-MIB
+# MIB module: SNMPv2-MIB, from 1.3.6.1.2.1.1.1 till 1.3.6.1.2.1.1.8
 1.3.6.1.2.1.1.1.0|4|Portez ce vieux
 1.3.6.1.2.1.1.2.0|6|1.3.6.1.3.39.232.14.10.84.109.1
 1.3.6.1.2.1.1.3.0|67|350728093
@@ -267,14 +255,12 @@ The mib2dev.py tool can also generate values for SNMP conceptual tables.
 It's doing that by iterating over table definition in MIB for specified
 number of times.
 
-Assuming we have the IF-MIB.py module in the pysnmp search path, the
-following command will produce two rows for IF-MIB::ifTable table:
+Please note that to run mib2dev.py you may have to pass it a URL to local
+or remote SNMP MIB directories/repositories via --mib-source series of
+options.
 
-$ snmptranslate -On IF-MIB::ifTable
-.1.3.6.1.2.1.2.2
-
-$ mib2dev.py --mib-module=IF-MIB --start-oid=1.3.6.1.2.1.2.2 --stop-oid=1.3.6.1.2.1.2.3 --table-size=2
-# MIB module: IF-MIB
+$ mib2dev.py --mib-module=IF-MIB --start-object=1.3.6.1.2.1.2.2 --stop-object=1.3.6.1.2.1.2.3 --table-size=2 --mib-source=file://usr/local/snmp/mibs --mibsource=ftp://ftp.cisco.com/pub/mibs/v2
+# MIB module: IF-MIB, from 1.3.6.1.2.1.2.2 till 1.3.6.1.2.1.2.3
 # Starting table IF-MIB::ifTable (1.3.6.1.2.1.2.2)
 # Synthesizing row #1 of table 1.3.6.1.2.1.2.2.1
 # Finished table 1.3.6.1.2.1.2.2.1 (2 rows)
@@ -332,7 +318,7 @@ via --string-pool option. For example:
 
 $ mib2dev.py --mib-module=UDP-MIB --table-size=1 --counter-range=0,100
 --unsigned-range=100,200
-# MIB module: UDP-MIB
+# MIB module: UDP-MIB, from the beginning till the end
 # Starting table UDP-MIB::udpTable (1.3.6.1.2.1.7.5)
 # Finished table 1.3.6.1.2.1.7.5.1 (1 rows)
 # Starting table UDP-MIB::udpEndpointTable (1.3.6.1.2.1.7.7)
@@ -379,10 +365,15 @@ Documentation:
   http://snmpsim.sourceforge.net/
 Usage: scripts/pcap2dev.py [--help]
     [--version]
+    [--debug=<mibbuild|all|app|msgproc|proxy|io|secmod|dsp|acl|mibinstrum>]
+    [--debug-asn1=<all|decoder|encoder>]
     [--quiet]
-    [--logging-method=<stdout|stderr|syslog|file>[:args>]]
-    [--start-oid=<OID>] [--stop-oid=<OID>]
+    [--logging-method=<syslog|null|stderr|file|stdout[:args]>]
+    [--mib-source=<url>]
+    [--start-object=<MIB-NAME::[symbol-name]|OID>]
+    [--stop-object=<MIB-NAME::[symbol-name]|OID>]
     [--output-dir=<directory>]
+    [--transport-id-offset=<number>]
     [--capture-file=<filename.pcap>]
     [--listen-interface=<device>]
     [--promiscuous-mode]
@@ -496,7 +487,6 @@ The pcap2dev.py tool can also invoke variation modules to feed recorded
 data through them. Please, refer to corresponding section of this document
 for more information on recoding data files with variation modules.
 
-
 Simulating SNMP Agents
 ----------------------
 
@@ -550,28 +540,32 @@ Documentation:
 Usage: scripts/snmpsimd.py [--help]
   [--version ]
   [--debug=<mibbuild|all|app|msgproc|proxy|io|secmod|dsp|acl|mibinstrum>]
+  [--debug-asn1=<all|decoder|encoder>]
   [--daemonize]
   [--process-user=<uname>] [--process-group=<gname>]
-  [--logging-method=<stdout|stderr|syslog|file>[:args>]]
-  [--data-dir=<dir>]
+  [--pid-file=<file>]
+  [--logging-method=<syslog|null|stderr|file|stdout[:args>]>]
   [--cache-dir=<dir>]
   [--variation-modules-dir=<dir>]
   [--variation-module-options=<module[=alias][:args]>] 
   [--force-index-rebuild]
   [--validate-data]
-  [--agent-udpv4-endpoint=<X.X.X.X:NNNNN>]
-  [--agent-udpv6-endpoint=<[X:X:..X]:NNNNN>]
-  [--agent-unix-endpoint=</path/to/named/pipe>]
-  [--agent-udpv4-endpoints-list=<file>]
-  [--agent-udpv6-endpoints-list=<file>]
-  [--agent-unix-endpoints-list=<file>]
+  [--args-from-file=<file>]
+  [--transport-id-offset=<number>]
   [--v2c-arch]
   [--v3-only]
+  [--v3-engine-id=<hexvalue>]
+  [--v3-context-engine-id=<hexvalue>]
   [--v3-user=<username>]
   [--v3-auth-key=<key>]
   [--v3-auth-proto=<SHA|NONE|MD5>]
   [--v3-priv-key=<key>]
   [--v3-priv-proto=<3DES|AES256|NONE|DES|AES|AES128|AES192>]
+  [--data-dir=<dir>]
+  [--max-varbinds=<number>]
+  [--agent-udpv4-endpoint=<X.X.X.X:NNNNN>]
+  [--agent-udpv6-endpoint=<[X:X:..X]:NNNNN>]
+  [--agent-unix-endpoint=</path/to/named/pipe>]
 
 Running Simulator:
 
@@ -1785,13 +1779,17 @@ to perform a few handy operations on data files.
 $ datafile.py -h
 Synopsis:
   SNMP Simulator data files management and repair tool.
+Documentation:
+  http://snmpsim.sourceforge.net/managing-data-files.html
 Usage: scripts/datafile.py [--help]
   [--version]
   [--quiet]
   [--sort-records]
   [--ignore-broken-records]
   [--deduplicate-records]
-  [--start-oid=<OID>] [--stop-oid=<OID>]
+  [--mib-source=<url>]
+  [--start-object=<MIB-NAME::[symbol-name]|OID>]
+  [--stop-object=<MIB-NAME::[symbol-name]|OID>]
   [--source-record-type=<snmpwalk|MVC|sapwalk|snmprec|dump>]
   [--destination-record-type=<snmpwalk|MVC|sapwalk|snmprec|dump>]
   [--input-file=<filename>]
@@ -1945,7 +1943,6 @@ the same effect.
 For transport-based simulation to work, make sure to design your
 data directory layout matching transport ID's of the addresses
 listed in the ips.txt file above.
-
  
 Tips and Tricks
 ---------------
@@ -1963,7 +1960,6 @@ When Simulator runs over thousands of data files, startup may take time
 into SNMPv3 engine so startup time can be dramatically reduced by either
 using --v2c-arch mode (as mentioned above) or by turning off SNMPv1/v2c
 configuration at SNMPv3 engine with --v3-only command-line flag.
-
 
 Installation
 ------------
