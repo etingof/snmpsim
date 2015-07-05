@@ -151,7 +151,7 @@ Documentation:
 """ % helpMessage)
         sys.exit(-1)
     if opt[0] == '-v' or opt[0] == '--version':
-        import snmpsim, pysnmp, pyasn1
+        import snmpsim, pysnmp, pysmi, pyasn1
         sys.stderr.write("""\
 SNMP Simulator version %s, written by Ilya Etingof <ilya@glas.net>
 Using foundation libraries: pysmi %s, pysnmp %s, pyasn1 %s.
