@@ -1,9 +1,9 @@
 
-Revision 0.2.5rc3, 14-04-2015
------------------------------
+Revision 0.3.0, 04-07-2015
+--------------------------
 
 - Simulator now depends on the latest pysnmp features introduced in 
-  pysnmp version 4.2.6
+  pysnmp version 4.3.0
 - Introducing initial MIB compiler (PySMI) integration. Most command-line
   tools can now be given MIB symbols rather than OIDs. Requested
   MIBs will be automatically downloaded from http://mibs.snmplabs.com/ .
