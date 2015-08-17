@@ -46,6 +46,7 @@ Revision 0.3.0, 04-07-2015
 - Configure both plain-text and hashed versions of snmpCommunityName,
   contextName whenever its length does not exceed 32 chars. That might ease
   ContextName usage for Agent addressing.
+- Wheel distribution format now supported.
 - Fix to log file autorotation feature.
 - Fix to pcap2dev.py not to loose the last trailing OID in capture.
 - Fix to variation module recordContexts isolation to make it dedicated
