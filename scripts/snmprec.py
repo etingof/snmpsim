@@ -284,7 +284,7 @@ Software documentation and support at http://snmpsim.sf.net
     elif opt[0] == '--start-object':
         startOID = rfc1902.ObjectIdentity(*opt[1].split('::'))
     elif opt[0] == '--stop-object':
-        stopOID = rfc1902.ObjectIdentity(*opt[1].split('::'), last=True)
+        stopOID = rfc1902.ObjectIdentity(*opt[1].split('::'), **dict(last=True))
     elif opt[0] == '--output-file':
         outputFile = open(opt[1], 'wb')
     elif opt[0] == '--variation-modules-dir':
