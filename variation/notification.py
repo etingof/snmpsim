@@ -1,9 +1,7 @@
 # SNMP Simulator, http://snmpsim.sourceforge.net
 # Managed value variation module
 # Send SNMP Notification
-import sys
-from pysnmp.entity.rfc3413.oneliner import ntforg
-from pysnmp.proto import rfc1902
+from pysnmp.hlapi.asyncore import *
 from snmpsim.grammar.snmprec import SnmprecGrammar
 from snmpsim.mltsplit import split
 from snmpsim import error, log
@@ -11,15 +9,15 @@ from snmpsim import error, log
 def init(**context): pass
 
 typeMap = {
-    's': rfc1902.OctetString,
-    'i': rfc1902.Integer32,
-    'o': rfc1902.ObjectName,
-    'a': rfc1902.IpAddress,
-    'u': rfc1902.Unsigned32,
-    'g': rfc1902.Gauge32,
-    't': rfc1902.TimeTicks,
-    'b': rfc1902.Bits,
-    'I': rfc1902.Counter64
+    's': OctetString,
+    'i': Integer32,
+    'o': ObjectIdentifier,
+    'a': IpAddress,
+    'u': Unsigned32,
+    'g': Gauge32,
+    't': TimeTicks,
+    'b': Bits,
+    'I': Counter64
 }
 
 def _cbFun(sendRequestHandle,
@@ -27,7 +25,7 @@ def _cbFun(sendRequestHandle,
           errorStatus, errorIndex,
           varBinds,
           cbCtx):
-    oid, value, ntfOrg = cbCtx
+    oid, value = cbCtx
     if errorIndication or errorStatus:
         log.msg('notification: for %s=%r failed with errorIndication %s, errorStatus %s' % (oid, value, errorIndication, errorStatus))
 
@@ -36,23 +34,21 @@ def variate(oid, tag, value, **context):
         snmpEngine = context['snmpEngine']
         if snmpEngine not in moduleContext:
             moduleContext[snmpEngine] = {}
-            moduleContext[snmpEngine]['ntfOrg'] = ntforg.AsynNotificationOriginator(snmpEngine)
         if context['transportDomain'] not in moduleContext[snmpEngine]:
             # register this SNMP Engine to handle our transports'
             # receiver IDs (which we build by outbound and simulator
             # transportDomains concatenation)
             snmpEngine.registerTransportDispatcher(
                 snmpEngine.transportDispatcher,
-                ntforg.UdpTransportTarget.transportDomain + \
+                UdpTransportTarget.transportDomain + \
                     context['transportDomain']
             )
             snmpEngine.registerTransportDispatcher(
                 snmpEngine.transportDispatcher,
-                ntforg.Udp6TransportTarget.transportDomain + \
+                Udp6TransportTarget.transportDomain + \
                     context['transportDomain']
             )
             moduleContext[snmpEngine][context['transportDomain']] = 1
-        ntfOrg = moduleContext[snmpEngine]['ntfOrg']
     else:
         raise error.SnmpsimError('variation module not given snmpEngine')
 
@@ -116,27 +112,27 @@ def variate(oid, tag, value, **context):
        args['op'] == 'set' and context['setFlag'] or \
        args['op'] in ('any', '*'):
         if args['version'] in ('1', '2c'):
-            authData = ntforg.CommunityData(args['community'], mpModel=args['version'] == '2c' and 1 or 0)
+            authData = CommunityData(args['community'], mpModel=args['version'] == '2c' and 1 or 0)
         elif args['version'] == '3':
             if args['authproto'] == 'md5':
-                authProtocol = ntforg.usmHMACMD5AuthProtocol
+                authProtocol = usmHMACMD5AuthProtocol
             elif args['authproto'] == 'sha':
-                authProtocol = ntforg.usmHMACSHAAuthProtocol
+                authProtocol = usmHMACSHAAuthProtocol
             elif args['authproto'] == 'none':
-                authProtocol = ntforg.usmNoAuthProtocol
+                authProtocol = usmNoAuthProtocol
             else:
                 log.msg('notification: unknown auth proto %s' % args['authproto'])
                 return context['origOid'], tag, context['errorStatus']
             if args['privproto'] == 'des':
-                privProtocol = ntforg.usmDESPrivProtocol
+                privProtocol = usmDESPrivProtocol
             elif args['privproto'] == 'aes':
-                privProtocol = ntforg.usmAesCfb128Protocol
+                privProtocol = usmAesCfb128Protocol
             elif args['privproto'] == 'none':
-                privProtocol = ntforg.usmNoPrivProtocol
+                privProtocol = usmNoPrivProtocol
             else:
                 log.msg('notification: unknown privacy proto %s' % args['privproto'])
                 return context['origOid'], tag, context['errorStatus']
-            authData = ntforg.UsmUserData(args['user'], args['authkey'], args['privkey'], authProtocol=authProtocol, privProtocol=privProtocol)
+            authData = UsmUserData(args['user'], args['authkey'], args['privkey'], authProtocol=authProtocol, privProtocol=privProtocol)
         else:
             log.msg('notification: unknown SNMP version %s' % args['version'])
             return context['origOid'], tag, context['errorStatus']
@@ -146,9 +142,9 @@ def variate(oid, tag, value, **context):
             return context['origOid'], tag, context['errorStatus']
         
         if args['proto'] == 'udp':
-            target = ntforg.UdpTransportTarget((args['host'], int(args['port'])))
+            target = UdpTransportTarget((args['host'], int(args['port'])))
         elif args['proto'] == 'udp6':
-            target = ntforg.Udp6TransportTarget((args['host'], int(args['port'])))
+            target = Udp6TransportTarget((args['host'], int(args['port'])))
         else:
             log.msg('notification: unknown transport %s' % args['proto'])
             return context['origOid'], tag, context['errorStatus']
@@ -178,34 +174,34 @@ def variate(oid, tag, value, **context):
 
         if 'uptime' in args:
             varBinds.append(
-                ( rfc1902.ObjectName('1.3.6.1.2.1.1.3.0'),
-                  rfc1902.TimeTicks(args['uptime']) )
+                ( ObjectIdentifier('1.3.6.1.2.1.1.3.0'),
+                  TimeTicks(args['uptime']) )
             )
 
         if args['version'] == '1':
             if 'agentaddress' in args:
                 varBinds.append(
-                    ( rfc1902.ObjectName('1.3.6.1.6.3.18.1.3.0'),
-                      rfc1902.IpAddress(args['agentaddress']) )
+                    ( ObjectIdentifier('1.3.6.1.6.3.18.1.3.0'),
+                      IpAddress(args['agentaddress']) )
                 )
             if 'enterprise' in args:
                 varBinds.append(
-                    ( rfc1902.ObjectName('1.3.6.1.6.3.1.1.4.3.0'),
-                      rfc1902.ObjectName(args['enterprise']) )
+                    ( ObjectIdentifier('1.3.6.1.6.3.1.1.4.3.0'),
+                      ObjectIdentifier(args['enterprise']) )
                 )
 
         if 'varbinds' in args:
             vbs = split(args['varbinds'], ':') 
             while vbs:
                 varBinds.append(
-                    (rfc1902.ObjectName(vbs[0]), typeMap[vbs[1]](vbs[2]))
+                    (ObjectIdentifier(vbs[0]), typeMap[vbs[1]](vbs[2]))
                 )
                 vbs = vbs[3:]
 
-        ntfOrg.sendNotification(
-            authData, target, args['ntftype'],
-            rfc1902.ObjectName(args['trapoid']),
-            varBinds, cbInfo=(_cbFun, (oid, value, ntfOrg))
+        sendNotification(
+            snmpEngine, authData, target, ContextData(), args['ntftype'],
+            NotificationType(ObjectIdentity(args['trapoid'])).addVarBinds(*varBinds),
+            cbFun=_cbFun, cbCtx=(oid, value)
         )
 
         log.msg('notification: sending Notification to %s with credentials %s' % (authData, target))
