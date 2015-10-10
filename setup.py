@@ -59,30 +59,30 @@ except ImportError:
     from distutils.core import setup
     params = {}
     if sys.version_info[:2] > (2, 4):
-        params['requires'] = [ 'pysnmp(>=4.3.0)' ]
+        params['requires'] = ['pysnmp(>=4.3.0)']
 
-doclines = [ x.strip() for x in __doc__.split('\n') if x ]
+doclines = [x.strip() for x in (__doc__ or '').split('\n') if x]
 
-params.update( {
-    'name': 'snmpsim',
-    'version': open(os.path.join('snmpsim', '__init__.py')).read().split('\'')[1],
-    'description': doclines[0],
-    'long_description': ' '.join(doclines[1:]),
-    'maintainer': 'Ilya Etingof <ilya@glas.net>',
-    'author': 'Ilya Etingof',
-    'author_email': 'ilya@glas.net',
-    'url': 'http://sourceforge.net/projects/snmpsim/',
-    'license': 'BSD',
-    'platforms': ['any'],
-    'classifiers': [ x for x in classifiers.split('\n') if x ],
-    'scripts': [ 'scripts/snmpsimd.py',
+params.update(
+    {'name': 'snmpsim',
+     'version': open(os.path.join('snmpsim', '__init__.py')).read().split('\'')[1],
+     'description': doclines[0],
+     'long_description': ' '.join(doclines[1:]),
+     'maintainer': 'Ilya Etingof <ilya@glas.net>',
+     'author': 'Ilya Etingof',
+     'author_email': 'ilya@glas.net',
+     'url': 'http://sourceforge.net/projects/snmpsim/',
+     'license': 'BSD',
+     'platforms': ['any'],
+     'classifiers': [x for x in classifiers.split('\n') if x],
+     'scripts': ['scripts/snmpsimd.py',
                  'scripts/snmprec.py',
                  'scripts/datafile.py',
                  'scripts/pcap2dev.py',
-                 'scripts/mib2dev.py' ],
-    'packages': [ 'snmpsim', 'snmpsim.grammar', 'snmpsim.record',
-                  'snmpsim.record.search' ]
-} )
+                 'scripts/mib2dev.py'],
+     'packages': ['snmpsim', 'snmpsim.grammar', 'snmpsim.record',
+                  'snmpsim.record.search']}
+)
 
 # install stock variation modules as data_files
 params['data_files'] = [

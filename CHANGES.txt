@@ -1,3 +1,7 @@
+Revision 0.3.1, released XX-XX-2015
+-----------------------------------
+
+- Fix to __doc__ use in setup.py to make -O0 installation mode working.
 
 Revision 0.3.0, released 28-09-2015
 -----------------------------------
