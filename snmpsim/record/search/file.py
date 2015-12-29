@@ -1,3 +1,9 @@
+#
+# This file is part of snmpsim software.
+#
+# Copyright (c) 2010-2016, Ilya Etingof <ilya@glas.net>
+# License: http://snmpsim.sf.net/license.html
+#
 from pyasn1.compat.octets import str2octs
 
 # read lines from text file ignoring #comments and blank lines

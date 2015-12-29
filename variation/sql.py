@@ -1,5 +1,8 @@
 #
-# SNMP Simulator, http://snmpsim.sourceforge.net
+# This file is part of snmpsim software.
+#
+# Copyright (c) 2010-2016, Ilya Etingof <ilya@glas.net>
+# License: http://snmpsim.sf.net/license.html
 #
 # Managed value variation module: simulate a writable Agent using
 # SQL backend for storing Managed Objects

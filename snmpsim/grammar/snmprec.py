@@ -1,3 +1,9 @@
+#
+# This file is part of snmpsim software.
+#
+# Copyright (c) 2010-2016, Ilya Etingof <ilya@glas.net>
+# License: http://snmpsim.sf.net/license.html
+#
 from string import digits, ascii_letters
 from pysnmp.proto import rfc1902, rfc1905
 from pyasn1.compat.octets import octs2str, str2octs, octs2ints

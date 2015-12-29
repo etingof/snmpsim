@@ -1,6 +1,9 @@
-# SNMP Simulator, http://snmpsim.sourceforge.net
-# Managed value variation module
-# Simulate request processing delay
+#
+# This file is part of snmpsim software.
+#
+# Copyright (c) 2010-2016, Ilya Etingof <ilya@glas.net>
+# License: http://snmpsim.sf.net/license.html
+#
 import sys
 import time
 import random

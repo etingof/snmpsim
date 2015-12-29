@@ -1,10 +1,12 @@
 #!/usr/bin/env python
 #
+# This file is part of snmpsim software.
+#
+# Copyright (c) 2010-2016, Ilya Etingof <ilya@glas.net>
+# License: http://snmpsim.sf.net/license.html
+#
 # SNMP Snapshot Data Recorder
 #
-# Written by Ilya Etingof <ilya@glas.net>, 2010-2015
-#
-
 import getopt
 import time
 import sys

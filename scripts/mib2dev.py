@@ -1,8 +1,11 @@
 #!/usr/bin/env python
 #
-# SNMP Simulator MIB to data file converter
+# This file is part of snmpsim software.
 #
-# Written by Ilya Etingof <ilya@glas.net>, 2011-2015
+# Copyright (c) 2010-2016, Ilya Etingof <ilya@glas.net>
+# License: http://snmpsim.sf.net/license.html
+#
+# SNMP Simulator MIB to data file converter
 #
 import getopt
 import sys

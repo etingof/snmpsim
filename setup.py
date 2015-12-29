@@ -1,4 +1,10 @@
 #!/usr/bin/env python
+#
+# This file is part of snmpsim software.
+#
+# Copyright (c) 2010-2016, Ilya Etingof <ilya@glas.net>
+# License: http://snmpsim.sf.net/license.html
+#
 """SNMP Agents simulator
 
    SNMP Simulator is a tool that acts as multitude of SNMP Agents built

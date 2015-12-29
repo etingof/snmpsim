@@ -1,3 +1,9 @@
+#
+# This file is part of snmpsim software.
+#
+# Copyright (c) 2010-2016, Ilya Etingof <ilya@glas.net>
+# License: http://snmpsim.sf.net/license.html
+#
 from pysnmp.proto import rfc1902
 from pyasn1.type import univ
 from pyasn1.codec.ber import encoder

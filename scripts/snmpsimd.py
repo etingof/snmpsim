@@ -1,8 +1,11 @@
 #!/usr/bin/env python
 #
-# SNMP Agent Simulator
+# This file is part of snmpsim software.
 #
-# Written by Ilya Etingof <ilya@glas.net>, 2010-2015
+# Copyright (c) 2010-2016, Ilya Etingof <ilya@glas.net>
+# License: http://snmpsim.sf.net/license.html
+#
+# SNMP Agent Simulator
 #
 import os
 import stat

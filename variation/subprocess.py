@@ -1,6 +1,12 @@
-# SNMP Simulator, http://snmpsim.sourceforge.net
+#
+# This file is part of snmpsim software.
+#
+# Copyright (c) 2010-2016, Ilya Etingof <ilya@glas.net>
+# License: http://snmpsim.sf.net/license.html
+#
 # Managed value variation module
 # Get/set managed value by invoking an external program
+#
 import sys
 import subprocess
 from pysnmp.proto import rfc1902

@@ -1,4 +1,9 @@
-# UNIX-specific process daemonization tools
+#
+# This file is part of snmpsim software.
+#
+# Copyright (c) 2010-2016, Ilya Etingof <ilya@glas.net>
+# License: http://snmpsim.sf.net/license.html
+#
 import sys
 from snmpsim import error
 
