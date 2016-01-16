@@ -171,9 +171,9 @@ for inputFile in inputFiles:
         line, recLineNo, _ = getRecord(inputFile, lineNo)
         if not line:
             break
-        if recLineNo != lineNo:
+        if recLineNo != lineNo+1:
             if verboseFlag:
-                sys.stderr.write('# Losing comment at line %s (input file #%s)\r\n' % (inputFiles.index(inputFile), recLineNo))
+                sys.stderr.write('# Losing comment at lines %s..%s (input file #%s)\r\n' % (lineNo+1, recLineNo-1, inputFiles.index(inputFile)))
             lineNo = recLineNo
             lostComments += 1
         backdoor = {}
