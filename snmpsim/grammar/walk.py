@@ -4,6 +4,7 @@
 # Copyright (c) 2010-2016, Ilya Etingof <ilya@glas.net>
 # License: http://snmpsim.sf.net/license.html
 #
+import re
 from pysnmp.proto import rfc1902
 from pyasn1.type import univ
 from pyasn1.codec.ber import encoder
@@ -59,12 +60,19 @@ class WalkGrammar(abstract.AbstractGrammar):
     def __netAddressFilter(value):
         return '.'.join([str(int(y, 16)) for y in value.split(':')])
 
+    def __timeTicksFilter(value):
+        match = re.match('.*?\(([0-9]+)\)', value)
+        if match:
+            return match.groups()[0]
+        return value
+
     filterMap = {
         'OPAQUE:': __opaqueFilter,
         'STRING:': __stringFilter,
         'BITS:': __bitsFilter,
         'HEX-STRING:': __hexStringFilter,
-        'Network Address:': __netAddressFilter
+        'Network Address:': __netAddressFilter,
+        'TIMETICKS:': __timeTicksFilter
     }
 
     def parse(self, line):
