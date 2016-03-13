@@ -51,9 +51,11 @@ Once installed, invoke snmpsimd.py and point it to a directory with simulation d
 $ snmpsimd.py --data-dir=./data --agent-udpv4-endpoint=127.0.0.1:1024
 ```
 
-Simulation data is stored in a simple plaint-text files (OID|TYPE|VALUE):
+Simulation data is stored in simple plaint-text files having OID|TYPE|VALUE
+format:
 
 ```
+$ cat ./data/public.snmprec
 1.3.6.1.2.1.1.1.0|4|Linux 2.6.25.5-smp SMP Tue Jun 19 14:58:11 CDT 2007 i686
 1.3.6.1.2.1.1.2.0|6|1.3.6.1.4.1.8072.3.2.10
 1.3.6.1.2.1.1.3.0|67|233425120
