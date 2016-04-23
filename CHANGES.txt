@@ -3,6 +3,7 @@ Revision 0.3.1, released XX-XX-2015
 
 - Fix to __doc__ use in setup.py to make -O0 installation mode working.
 - Copyright notice added to source code files.
+- Per-OID access control added to 'writecache' variation module.
 - Fix to PID file creation when running Python 3.
 - Fix to datafile.py tool that apparently stopped working.
 - Fix to snmpwalk Timeticks parser 

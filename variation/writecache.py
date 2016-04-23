@@ -65,7 +65,12 @@ def variate(oid, tag, value, **context):
                     vlist[o] = v, e
                 else:
                     log.msg('writecache: bad vlist syntax: %s' % recordContext['settings']['vlist'])
+
             recordContext['settings']['vlist'] = vlist
+
+
+        if 'status' in recordContext['settings']:
+            recordContext['settings']['status'] = recordContext['settings']['status'].lower()
 
     if oid not in moduleContext:
         moduleContext[oid] = {}
@@ -96,6 +101,17 @@ def variate(oid, tag, value, **context):
             moduleContext['cache'][textOid] = context['origValue']
         else:
             return context['origOid'], tag, context['errorStatus']
+
+    if 'status' in recordContext['settings']:
+        if 'op' not in recordContext['settings'] or \
+                recordContext['settings']['op'] == 'any' or \
+                recordContext['settings']['op'] == 'set' and context['setFlag'] or \
+                recordContext['settings']['op'] == 'get' and not context['setFlag']:
+            e = recordContext['settings']['status']
+            if e in errorTypes:
+                raise errorTypes[e](
+                    name=oid, idx=max(0, context['varsTotal']-context['varsRemaining']-1)
+                )
 
     if textOid in moduleContext['cache']:
         return oid, tag, moduleContext['cache'][textOid]
