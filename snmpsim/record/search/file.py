@@ -6,6 +6,7 @@
 #
 from pyasn1.compat.octets import str2octs
 
+
 # read lines from text file ignoring #comments and blank lines
 def getRecord(fileObj, lineNo=None, offset=0):
     line = fileObj.readline()
@@ -21,20 +22,22 @@ def getRecord(fileObj, lineNo=None, offset=0):
             break
     return line, lineNo, offset
 
+
 # In-place, by-OID binary search
 def searchRecordByOid(oid, fileObj, textParser, eol=str2octs('\n')):
-    lo = mid = 0; prev_mid = -1
+    lo = mid = 0;
+    prev_mid = -1
     fileObj.seek(0, 2)
     hi = sz = fileObj.tell()
     while lo < hi:
-        mid = (lo+hi)//2
+        mid = (lo + hi) // 2
         fileObj.seek(mid)
         while mid:
             c = fileObj.read(1)
             if c == eol:
-                mid = mid + 1
+                mid += 1
                 break
-            mid = mid - 1    # pivot stepping back in search for full line
+            mid -= 1  # pivot stepping back in search for full line
             fileObj.seek(mid)
         if mid == prev_mid:  # loop condition due to stepping back pivot
             break

@@ -23,6 +23,7 @@ isolationLevels = {
     '3': 'SERIALIZABLE'
 }
 
+
 def init(**context):
     options = {}
     if context['options']:
@@ -32,15 +33,16 @@ def init(**context):
     if 'dbtype' not in options:
         raise error.SnmpsimError('database type not specified')
     db = __import__(
-        options['dbtype'], 
+        options['dbtype'],
         globals(), locals(),
         options['dbtype'].split('.')[:-1]
     )
-    if 'dboptions' in options: # legacy
-        connectParams = { 'database': options['dboptions'] }
+    if 'dboptions' in options:  # legacy
+        connectParams = {'database': options['dboptions']}
     else:
         connectParams = dict(
-            [ (k,options[k]) for k in options if k in ('host', 'port', 'user', 'passwd', 'password', 'db', 'database', 'unix_socket', 'named_pipe') ]
+            [(k, options[k]) for k in options if
+             k in ('host', 'port', 'user', 'passwd', 'password', 'db', 'database', 'unix_socket', 'named_pipe')]
         )
         for k in 'port', 'connect_timeout':
             if k in connectParams:
@@ -60,7 +62,7 @@ def init(**context):
             cursor.execute(
                 'select * from information_schema.tables where table_name=\'%s\' limit 1' % dbTable
             )
-        except: # non-ANSI database
+        except:  # non-ANSI database
             try:
                 cursor.execute('select * from %s limit 1' % dbTable)
             except:
@@ -74,6 +76,7 @@ def init(**context):
             cursor.execute('CREATE TABLE %s (oid text, tag text, value text, maxaccess text)' % dbTable)
 
         cursor.close()
+
 
 def variate(oid, tag, value, **context):
     if 'dbConn' in moduleContext:
@@ -134,7 +137,7 @@ def variate(oid, tag, value, **context):
             resultset = cursor.fetchone()
             if resultset:
                 origOid = origOid.clone(
-                  '.'.join([x.strip() for x in str(resultset[0]).split('.')])
+                    '.'.join([x.strip() for x in str(resultset[0]).split('.')])
                 )
                 sqlOid = '.'.join(['%10s' % x for x in str(origOid).split('.')])
             else:
@@ -149,6 +152,7 @@ def variate(oid, tag, value, **context):
             return origOid, str(resultset[0]), str(resultset[1])
         else:
             return origOid, tag, context['errorStatus']
+
 
 def record(oid, tag, value, **context):
     if 'dbConn' in moduleContext:
@@ -188,6 +192,7 @@ def record(oid, tag, value, **context):
         return str(context['startOID']), ':sql', dbTable
     else:
         raise error.NoDataNotification()
+
 
 def shutdown(**context):
     dbConn = moduleContext.get('dbConn')

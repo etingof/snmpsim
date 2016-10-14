@@ -35,6 +35,7 @@ Topic :: System :: Monitoring
 Topic :: System :: Networking :: Monitoring
 """
 
+
 def howto_install_setuptools():
     print("""
    Error: You need setuptools Python package!
@@ -47,22 +48,25 @@ def howto_install_setuptools():
    Then you could make eggs from this package.
 """)
 
+
 if sys.version_info[:2] < (2, 4):
     print("ERROR: this package requires Python 2.4 or later!")
     sys.exit(1)
 
 try:
     from setuptools import setup
+
     params = {
-        'install_requires': [ 'pysnmp>=4.3.0' ],
+        'install_requires': ['pysnmp>=4.3.0'],
         'zip_safe': False  # this is due to data and variation dirs
-        }
+    }
 except ImportError:
     for arg in sys.argv:
         if 'egg' in arg:
             howto_install_setuptools()
             sys.exit(1)
     from distutils.core import setup
+
     params = {}
     if sys.version_info[:2] > (2, 4):
         params['requires'] = ['pysnmp(>=4.3.0)']
@@ -92,20 +96,21 @@ params.update(
 
 # install stock variation modules as data_files
 params['data_files'] = [
-    ( 'snmpsim/' + 'variation', glob.glob(os.path.join('variation', '*.py')) )
+    ('snmpsim/' + 'variation', glob.glob(os.path.join('variation', '*.py')))
 ]
 
 # install sample .snmprec files as data_files
 for x in os.walk('data'):
     params['data_files'].append(
-        ( 'snmpsim/' + '/'.join(os.path.split(x[0])),
-          glob.glob(os.path.join(x[0], '*.snmprec')) + \
-          glob.glob(os.path.join(x[0], '*.snmpwalk')) + \
-          glob.glob(os.path.join(x[0], '*.sapwalk')) )
+        ('snmpsim/' + '/'.join(os.path.split(x[0])),
+         glob.glob(os.path.join(x[0], '*.snmprec')) + \
+         glob.glob(os.path.join(x[0], '*.snmpwalk')) + \
+         glob.glob(os.path.join(x[0], '*.sapwalk')))
     )
 
 if 'py2exe' in sys.argv:
     import py2exe
+
     # fix executables
     params['console'] = params['scripts']
     del params['scripts']

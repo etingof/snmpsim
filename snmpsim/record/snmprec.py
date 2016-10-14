@@ -8,6 +8,7 @@ from snmpsim.record import dump
 from snmpsim.grammar import snmprec
 from snmpsim import error
 
+
 class SnmprecRecord(dump.DumpRecord):
     grammar = snmprec.SnmprecGrammar()
     ext = 'snmprec'

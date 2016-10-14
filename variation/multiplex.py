@@ -7,7 +7,7 @@
 # Managed value variation module: simulate a live Agent using
 # a series of snapshots.
 #
-import os, sys, time, bisect
+import os, time, bisect
 from pyasn1.compat.octets import str2octs
 from pysnmp.proto import rfc1902
 from snmpsim.record.snmprec import SnmprecRecord
@@ -18,9 +18,10 @@ from snmpsim.mltsplit import split
 from snmpsim import log
 from snmpsim import error
 
+
 def init(**context):
     if context['options']:
-        for k,v in [split(x, ':') for x in split(context['options'], ',')]:
+        for k, v in [split(x, ':') for x in split(context['options'], ',')]:
             if k == 'addon':
                 if k in moduleContext:
                     moduleContext[k].append(v)
@@ -37,13 +38,14 @@ def init(**context):
             log.msg('multiplex: creating %s...' % moduleContext['dir'])
             os.makedirs(moduleContext['dir'])
         if 'iterations' in moduleContext:
-            moduleContext['iterations'] = max(0, int(moduleContext['iterations'])-1)
+            moduleContext['iterations'] = max(0, int(moduleContext['iterations']) - 1)
         if 'period' in moduleContext:
             moduleContext['period'] = float(moduleContext['period'])
         else:
             moduleContext['period'] = 10.0
 
     moduleContext['ready'] = True
+
 
 def variate(oid, tag, value, **context):
     if 'settings' not in recordContext:
@@ -66,7 +68,8 @@ def variate(oid, tag, value, **context):
         else:
             d = recordContext['settings']['dir']
         recordContext['dirmap'] = dict(
-            [ (int(os.path.basename(x).split(os.path.extsep)[0]), os.path.join(d, x)) for x in os.listdir(d) if x[-7:] == 'snmprec' ]
+            [(int(os.path.basename(x).split(os.path.extsep)[0]), os.path.join(d, x)) for x in os.listdir(d) if
+             x[-7:] == 'snmprec']
         )
         recordContext['keys'] = list(
             recordContext['dirmap'].keys()
@@ -86,7 +89,8 @@ def variate(oid, tag, value, **context):
             recordContext['settings']['control'] = rfc1902.ObjectName(
                 recordContext['settings']['control']
             )
-            log.msg('multiplex: using control OID %s for subtree %s, time-based multiplexing disabled' % (recordContext['settings']['control'], oid))
+            log.msg('multiplex: using control OID %s for subtree %s, time-based multiplexing disabled' % (
+            recordContext['settings']['control'], oid))
 
         recordContext['ready'] = True
 
@@ -98,13 +102,14 @@ def variate(oid, tag, value, **context):
 
     if context['setFlag']:
         if 'control' in recordContext['settings'] and \
-                recordContext['settings']['control'] == context['origOid']:
+                        recordContext['settings']['control'] == context['origOid']:
             fileno = int(context['origValue'])
             if fileno >= len(recordContext['keys']):
                 log.msg('multiplex: .snmprec file number %s over limit of %s' % (fileno, len(recordContext['keys'])))
                 return context['origOid'], tag, context['errorStatus']
             moduleContext[oid]['fileno'] = fileno
-            log.msg('multiplex: switched to file #%s (%s)' % (recordContext['keys'][fileno], recordContext['dirmap'][recordContext['keys'][fileno]]))
+            log.msg('multiplex: switched to file #%s (%s)' % (
+            recordContext['keys'][fileno], recordContext['dirmap'][recordContext['keys'][fileno]]))
             return context['origOid'], tag, context['origValue']
         else:
             return context['origOid'], tag, context['errorStatus']
@@ -113,16 +118,17 @@ def variate(oid, tag, value, **context):
         if 'fileno' not in moduleContext[oid]:
             moduleContext[oid]['fileno'] = 0
         if not context['nextFlag'] and \
-                recordContext['settings']['control'] == context['origOid']:
+                        recordContext['settings']['control'] == context['origOid']:
             return context['origOid'], tag, rfc1902.Integer32(moduleContext[oid]['fileno'])
     else:
-        timeslot = (time.time() - moduleContext['booted']) % (recordContext['settings']['period'] * len(recordContext['dirmap']))
+        timeslot = (time.time() - moduleContext['booted']) % (
+        recordContext['settings']['period'] * len(recordContext['dirmap']))
         fileslot = int(timeslot / recordContext['settings']['period']) + recordContext['bounds'][0]
 
         fileno = bisect.bisect(recordContext['keys'], fileslot) - 1
 
         if 'fileno' not in moduleContext[oid] or \
-                moduleContext[oid]['fileno'] < fileno or \
+                        moduleContext[oid]['fileno'] < fileno or \
                 recordContext['settings']['wrap']:
             moduleContext[oid]['fileno'] = fileno
 
@@ -131,7 +137,7 @@ def variate(oid, tag, value, **context):
     ]
 
     if 'datafile' not in moduleContext[oid] or \
-            moduleContext[oid]['datafile'] != datafile:
+                    moduleContext[oid]['datafile'] != datafile:
         if 'datafileobj' in moduleContext[oid]:
             moduleContext[oid]['datafileobj'].close()
         moduleContext[oid]['datafileobj'] = RecordIndex(
@@ -140,10 +146,10 @@ def variate(oid, tag, value, **context):
         moduleContext[oid]['datafile'] = datafile
 
         log.msg('multiplex: switching to data file %s for %s' % (datafile, context['origOid']))
-        
+
     text, db = moduleContext[oid]['datafileobj'].getHandles()
 
-    textOid = str(rfc1902.OctetString('.'.join([ '%s' % x for x in context['origOid']])))
+    textOid = str(rfc1902.OctetString('.'.join(['%s' % x for x in context['origOid']])))
 
     try:
         line = moduleContext[oid]['datafileobj'].lookup(textOid)
@@ -171,9 +177,10 @@ def variate(oid, tag, value, **context):
     try:
         oid, value = SnmprecRecord().evaluate(line)
     except error.SnmpsimError:
-        oid, value = context['origOid'], tag, context['errorStatus']
+        oid, value = context['origOid'], context['errorStatus']
 
     return oid, tag, value
+
 
 def record(oid, tag, value, **context):
     if 'ready' not in moduleContext:
@@ -219,9 +226,11 @@ def record(oid, tag, value, **context):
             settings.update(
                 dict([split(x, '=') for x in moduleContext['addon']])
             )
-        value = ','.join([ '%s=%s' % (k,v) for k,v in settings.items() ])
+        value = ','.join(['%s=%s' % (k, v) for k, v in settings.items()])
         return str(context['startOID']), ':multiplex', value
     else:
         raise error.NoDataNotification()
 
-def shutdown(**context): pass
+
+def shutdown(**context):
+    pass

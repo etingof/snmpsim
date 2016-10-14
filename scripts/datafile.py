@@ -18,7 +18,7 @@ from snmpsim import error
 # Defaults
 verboseFlag = True
 mibSources = []
-defaultMibSources = [ 'http://mibs.snmplabs.com/asn1/@mib@' ]
+defaultMibSources = ['http://mibs.snmplabs.com/asn1/@mib@']
 sortRecords = ignoreBrokenRecords = deduplicateRecords = lostComments = False
 startOID = stopOID = None
 srcRecordType = dstRecordType = 'snmprec'
@@ -27,6 +27,7 @@ outputFile = sys.stdout
 if hasattr(outputFile, 'buffer'):
     outputFile = outputFile.buffer
 writtenCount = skippedCount = duplicateCount = brokenCount = variationCount = 0
+
 
 class SnmprecRecord(snmprec.SnmprecRecord):
     def evaluateValue(self, oid, tag, value, **context):
@@ -42,6 +43,7 @@ class SnmprecRecord(snmprec.SnmprecRecord):
             return self.formatOid(oid), context['backdoor']['textTag'], value
         else:
             return snmprec.SnmprecRecord.formatValue(self, oid, value)
+
 
 # data file types and parsers
 recordsSet = {
@@ -65,18 +67,21 @@ Usage: %s [--help]
     [--source-record-type=<%s>]
     [--destination-record-type=<%s>]
     [--input-file=<filename>]
-    [--output-file=<filename>]""" % (sys.argv[0], 
+    [--output-file=<filename>]""" % (sys.argv[0],
                                      '|'.join(recordsSet.keys()),
                                      '|'.join(recordsSet.keys()))
 
 try:
     opts, params = getopt.getopt(sys.argv[1:], 'hv',
-        ['help', 'version', 'quiet', 'sort-records', 
-         'ignore-broken-records', 'deduplicate-records',
-         'start-oid=', 'stop-oid=', 'start-object=', 'stop-object=',
-         'mib-source=', 'source-record-type=', 'destination-record-type=',
-         'input-file=', 'output-file=']
-    )
+                                 ['help', 'version', 'quiet', 'sort-records',
+                                  'ignore-broken-records',
+                                  'deduplicate-records',
+                                  'start-oid=', 'stop-oid=', 'start-object=',
+                                  'stop-object=',
+                                  'mib-source=', 'source-record-type=',
+                                  'destination-record-type=',
+                                  'input-file=', 'output-file=']
+                                 )
 except Exception:
     if verboseFlag:
         sys.stderr.write('ERROR: %s\r\n%s\r\n' % (sys.exc_info()[1], helpMessage))
@@ -84,8 +89,9 @@ except Exception:
 
 if params:
     if verboseFlag:
-        sys.stderr.write('ERROR: extra arguments supplied %s\r\n%s\r\n' % (params, helpMessage))
-    sys.exit(-1)    
+        sys.stderr.write('ERROR: extra arguments supplied %s\r\n%s\r\n' % (
+        params, helpMessage))
+    sys.exit(-1)
 
 for opt in opts:
     if opt[0] == '-h' or opt[0] == '--help':
@@ -99,13 +105,18 @@ Documentation:
         sys.exit(-1)
     if opt[0] == '-v' or opt[0] == '--version':
         import snmpsim, pysmi, pysnmp, pyasn1
+
         sys.stderr.write("""\
 SNMP Simulator version %s, written by Ilya Etingof <ilya@glas.net>
 Using foundation libraries: pysmi %s, pysnmp %s, pyasn1 %s.
 Python interpreter: %s
 Software documentation and support at http://snmpsim.sf.net
 %s
-""" % (snmpsim.__version__, hasattr(pysmi, '__version__') and pysmi.__version__ or 'unknown', hasattr(pysnmp, '__version__') and pysnmp.__version__ or 'unknown', hasattr(pyasn1, '__version__') and pyasn1.__version__ or 'unknown', sys.version, helpMessage))
+""" % (snmpsim.__version__,
+       hasattr(pysmi, '__version__') and pysmi.__version__ or 'unknown',
+       hasattr(pysnmp, '__version__') and pysnmp.__version__ or 'unknown',
+       hasattr(pyasn1, '__version__') and pyasn1.__version__ or 'unknown',
+       sys.version, helpMessage))
         sys.exit(-1)
     if opt[0] == '--quiet':
         verboseFlag = False
@@ -126,7 +137,8 @@ Software documentation and support at http://snmpsim.sf.net
     if opt[0] == '--start-object':
         startOID = rfc1902.ObjectIdentity(*opt[1].split('::'))
     if opt[0] == '--stop-object':
-        stopOID = rfc1902.ObjectIdentity(*opt[1].split('::'), **dict(last=True))
+        stopOID = rfc1902.ObjectIdentity(*opt[1].split('::'),
+                                         **dict(last=True))
     if opt[0] == '--source-record-type':
         if opt[1] not in recordsSet:
             if verboseFlag:
@@ -171,9 +183,9 @@ for inputFile in inputFiles:
         line, recLineNo, _ = getRecord(inputFile, lineNo)
         if not line:
             break
-        if recLineNo != lineNo+1:
+        if recLineNo != lineNo + 1:
             if verboseFlag:
-                sys.stderr.write('# Losing comment at lines %s..%s (input file #%s)\r\n' % (lineNo+1, recLineNo-1, inputFiles.index(inputFile)))
+                sys.stderr.write('# Losing comment at lines %s..%s (input file #%s)\r\n' % (lineNo + 1, recLineNo - 1, inputFiles.index(inputFile)))
             lineNo = recLineNo
             lostComments += 1
         backdoor = {}
@@ -188,10 +200,10 @@ for inputFile in inputFiles:
             else:
                 if verboseFlag:
                     sys.stderr.write('ERROR: broken record <%s>\r\n' % line)
-                sys.exit(-1)    
+                sys.exit(-1)
 
         if startOID and startOID > oid or \
-                stopOID and stopOID < oid:
+                        stopOID and stopOID < oid:
             skippedCount += 1
             continue
 
@@ -218,7 +230,7 @@ for record in recordsList:
             )
         )
     except:
-        sys.stderr.write('ERROR: record not written: %s\r\n'%sys.exc_info()[1])
+        sys.stderr.write('ERROR: record not written: %s\r\n' % sys.exc_info()[1])
         break
 
     writtenCount += 1
@@ -226,9 +238,7 @@ for record in recordsList:
         variationCount += 1
 
 if verboseFlag:
-    sys.stderr.write(
-        '# Records: written %s, filtered out %s, deduped %s, ignored %s, broken %s, variated %s\r\n' % (writtenCount, skippedCount, duplicateCount, lostComments, brokenCount, variationCount)
-    )
+    sys.stderr.write('# Records: written %s, filtered out %s, deduped %s, ignored %s, broken %s, variated %s\r\n' % (writtenCount, skippedCount, duplicateCount, lostComments, brokenCount, variationCount))
 
 outputFile.flush()
 outputFile.close()

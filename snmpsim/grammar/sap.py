@@ -7,8 +7,9 @@
 from pysnmp.proto import rfc1902
 from pyasn1.type import univ
 from pyasn1.compat.octets import octs2str
-from snmpsim.grammar import abstract, dump
+from snmpsim.grammar import abstract
 from snmpsim import error
+
 
 class SapGrammar(abstract.AbstractGrammar):
     tagMap = {
@@ -16,7 +17,7 @@ class SapGrammar(abstract.AbstractGrammar):
         'Gauge': rfc1902.Gauge32,
         'Integer': rfc1902.Integer32,
         'IpAddress': rfc1902.IpAddress,
-#        '<not implemented?>': univ.Null,
+        #        '<not implemented?>': univ.Null,
         'ObjectID': univ.ObjectIdentifier,
         'OctetString': rfc1902.OctetString,
         'TimeTicks': rfc1902.TimeTicks,
@@ -25,7 +26,7 @@ class SapGrammar(abstract.AbstractGrammar):
 
     def __stringFilter(value):
         if value[:2] == '0x':
-            value = [ int(value[x:x+2], 16) for x in range(2, len(value[2:])+2, 2) ]
+            value = [int(value[x:x + 2], 16) for x in range(2, len(value[2:]) + 2, 2)]
         return value
 
     filterMap = {

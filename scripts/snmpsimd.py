@@ -489,7 +489,7 @@ class DataIndexInstrumController:
             self.__db[
                 self.__indexOid + (idx+1, self.__idx)
                 ] = rfc1902.OctetString(args[idx])
-        self.__idx = self.__idx + 1
+        self.__idx += 1
 
 mibInstrumControllerSet = {
     DataFile.layout: MibInstrumController
@@ -895,7 +895,7 @@ if v2cArch:
                 readNextVars(varBinds)
             )
             varBinds = rspVarBinds[-R:]
-            M = M - 1
+            M -= 1
 
         return rspVarBinds
 
@@ -1106,7 +1106,7 @@ if v2cArch:
     if not agentUDPv4Endpoints and \
             not agentUDPv6Endpoints and \
             not agentUnixEndpoints:
-        log.msg('ERROR: agent endpoint address(es) not specified for SNMP engine ID %s' % v3EngineId)
+        log.msg('ERROR: agent endpoint address(es) not specified')
         sys.exit(-1)
 
     log.msg('Maximum number of variable bindings in SNMP response: %s' % maxVarBinds)

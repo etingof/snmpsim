@@ -10,6 +10,7 @@ from pyasn1.compat.octets import octs2str
 from snmpsim.grammar import abstract
 from snmpsim import error
 
+
 class DumpGrammar(abstract.AbstractGrammar):
     tagMap = {
         '0': rfc1902.Counter32,
@@ -25,11 +26,11 @@ class DumpGrammar(abstract.AbstractGrammar):
     }
 
     def __nullFilter(value):
-        return '' # simply drop whatever value is there when it's a Null
-    
+        return ''  # simply drop whatever value is there when it's a Null
+
     def __unhexFilter(value):
         if value[:5].lower() == 'hex: ':
-            value = [ int(x, 16) for x in value[5:].split('.') ]
+            value = [int(x, 16) for x in value[5:].split('.')]
         elif value[0] == '"' and value[-1] == '"':
             value = value[1:-1]
         return value
@@ -48,4 +49,3 @@ class DumpGrammar(abstract.AbstractGrammar):
             if oid and tag:
                 return oid, tag, self.filterMap.get(tag, lambda x: x)(value.strip())
             raise error.SnmpsimError('broken record <%s>' % line)
-

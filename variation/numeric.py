@@ -12,16 +12,16 @@
 #   66 - Gauge32
 #   67 - TimeTicks
 #   70 - Counter64
-import sys
 import math
 import time
 import random
-from pysnmp.proto import rfc1902, rfc1905
+from pysnmp.proto import rfc1902
 from snmpsim.mltsplit import split
 from snmpsim import log
 from snmpsim import error
 
 tboot = time.time()
+
 
 def init(**context):
     if context['mode'] == 'variating':
@@ -29,7 +29,7 @@ def init(**context):
     if context['mode'] == 'recording':
         moduleContext['settings'] = {}
         if context['options']:
-            for k,v in [split(x, ':') for x in split(context['options'], ',')]:
+            for k, v in [split(x, ':') for x in split(context['options'], ',')]:
                 if k == 'addon':
                     if k in moduleContext['settings']:
                         moduleContext['settings'][k].append(v)
@@ -48,6 +48,7 @@ def init(**context):
 
             if 'taglist' not in moduleContext['settings']:
                 moduleContext['settings']['taglist'] = '2-65-66-67-70'
+
 
 def variate(oid, tag, value, **context):
     if not context['nextFlag'] and not context['exactMatch']:
@@ -95,14 +96,14 @@ def variate(oid, tag, value, **context):
     if args:
         for x in args:
             if x == '<time>':
-                _args.append(t*recordContext['settings']['rate'])
+                _args.append(t * recordContext['settings']['rate'])
             else:
                 _args.append(float(x))
     else:
-        _args.append(t*recordContext['settings']['rate'])
+        _args.append(t * recordContext['settings']['rate'])
 
     v = f(*_args)
-    
+
     if 'scale' in recordContext['settings']:
         v *= recordContext['settings']['scale']
 
@@ -134,22 +135,23 @@ def variate(oid, tag, value, **context):
 
     return oid, tag, v
 
+
 def record(oid, tag, value, **context):
     if 'started' not in moduleContext:
         moduleContext['started'] = time.time()
 
     if 'iterations' not in moduleContext:
-        moduleContext['iterations'] = min(1, moduleContext['settings'].get('iterations',0))
+        moduleContext['iterations'] = min(1, moduleContext['settings'].get('iterations', 0))
 
     # single-run recording
 
     if 'iterations' not in moduleContext['settings'] or not moduleContext['settings']['iterations']:
         if context['origValue'].tagSet not in (
-                    rfc1902.Counter32.tagSet,
-                    rfc1902.Counter64.tagSet,
-                    rfc1902.TimeTicks.tagSet,
-                    rfc1902.Gauge32.tagSet,
-                    rfc1902.Integer.tagSet):
+                rfc1902.Counter32.tagSet,
+                rfc1902.Counter64.tagSet,
+                rfc1902.TimeTicks.tagSet,
+                rfc1902.Gauge32.tagSet,
+                rfc1902.Integer.tagSet):
             if 'hextag' in context:
                 tag = context['hextag']
             if 'hexvalue' in context:
@@ -157,18 +159,18 @@ def record(oid, tag, value, **context):
             return oid, tag, value
 
         if 'taglist' not in moduleContext['settings'] or \
-                tag not in moduleContext['settings']['taglist']:
+                        tag not in moduleContext['settings']['taglist']:
             return oid, tag, value
 
-        value = 'initial=%s' % value 
+        value = 'initial=%s' % value
 
         if context['origValue'].tagSet == rfc1902.TimeTicks.tagSet:
             value += ',rate=100'
         elif context['origValue'].tagSet == rfc1902.Integer.tagSet:
             value += ',rate=0'
- 
+
         return oid, tag + ':numeric', value
-            
+
     # multiple-iteration recording
 
     if oid not in moduleContext:
@@ -181,7 +183,7 @@ def record(oid, tag, value, **context):
             settings['rate'] = 0  # may be constants
         if 'addon' in moduleContext['settings']:
             settings.update(
-                dict([split(x,'=') for x in moduleContext['settings']['addon']])
+                dict([split(x, '=') for x in moduleContext['settings']['addon']])
             )
 
         moduleContext[oid] = {}
@@ -189,7 +191,7 @@ def record(oid, tag, value, **context):
         moduleContext[oid]['settings'] = settings
 
     if moduleContext['iterations']:
-        if context['stopFlag']: # switching to final iteration
+        if context['stopFlag']:  # switching to final iteration
             log.msg('numeric: %s iterations remaining' % moduleContext['settings']['iterations'])
             moduleContext['iterations'] -= 1
             moduleContext['started'] = time.time()
@@ -209,11 +211,11 @@ def record(oid, tag, value, **context):
 
         if 'value' in moduleContext[oid]:
             if context['origValue'].tagSet not in (
-                        rfc1902.Counter32.tagSet,
-                        rfc1902.Counter64.tagSet,
-                        rfc1902.TimeTicks.tagSet,
-                        rfc1902.Gauge32.tagSet,
-                        rfc1902.Integer.tagSet):
+                    rfc1902.Counter32.tagSet,
+                    rfc1902.Counter64.tagSet,
+                    rfc1902.TimeTicks.tagSet,
+                    rfc1902.Gauge32.tagSet,
+                    rfc1902.Integer.tagSet):
                 if 'hextag' in moduleContext[oid]:
                     tag = moduleContext[oid]['hextag']
                 if 'hexvalue' in moduleContext[oid]:
@@ -222,15 +224,18 @@ def record(oid, tag, value, **context):
 
             if tag not in moduleContext['settings']['taglist']:
                 return oid, tag, moduleContext[oid]['value']
- 
-            moduleContext[oid]['settings']['rate'] = (int(context['origValue']) - int(moduleContext[oid]['value'])) / (time.time() - moduleContext[oid]['time'])
+
+            moduleContext[oid]['settings']['rate'] = (int(context['origValue']) - int(moduleContext[oid]['value'])) / (
+            time.time() - moduleContext[oid]['time'])
 
             tag += ':numeric'
             value = ','.join(
-                [ '%s=%s' % (k,v) for k,v in moduleContext[oid]['settings'].items() ]
+                ['%s=%s' % (k, v) for k, v in moduleContext[oid]['settings'].items()]
             )
             return oid, tag, value
         else:
             raise error.NoDataNotification()
 
-def shutdown(**context): pass 
+
+def shutdown(**context):
+    pass

@@ -17,6 +17,7 @@ from pyasn1.type import univ
 from pysnmp.proto import rfc1905
 from pysnmp.entity import engine, config
 from pysnmp.carrier.asynsock.dgram import udp
+
 try:
     from pysnmp.carrier.asynsock.dgram import udp6
 except ImportError:
@@ -54,7 +55,7 @@ retryCount = 3
 startOID = univ.ObjectIdentifier('1.3.6')
 stopOID = None
 mibSources = []
-defaultMibSources = [ 'http://mibs.snmplabs.com/asn1/@mib@' ]
+defaultMibSources = ['http://mibs.snmplabs.com/asn1/@mib@']
 outputFile = sys.stdout
 if hasattr(outputFile, 'buffer'):
     outputFile = outputFile.buffer
@@ -62,19 +63,19 @@ variationModuleOptions = ""
 variationModuleName = variationModule = None
 
 authProtocols = {
-  'MD5': config.usmHMACMD5AuthProtocol,
-  'SHA': config.usmHMACSHAAuthProtocol,
-  'NONE': config.usmNoAuthProtocol
+    'MD5': config.usmHMACMD5AuthProtocol,
+    'SHA': config.usmHMACSHAAuthProtocol,
+    'NONE': config.usmNoAuthProtocol
 }
 
 privProtocols = {
-  'DES': config.usmDESPrivProtocol,
-  '3DES': config.usm3DESEDEPrivProtocol,
-  'AES': config.usmAesCfb128Protocol,
-  'AES128': config.usmAesCfb128Protocol,
-  'AES192': config.usmAesCfb192Protocol,
-  'AES256': config.usmAesCfb256Protocol,
-  'NONE': config.usmNoPrivProtocol
+    'DES': config.usmDESPrivProtocol,
+    '3DES': config.usm3DESEDEPrivProtocol,
+    'AES': config.usmAesCfb128Protocol,
+    'AES128': config.usmAesCfb128Protocol,
+    'AES192': config.usmAesCfb192Protocol,
+    'AES256': config.usmAesCfb256Protocol,
+    'NONE': config.usmNoPrivProtocol
 }
 
 helpMessage = """\
@@ -106,23 +107,25 @@ Usage: %s [--help]
     [--variation-module=<module>]
     [--variation-module-options=<args>]
     [--continue-on-errors=<max-sustained-errors>]""" % (
-        sys.argv[0],
-        '|'.join([ x for x in pysnmp_debug.flagMap.keys() if x != 'mibview' ]),
-        '|'.join([ x for x in pyasn1_debug.flagMap.keys() ]),
-        '|'.join(log.gMap.keys()),
-        '|'.join([ x for x in authProtocols if x != 'NONE' ]),
-        '|'.join([ x for x in privProtocols if x != 'NONE' ])
-    )
+    sys.argv[0],
+    '|'.join([x for x in pysnmp_debug.flagMap.keys() if x != 'mibview']),
+    '|'.join([x for x in pyasn1_debug.flagMap.keys()]),
+    '|'.join(log.gMap.keys()),
+    '|'.join([x for x in authProtocols if x != 'NONE']),
+    '|'.join([x for x in privProtocols if x != 'NONE'])
+)
 
 try:
     opts, params = getopt.getopt(sys.argv[1:], 'hv', [
-        'help', 'version', 'debug=', 'debug-asn1=', 'logging-method=', 'quiet',
-        'v1', 'v2c', 'v3', 'protocol-version=', 'community=', 
+        'help', 'version', 'debug=', 'debug-asn1=', 'logging-method=',
+        'quiet',
+        'v1', 'v2c', 'v3', 'protocol-version=', 'community=',
         'v3-user=', 'v3-auth-key=', 'v3-priv-key=', 'v3-auth-proto=',
         'v3-priv-proto=',
         'context-engine-id=', 'v3-context-engine-id=',
         'context=', 'v3-context-name=',
-        'use-getbulk', 'getbulk-repetitions=', 'agent-address=', 'agent-port=',
+        'use-getbulk', 'getbulk-repetitions=', 'agent-address=',
+        'agent-port=',
         'agent-udpv4-endpoint=', 'agent-udpv6-endpoint=',
         'agent-unix-endpoint=', 'timeout=', 'retries=',
         'start-oid=', 'stop-oid=',
@@ -131,7 +134,7 @@ try:
         'output-file=',
         'variation-modules-dir=', 'variation-module=',
         'variation-module-options=', 'continue-on-errors='
-    ] )
+    ])
 except Exception:
     sys.stderr.write('ERROR: %s\r\n%s\r\n' % (sys.exc_info()[1], helpMessage))
     sys.exit(-1)
@@ -154,13 +157,18 @@ Documentation:
         sys.exit(-1)
     if opt[0] == '-v' or opt[0] == '--version':
         import snmpsim, pysnmp, pysmi, pyasn1
+
         sys.stderr.write("""\
 SNMP Simulator version %s, written by Ilya Etingof <ilya@glas.net>
 Using foundation libraries: pysmi %s, pysnmp %s, pyasn1 %s.
 Python interpreter: %s
 Software documentation and support at http://snmpsim.sf.net
 %s
-""" % (snmpsim.__version__, hasattr(pysmi, '__version__') and pysmi.__version__ or 'unknown', hasattr(pysnmp, '__version__') and pysnmp.__version__ or 'unknown', hasattr(pyasn1, '__version__') and pyasn1.__version__ or 'unknown', sys.version, helpMessage))
+""" % (snmpsim.__version__,
+       hasattr(pysmi, '__version__') and pysmi.__version__ or 'unknown',
+       hasattr(pysnmp, '__version__') and pysnmp.__version__ or 'unknown',
+       hasattr(pyasn1, '__version__') and pyasn1.__version__ or 'unknown',
+       sys.version, helpMessage))
         sys.exit(-1)
     elif opt[0] in ('--debug', '--debug-snmp'):
         pysnmp_debug.setLogger(pysnmp_debug.Debug(*opt[1].split(','), **dict(loggerName='snmprec.pysnmp')))
@@ -173,7 +181,7 @@ Software documentation and support at http://snmpsim.sf.net
             sys.stderr.write('%s\r\n%s\r\n' % (sys.exc_info()[1], helpMessage))
             sys.exit(-1)
     elif opt[0] == '--quiet':
-        log.setLogger('snmprec', 'null', force=True) 
+        log.setLogger('snmprec', 'null', force=True)
     elif opt[0] == '--v1':
         snmpVersion = 0
     elif opt[0] == '--v2c':
@@ -227,14 +235,18 @@ Software documentation and support at http://snmpsim.sf.net
     elif opt[0] == '--agent-port':
         agentUDPv4Address = (agentUDPv4Address[0], int(opt[1]))
     elif opt[0] == '--agent-udpv4-endpoint':
-        f = lambda h,p=161: (h, int(p))
+        f = lambda h, p=161: (h, int(p))
         try:
             agentUDPv4Endpoint = f(*opt[1].split(':'))
         except:
             sys.stderr.write('ERROR: improper IPv4/UDP endpoint %s\r\n%s\r\n' % (opt[1], helpMessage))
             sys.exit(-1)
         try:
-            agentUDPv4Endpoint = socket.getaddrinfo(agentUDPv4Endpoint[0], agentUDPv4Endpoint[1], socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)[0][4][:2]
+            agentUDPv4Endpoint = \
+                socket.getaddrinfo(agentUDPv4Endpoint[0],
+                                   agentUDPv4Endpoint[1],
+                                   socket.AF_INET, socket.SOCK_DGRAM,
+                                   socket.IPPROTO_UDP)[0][4][:2]
         except socket.gaierror:
             sys.stderr.write('ERROR: unknown hostname %s\r\n%s\r\n' % (agentUDPv4Endpoint[0], helpMessage))
             sys.exit(-1)
@@ -254,7 +266,11 @@ Software documentation and support at http://snmpsim.sf.net
         else:
             agentUDPv6Endpoint = opt[1], 161
         try:
-            agentUDPv6Endpoint = socket.getaddrinfo(agentUDPv6Endpoint[0], agentUDPv6Endpoint[1], socket.AF_INET6, socket.SOCK_DGRAM, socket.IPPROTO_UDP)[0][4][:2]
+            agentUDPv6Endpoint = \
+                socket.getaddrinfo(agentUDPv6Endpoint[0],
+                                   agentUDPv6Endpoint[1],
+                                   socket.AF_INET6, socket.SOCK_DGRAM,
+                                   socket.IPPROTO_UDP)[0][4][:2]
         except socket.gaierror:
             sys.stderr.write('ERROR: unknown hostname %s\r\n%s\r\n' % (agentUDPv6Endpoint[0], helpMessage))
             sys.exit(-1)
@@ -265,7 +281,7 @@ Software documentation and support at http://snmpsim.sf.net
         agentUNIXEndpoint = opt[1]
     elif opt[0] == '--timeout':
         try:
-            timeout = float(opt[1])*100
+            timeout = float(opt[1]) * 100
         except:
             sys.stderr.write('ERROR: improper --timeout value %s\r\n%s\r\n' % (opt[1], helpMessage))
             sys.exit(-1)
@@ -286,7 +302,8 @@ Software documentation and support at http://snmpsim.sf.net
     elif opt[0] == '--start-object':
         startOID = rfc1902.ObjectIdentity(*opt[1].split('::'))
     elif opt[0] == '--stop-object':
-        stopOID = rfc1902.ObjectIdentity(*opt[1].split('::'), **dict(last=True))
+        stopOID = rfc1902.ObjectIdentity(*opt[1].split('::'),
+                                         **dict(last=True))
     elif opt[0] == '--output-file':
         outputFile = open(opt[1], 'wb')
     elif opt[0] == '--variation-modules-dir':
@@ -301,7 +318,7 @@ Software documentation and support at http://snmpsim.sf.net
         except:
             sys.stderr.write('ERROR: improper --continue-on-errors retries count %s\r\n%s\r\n' % (opt[1], helpMessage))
             sys.exit(-1)
- 
+
 # Catch missing params
 
 if not agentUDPv4Endpoint and not agentUDPv6Endpoint and not agentUNIXEndpoint:
@@ -313,10 +330,12 @@ if not agentUDPv4Endpoint and not agentUDPv6Endpoint and not agentUNIXEndpoint:
 
 if snmpVersion == 3:
     if v3User is None:
-        sys.stderr.write('ERROR: --v3-user is missing\r\n%s\r\n' % helpMessage)
+        sys.stderr.write(
+            'ERROR: --v3-user is missing\r\n%s\r\n' % helpMessage)
         sys.exit(-1)
     if v3PrivKey and not v3AuthKey:
-        sys.stderr.write('ERROR: --v3-auth-key is missing\r\n%s\r\n' % helpMessage)
+        sys.stderr.write(
+            'ERROR: --v3-auth-key is missing\r\n%s\r\n' % helpMessage)
         sys.exit(-1)
     if authProtocols[v3AuthProto] == config.usmNoAuthProtocol:
         if v3AuthKey is not None:
@@ -348,13 +367,15 @@ if outputFile is sys.stderr:
         outputFile = outputFile.buffer
     elif sys.platform == "win32":
         import msvcrt
+
         msvcrt.setmode(outputFile.fileno(), os.O_BINARY)
 
 # Load variation module
 
 if variationModuleName:
     for variationModulesDir in confdir.variation:
-        log.msg('Scanning "%s" directory for variation modules...' % variationModulesDir)
+        log.msg(
+            'Scanning "%s" directory for variation modules...' % variationModulesDir)
         if not os.path.exists(variationModulesDir):
             log.msg('Directory "%s" does not exist' % variationModulesDir)
             continue
@@ -364,7 +385,7 @@ if variationModuleName:
             log.msg('Variation module "%s" not found' % mod)
             continue
 
-        ctx = { 'path': mod, 'moduleContext': {} }
+        ctx = {'path': mod, 'moduleContext': {}}
 
         try:
             if sys.version_info[0] > 2:
@@ -372,7 +393,7 @@ if variationModuleName:
             else:
                 execfile(mod, ctx)
         except Exception:
-            log.msg('Variation module "%s" execution failure: %s' %  (mod, sys.exc_info()[1]))
+            log.msg('Variation module "%s" execution failure: %s' % (mod, sys.exc_info()[1]))
             sys.exit(-1)
         else:
             variationModule = ctx
@@ -381,7 +402,7 @@ if variationModuleName:
     else:
         log.msg('ERROR: variation module "%s" not found' % variationModuleName)
         sys.exit(-1)
-       
+
 # SNMP configuration
 
 snmpEngine = engine.SnmpEngine()
@@ -397,8 +418,13 @@ if snmpVersion == 3:
         snmpEngine, v3User,
         authProtocols[v3AuthProto], v3AuthKey,
         privProtocols[v3PrivProto], v3PrivKey
-        )
-    log.msg('SNMP version 3, Context EngineID: %s Context name: %s, SecurityName: %s, SecurityLevel: %s, Authentication key/protocol: %s/%s, Encryption (privacy) key/protocol: %s/%s' % (v3ContextEngineId and v3ContextEngineId.prettyPrint() or '<default>', v3Context and v3Context.prettyPrint() or '<default>', v3User, secLevel, v3AuthKey is None and '<NONE>' or v3AuthKey, v3AuthProto, v3PrivKey is None and '<NONE>' or v3PrivKey, v3PrivProto))
+    )
+    log.msg('SNMP version 3, Context EngineID: %s Context name: %s, SecurityName: %s, SecurityLevel: %s, Authentication key/protocol: %s/%s, Encryption (privacy) key/protocol: %s/%s' % (
+            v3ContextEngineId and v3ContextEngineId.prettyPrint() or '<default>',
+            v3Context and v3Context.prettyPrint() or '<default>', v3User,
+            secLevel, v3AuthKey is None and '<NONE>' or v3AuthKey,
+            v3AuthProto,
+            v3PrivKey is None and '<NONE>' or v3PrivKey, v3PrivProto))
 else:
     v3User = 'agt'
     secLevel = 'noAuthNoPriv'
@@ -443,7 +469,7 @@ elif agentUDPv4Endpoint:
     )
     log.msg('Querying UDP/IPv4 agent at %s:%s' % agentUDPv4Endpoint)
 
-log.msg('Agent response timeout: %.2f secs, retries: %s' % (timeout/100, retryCount))
+log.msg('Agent response timeout: %.2f secs, retries: %s' % (timeout / 100, retryCount))
 
 if isinstance(startOID, rfc1902.ObjectIdentity) or \
         isinstance(stopOID, rfc1902.ObjectIdentity):
@@ -476,6 +502,7 @@ if variationModule:
     else:
         log.msg('Variation module "%s" initialization OK' % variationModuleName)
 
+
 # Data file builder
 
 class SnmprecRecord(snmprec.SnmprecRecord):
@@ -494,7 +521,8 @@ class SnmprecRecord(snmprec.SnmprecRecord):
             else:
                 textTag, textValue = plainTag, plainValue
 
-            textOid, textTag, textValue = context['variationModule']['record'](
+            textOid, textTag, textValue = context['variationModule'][
+                'record'](
                 textOid, textTag, textValue, **context
             )
 
@@ -503,7 +531,9 @@ class SnmprecRecord(snmprec.SnmprecRecord):
 
         return textOid, textTag, textValue
 
+
 dataFileHandler = SnmprecRecord()
+
 
 # SNMP worker
 
@@ -527,34 +557,35 @@ def cbFun(snmpEngine, sendRequestHandle, errorIndication,
             # fuzzy logic of walking a broken OID
             if len(nextOID) < 4:
                 pass
-            elif (continueOnErrors-cbCtx['retries'])*10/continueOnErrors > 5:
-                nextOID = nextOID[:-2] + (nextOID[-2]+1,)
+            elif (continueOnErrors - cbCtx[
+                'retries']) * 10 / continueOnErrors > 5:
+                nextOID = nextOID[:-2] + (nextOID[-2] + 1,)
             elif nextOID[-1]:
-                nextOID = nextOID[:-1] + (nextOID[-1]+1,)
+                nextOID = nextOID[:-1] + (nextOID[-1] + 1,)
             else:
-                nextOID = nextOID[:-2] + (nextOID[-2]+1, 0)
+                nextOID = nextOID[:-2] + (nextOID[-2] + 1, 0)
 
             cbCtx['retries'] -= 1
             cbCtx['lastOID'] = nextOID
 
             log.msg('Retrying with OID %s (%s retries left)...' % (nextOID, cbCtx['retries']))
-            
+
             # initiate another SNMP walk iteration
             if getBulkFlag:
                 cmdGen.sendVarBinds(
-                    snmpEngine, 
-                    'tgt', 
+                    snmpEngine,
+                    'tgt',
                     v3ContextEngineId, v3Context,
                     0, getBulkRepetitions,
-                    [ (nextOID, None) ], 
+                    [(nextOID, None)],
                     cbFun, cbCtx
                 )
             else:
                 cmdGen.sendVarBinds(
                     snmpEngine,
-                   'tgt',
+                    'tgt',
                     v3ContextEngineId, v3Context,
-                    [ (nextOID, None) ],
+                    [(nextOID, None)],
                     cbFun, cbCtx
                 )
 
@@ -575,11 +606,11 @@ def cbFun(snmpEngine, sendRequestHandle, errorIndication,
         for oid, val in varBindRow:
             # EOM
             if stopOID and oid >= stopOID:
-                stopFlag = True # stop on out of range condition
+                stopFlag = True  # stop on out of range condition
             elif val is None or \
-                val.tagSet in (rfc1905.NoSuchObject.tagSet,
-                               rfc1905.NoSuchInstance.tagSet,
-                               rfc1905.EndOfMibView.tagSet):
+                            val.tagSet in (rfc1905.NoSuchObject.tagSet,
+                                           rfc1905.NoSuchInstance.tagSet,
+                                           rfc1905.EndOfMibView.tagSet):
                 stopFlag = True
 
             # Build .snmprec record
@@ -607,15 +638,15 @@ def cbFun(snmpEngine, sendRequestHandle, errorIndication,
                 if 'period' in moreDataNotification:
                     log.msg('%s OIDs dumped, waiting %.2f sec(s)...' % (cbCtx['total'], moreDataNotification['period']))
                     time.sleep(moreDataNotification['period'])
- 
+
                 # initiate another SNMP walk iteration
                 if getBulkFlag:
                     cmdGen.sendVarBinds(
-                        snmpEngine, 
-                        'tgt', 
+                        snmpEngine,
+                        'tgt',
                         v3ContextEngineId, v3Context,
                         0, getBulkRepetitions,
-                        [ (startOID, None) ], 
+                        [(startOID, None)],
                         cbFun, cbCtx
                     )
                 else:
@@ -623,12 +654,12 @@ def cbFun(snmpEngine, sendRequestHandle, errorIndication,
                         snmpEngine,
                         'tgt',
                         v3ContextEngineId, v3Context,
-                        [ (startOID, None) ],
+                        [(startOID, None)],
                         cbFun, cbCtx
                     )
 
                 stopFlag = True  # stop current iteration
- 
+
             except error.NoDataNotification:
                 pass
             except error.SnmpsimError:
@@ -641,13 +672,15 @@ def cbFun(snmpEngine, sendRequestHandle, errorIndication,
                 cbCtx['total'] += 1
 
                 if cbCtx['count'] % 100 == 0:
-                    log.msg('OIDs dumped: %s/%s' % (cbCtx['iteration'], cbCtx['count']))
+                    log.msg('OIDs dumped: %s/%s' % (
+                        cbCtx['iteration'], cbCtx['count']))
 
     # Next request time
     cbCtx['reqTime'] = time.time()
 
     # Continue walking
     return not stopFlag
+
 
 cbCtx = {
     'total': 0,
@@ -667,7 +700,7 @@ if getBulkFlag:
         'tgt',
         v3ContextEngineId, v3Context,
         0, getBulkRepetitions,
-        [ (startOID, None) ], 
+        [(startOID, None)],
         cbFun, cbCtx
     )
 else:
@@ -677,7 +710,7 @@ else:
         snmpEngine,
         'tgt',
         v3ContextEngineId, v3Context,
-        [ (startOID, None) ],
+        [(startOID, None)],
         cbFun, cbCtx
     )
 
@@ -703,7 +736,8 @@ if variationModule:
                                     options=variationModuleOptions,
                                     mode='recording')
     except Exception:
-        log.msg('Variation module %s shutdown FAILED: %s' % (variationModuleName, sys.exc_info()[1]))
+        log.msg('Variation module %s shutdown FAILED: %s' % (
+            variationModuleName, sys.exc_info()[1]))
     else:
         log.msg('Variation module %s shutdown OK' % variationModuleName)
 
@@ -713,7 +747,7 @@ t = time.time() - t
 
 cbCtx['total'] += cbCtx['count']
 
-log.msg('OIDs dumped: %s, elapsed: %.2f sec, rate: %.2f OIDs/sec, errors: %d' % (cbCtx['total'], t, t and cbCtx['count']//t or 0, cbCtx['errors']))
+log.msg('OIDs dumped: %s, elapsed: %.2f sec, rate: %.2f OIDs/sec, errors: %d' % (cbCtx['total'], t, t and cbCtx['count'] // t or 0, cbCtx['errors']))
 
 if exc_info:
     for line in traceback.format_exception(*exc_info):

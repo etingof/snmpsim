@@ -10,48 +10,53 @@ from snmpsim import error
 if sys.platform[:3] == 'win':
     def daemonize(pidfile):
         raise error.SnmpsimError('Windows is not inhabited with daemons!')
+
+
     def dropPrivileges(uname, gname):
         return
 else:
     import os, pwd, grp, atexit, signal, tempfile
 
+
     def daemonize(pidfile):
-        try: 
-            pid = os.fork() 
+        try:
+            pid = os.fork()
             if pid > 0:
                 # exit first parent
-                os._exit(0) 
+                os._exit(0)
         except OSError:
             raise error.SnmpsimError('ERROR: fork #1 failed: %s' % sys.exc_info()[1])
 
         # decouple from parent environment
         try:
-            os.chdir('/') 
-            os.setsid() 
+            os.chdir('/')
+            os.setsid()
         except OSError:
             pass
-        os.umask(0) 
-            
+        os.umask(0)
+
         # do second fork
-        try: 
-            pid = os.fork() 
+        try:
+            pid = os.fork()
             if pid > 0:
                 # exit from second parent
-                os._exit(0) 
+                os._exit(0)
         except OSError:
             raise error.SnmpsimError('ERROR: fork #2 failed: %s' % sys.exc_info()[1])
 
-        def signal_cb(s,f):
+        def signal_cb(s, f):
             raise KeyboardInterrupt
+
         for s in signal.SIGTERM, signal.SIGINT, signal.SIGHUP, signal.SIGQUIT:
             signal.signal(s, signal_cb)
-             
+
         # write pidfile
         def atexit_cb():
             try:
                 os.remove(pidfile)
             except OSError:
                 pass
+
         atexit.register(atexit_cb)
 
         try:
@@ -72,11 +77,12 @@ else:
         os.dup2(si.fileno(), sys.stdin.fileno())
         os.dup2(so.fileno(), sys.stdout.fileno())
         os.dup2(se.fileno(), sys.stderr.fileno())
-          
+
+
     def dropPrivileges(uname, gname):
         if os.getuid() != 0:
             if uname and uname != pwd.getpwnam(uname).pw_name or \
-                    gname and gname != grp.getgrnam(gname).gr_name:
+                            gname and gname != grp.getgrnam(gname).gr_name:
                 raise error.SnmpsimError('Process is running under different UID/GID')
             else:
                 return

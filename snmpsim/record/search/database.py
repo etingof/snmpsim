@@ -161,7 +161,8 @@ class RecordIndex:
 
         return self
 
-    def lookup(self, oid): return self.__db[oid]
+    def lookup(self, oid):
+        return self.__db[oid]
 
     def open(self):
         self.__text = open(self.__textFile, 'rb')

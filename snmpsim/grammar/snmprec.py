@@ -11,23 +11,24 @@ from pyasn1.type import univ
 from snmpsim.grammar.abstract import AbstractGrammar
 from snmpsim import error
 
+
 class SnmprecGrammar(AbstractGrammar):
-    alnums = set(octs2ints(str2octs(ascii_letters+digits)))
+    alnums = set(octs2ints(str2octs(ascii_letters + digits)))
     tagMap = {}
-    for t in ( rfc1902.Gauge32,
-               rfc1902.Integer32,
-               rfc1902.IpAddress,
-               univ.Null,
-               univ.ObjectIdentifier,
-               rfc1902.OctetString,
-               rfc1902.TimeTicks,
-               rfc1902.Opaque,
-               rfc1902.Counter32,
-               rfc1902.Counter64,
-               rfc1905.NoSuchObject,
-               rfc1905.NoSuchInstance,
-               rfc1905.EndOfMibView ):
-        tagMap[str(sum([ x for x in t.tagSet[0] ]))] = t
+    for t in (rfc1902.Gauge32,
+              rfc1902.Integer32,
+              rfc1902.IpAddress,
+              univ.Null,
+              univ.ObjectIdentifier,
+              rfc1902.OctetString,
+              rfc1902.TimeTicks,
+              rfc1902.Opaque,
+              rfc1902.Counter32,
+              rfc1902.Counter64,
+              rfc1905.NoSuchObject,
+              rfc1905.NoSuchInstance,
+              rfc1905.EndOfMibView):
+        tagMap[str(sum([x for x in t.tagSet[0]]))] = t
 
     def build(self, oid, tag, val):
         if oid and tag:
@@ -59,4 +60,4 @@ class SnmprecGrammar(AbstractGrammar):
             nval = value.asNumbers()
             for x in nval:
                 if x not in self.alnums:
-                    return ''.join([ '%.2x' % x for x in nval ])
+                    return ''.join(['%.2x' % x for x in nval])

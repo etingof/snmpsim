@@ -24,10 +24,12 @@ from snmpsim.record.snmprec import SnmprecRecord
 from snmpsim.mltsplit import split
 from snmpsim import error, log
 from pysnmp.smi.error import WrongValueError
+
 try:
     from redis import StrictRedis
 except ImportError:
     StrictRedis = None
+
 
 def init(**context):
     options = {}
@@ -36,7 +38,7 @@ def init(**context):
             dict([split(x, ':') for x in split(context['options'], ',')])
         )
     connectParams = dict(
-        [ (k,options[k]) for k in options if k in ('host', 'port', 'password', 'db', 'unix_socket') ]
+        [(k, options[k]) for k in options if k in ('host', 'port', 'password', 'db', 'unix_socket')]
     )
     for k in 'port', 'db':
         if k in connectParams:
@@ -48,19 +50,19 @@ def init(**context):
         raise error.SnmpsimError('redis-py Python package must be installed!')
 
     moduleContext['dbConn'] = StrictRedis(**connectParams)
-    
+
     if context['mode'] == 'recording':
         if 'key-spaces-id' in options:
             moduleContext['key-spaces-id'] = int(options['key-spaces-id'])
-        else:    
+        else:
             from random import randrange, seed
             seed()
             moduleContext['key-spaces-id'] = randrange(0, 0xffffffff)
 
         log.msg('redis: using key-spaces-id %s' % moduleContext['key-spaces-id'])
-        
+
         if 'iterations' in options:
-            moduleContext['iterations'] = max(0, int(options['iterations'])-1)
+            moduleContext['iterations'] = max(0, int(options['iterations']) - 1)
         if 'period' in options:
             moduleContext['period'] = float(options['period'])
         else:
@@ -77,6 +79,7 @@ def init(**context):
 
 
 unpackTag = SnmprecRecord().unpackTag
+
 
 def variate(oid, tag, value, **context):
     if 'dbConn' in moduleContext:
@@ -106,13 +109,15 @@ def variate(oid, tag, value, **context):
 
     keySpacesId = recordContext['settings']['key-spaces-id']
     if recordContext['settings']['period']:
-        keySpaceIdx = int((time.time() - moduleContext['booted']) % (recordContext['settings']['period'] * int(dbConn.llen(keySpacesId))) // recordContext['settings']['period'])
+        keySpaceIdx = int((time.time() - moduleContext['booted']) % (
+        recordContext['settings']['period'] * int(dbConn.llen(keySpacesId))) // recordContext['settings']['period'])
     else:
         keySpaceIdx = 0
     keySpace = dbConn.lindex(keySpacesId, keySpaceIdx)
     if 'current-keyspace' not in recordContext or \
-            recordContext['current-keyspace'] != keySpace:
-        log.msg('redis: now using keyspace %s (cycling period %s)' % (keySpace, recordContext['settings']['period'] or '<disabled>'))
+                    recordContext['current-keyspace'] != keySpace:
+        log.msg('redis: now using keyspace %s (cycling period %s)' % (
+        keySpace, recordContext['settings']['period'] or '<disabled>'))
         recordContext['current-keyspace'] = keySpace
 
     if keySpace is None:
@@ -136,7 +141,7 @@ def variate(oid, tag, value, **context):
         if prevTagAndValue:
             prevTag, prevValue = prevTagAndValue.split('|')
             if unpackTag(prevTag)[0] != unpackTag(textTag)[0]:
-                raise WrongValueError(name=origOid, idx=max(0, context['varsTotal']-context['varsRemaining']-1))
+                raise WrongValueError(name=origOid, idx=max(0, context['varsTotal'] - context['varsRemaining'] - 1))
         else:
             dbConn.linsert(keySpace + '-oids_ordering',
                            'after',
@@ -152,7 +157,7 @@ def variate(oid, tag, value, **context):
     else:
         if context['nextFlag']:
             textOid = dbConn.lindex(keySpace + '-oids_ordering',
-                                    getNextOid(dbConn, keySpace, dbOid, 
+                                    getNextOid(dbConn, keySpace, dbOid,
                                                index=True))
         else:
             textOid = keySpace + '-' + dbOid
@@ -170,6 +175,7 @@ def variate(oid, tag, value, **context):
 
         return textOid, textTag, textValue
 
+
 def getNextOid(dbConn, keySpace, dbOid, index=False):
     listKey = keySpace + '-oids_ordering'
     oidKey = keySpace + '-' + dbOid
@@ -177,7 +183,7 @@ def getNextOid(dbConn, keySpace, dbOid, index=False):
     minlen = 0
     while maxlen >= minlen and listsize:
         listsize -= 1
-        idx = minlen+(maxlen-minlen)//2
+        idx = minlen + (maxlen - minlen) // 2
         nextOid = dbConn.lindex(listKey, idx)
         if nextOid < oidKey:
             minlen = idx + 1
@@ -189,6 +195,7 @@ def getNextOid(dbConn, keySpace, dbOid, index=False):
     if not listsize:
         raise error.SnmpsimError('empty/unsorted %s' % listKey)
     return not index and dbConn.lindex(listKey, idx) or idx
+
 
 def record(oid, tag, value, **context):
     if 'ready' not in moduleContext:
@@ -246,10 +253,11 @@ def record(oid, tag, value, **context):
             settings.update(
                 dict([split(x, '=') for x in moduleContext['addon']])
             )
-        value = ','.join([ '%s=%s' % (k,v) for k,v in settings.items() ])
+        value = ','.join(['%s=%s' % (k, v) for k, v in settings.items()])
         return str(context['startOID']), ':redis', value
     else:
         raise error.NoDataNotification()
+
 
 def shutdown(**context):
     if 'dbConn' in moduleContext: moduleContext.pop('dbConn')

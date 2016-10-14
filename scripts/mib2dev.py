@@ -23,7 +23,7 @@ from snmpsim.error import SnmpsimError
 verboseFlag = True
 startOID = stopOID = None
 mibSources = []
-defaultMibSources = [ 'http://mibs.snmplabs.com/asn1/@mib@' ]
+defaultMibSources = ['http://mibs.snmplabs.com/asn1/@mib@']
 outputFile = sys.stdout
 if hasattr(outputFile, 'buffer'):
     outputFile = outputFile.buffer
@@ -58,27 +58,30 @@ helpMessage = """Usage: %s [--help]
     [--timeticks-range=<min,max>]
     [--unsigned-range=<min,max>]
     [--integer32-range=<min,max>]""" % (
-        sys.argv[0], 
-        '|'.join([ x for x in debug.flagMap.keys() if x not in ('app', 'msgproc', 'proxy', 'io', 'secmod', 'dsp', 'acl') ])
-    )
+    sys.argv[0],
+    '|'.join([x for x in debug.flagMap.keys() if x not in (
+    'app', 'msgproc', 'proxy', 'io', 'secmod', 'dsp', 'acl')])
+)
 
 try:
     opts, params = getopt.getopt(sys.argv[1:], 'hv', [
-        'help', 'version', 'debug=', 'quiet', 
+        'help', 'version', 'debug=', 'quiet',
         'pysnmp-mib-dir=', 'mib-module=', 'start-oid=', 'stop-oid=',
         'mib-source=', 'start-object=', 'stop-object=',
-        'manual-values', 'automatic-values=', 'table-size=', 
+        'manual-values', 'automatic-values=', 'table-size=',
         'output-file=', 'string-pool=', 'integer32-range=',
         'counter-range=', 'counter64-range=', 'gauge-range=',
         'unsigned-range=', 'timeticks-range='
-    ] )
+    ])
 except Exception:
-    sys.stderr.write('ERROR: %s\r\n%s\r\n' % (sys.exc_info()[1], helpMessage))
+    sys.stderr.write(
+        'ERROR: %s\r\n%s\r\n' % (sys.exc_info()[1], helpMessage))
     sys.exit(-1)
 
 if params:
-    sys.stderr.write('ERROR: extra arguments supplied %s\r\n%s\r\n' % (params, helpMessage))
-    sys.exit(-1)    
+    sys.stderr.write('ERROR: extra arguments supplied %s\r\n%s\r\n' % (
+    params, helpMessage))
+    sys.exit(-1)
 
 for opt in opts:
     if opt[0] == '-h' or opt[0] == '--help':
@@ -94,13 +97,18 @@ Documentation:
         sys.exit(-1)
     if opt[0] == '-v' or opt[0] == '--version':
         import snmpsim, pysmi, pysnmp, pyasn1
+
         sys.stderr.write("""\
 SNMP Simulator version %s, written by Ilya Etingof <ilya@glas.net>
 Using foundation libraries: pysmi %s, pysnmp %s, pyasn1 %s.
 Python interpreter: %s
 Software documentation and support at http://snmpsim.sf.net
 %s
-""" % (snmpsim.__version__, hasattr(pysmi, '__version__') and pysmi.__version__ or 'unknown', hasattr(pysnmp, '__version__') and pysnmp.__version__ or 'unknown', hasattr(pyasn1, '__version__') and pyasn1.__version__ or 'unknown', sys.version, helpMessage))
+""" % (snmpsim.__version__,
+       hasattr(pysmi, '__version__') and pysmi.__version__ or 'unknown',
+       hasattr(pysnmp, '__version__') and pysnmp.__version__ or 'unknown',
+       hasattr(pyasn1, '__version__') and pyasn1.__version__ or 'unknown',
+       sys.version, helpMessage))
         sys.exit(-1)
     if opt[0] == '--debug':
         debug.setLogger(debug.Debug(*opt[1].split(',')))
@@ -128,14 +136,16 @@ Software documentation and support at http://snmpsim.sf.net
         try:
             automaticValues = int(opt[1])
         except ValueError:
-            sys.stderr.write('ERROR: bad value %s: %s\r\n' % (opt[1], sys.exc_info()[1]))
-            sys.exit(-1)   
+            sys.stderr.write(
+                'ERROR: bad value %s: %s\r\n' % (opt[1], sys.exc_info()[1]))
+            sys.exit(-1)
     if opt[0] == '--table-size':
         try:
             tableSize = int(opt[1])
         except ValueError:
-            sys.stderr.write('ERROR: bad value %s: %s\r\n' % (opt[1], sys.exc_info()[1]))
-            sys.exit(-1)   
+            sys.stderr.write(
+                'ERROR: bad value %s: %s\r\n' % (opt[1], sys.exc_info()[1]))
+            sys.exit(-1)
     if opt[0] == '--output-file':
         outputFile = open(opt[1], 'wb')
     if opt[0] == '--string-pool':
@@ -144,44 +154,50 @@ Software documentation and support at http://snmpsim.sf.net
         try:
             counterRange = [int(x) for x in opt[1].split(',')]
         except ValueError:
-            sys.stderr.write('ERROR: bad value %s: %s\r\n' % (opt[1], sys.exc_info()[1]))
+            sys.stderr.write(
+                'ERROR: bad value %s: %s\r\n' % (opt[1], sys.exc_info()[1]))
             sys.exit(-1)
     if opt[0] == '--counter64-range':
         try:
             counter64Range = [int(x) for x in opt[1].split(',')]
         except ValueError:
-            sys.stderr.write('ERROR: bad value %s: %s\r\n' % (opt[1], sys.exc_info()[1]))
+            sys.stderr.write(
+                'ERROR: bad value %s: %s\r\n' % (opt[1], sys.exc_info()[1]))
             sys.exit(-1)
     if opt[0] == '--gauge-range':
         try:
             gaugeRange = [int(x) for x in opt[1].split(',')]
         except ValueError:
-            sys.stderr.write('ERROR: bad value %s: %s\r\n' % (opt[1], sys.exc_info()[1]))
+            sys.stderr.write(
+                'ERROR: bad value %s: %s\r\n' % (opt[1], sys.exc_info()[1]))
             sys.exit(-1)
     if opt[0] == '--timeticks-range':
         try:
             timeticksRange = [int(x) for x in opt[1].split(',')]
         except ValueError:
-            sys.stderr.write('ERROR: bad value %s: %s\r\n' % (opt[1], sys.exc_info()[1]))
+            sys.stderr.write(
+                'ERROR: bad value %s: %s\r\n' % (opt[1], sys.exc_info()[1]))
             sys.exit(-1)
     if opt[0] == '--integer32-range':
         try:
             int32Range = [int(x) for x in opt[1].split(',')]
         except ValueError:
-            sys.stderr.write('ERROR: bad value %s: %s\r\n' % (opt[1], sys.exc_info()[1]))
+            sys.stderr.write(
+                'ERROR: bad value %s: %s\r\n' % (opt[1], sys.exc_info()[1]))
             sys.exit(-1)
     if opt[0] == '--unsigned-range':
         try:
             unsignedRange = [int(x) for x in opt[1].split(',')]
         except ValueError:
-            sys.stderr.write('ERROR: bad value %s: %s\r\n' % (opt[1], sys.exc_info()[1]))
+            sys.stderr.write(
+                'ERROR: bad value %s: %s\r\n' % (opt[1], sys.exc_info()[1]))
             sys.exit(-1)
-
 
 # Catch missing params
 if not modNames:
     sys.stderr.write('ERROR: MIB modules not specified\r\n%s\r\n' % helpMessage)
-    sys.exit(-1)    
+    sys.exit(-1)
+
 
 def getValue(syntax, hint='', automaticValues=automaticValues):
     # Optionally approve chosen value with the user
@@ -192,7 +208,7 @@ def getValue(syntax, hint='', automaticValues=automaticValues):
             # Pick a value
             if isinstance(syntax, rfc1902.IpAddress):
                 val = '.'.join(
-                    [ str(random.randrange(1, 256)) for x in range(4) ]
+                    [str(random.randrange(1, 256)) for x in range(4)]
                 )
             elif isinstance(syntax, rfc1902.TimeTicks):
                 val = random.randrange(timeticksRange[0], timeticksRange[1])
@@ -208,12 +224,17 @@ def getValue(syntax, hint='', automaticValues=automaticValues):
                 val = random.randrange(counter64Range[0], counter64Range[1])
             elif isinstance(syntax, univ.OctetString):
                 val = ' '.join(
-                    [ stringPool[i] for i in range(random.randrange(0, len(stringPool)), random.randrange(0, len(stringPool))) ]
+                    [stringPool[i] for i in
+                     range(random.randrange(0, len(stringPool)),
+                           random.randrange(0, len(stringPool)))]
                 )
             elif isinstance(syntax, univ.ObjectIdentifier):
-                val = '.'.join(['1','3','6','1','3'] + ['%d' % random.randrange(0, 255) for x in range(random.randrange(0, 10))])
+                val = '.'.join(['1', '3', '6', '1', '3'] + [
+                    '%d' % random.randrange(0, 255) for x in
+                    range(random.randrange(0, 10))])
             elif isinstance(syntax, rfc1902.Bits):
-                val = [random.randrange(0, 256) for x in range(random.randrange(0,9))]
+                val = [random.randrange(0, 256) for x in
+                       range(random.randrange(0, 9))]
             else:
                 val = '?'
 
@@ -223,15 +244,14 @@ def getValue(syntax, hint='', automaticValues=automaticValues):
         except PyAsn1Error:
             if makeGuess == 1:
                 sys.stderr.write(
-                    '*** Inconsistent value: %s\r\n*** See constraints and suggest a better one for:\r\n' % (sys.exc_info()[1],)
+                    '*** Inconsistent value: %s\r\n*** See constraints and suggest a better one for:\r\n' % (
+                    sys.exc_info()[1],)
                 )
             if makeGuess:
                 makeGuess -= 1
                 continue
 
-        sys.stderr.write(
-            '%s# Value [\'%s\'] ? ' % (hint,(val is None and '<none>' or val),)
-            )
+        sys.stderr.write('%s# Value [\'%s\'] ? ' % (hint, (val is None and '<none>' or val),))
         sys.stderr.flush()
         line = sys.stdin.readline().strip()
         if line:
@@ -245,6 +265,7 @@ def getValue(syntax, hint='', automaticValues=automaticValues):
             else:
                 val = line
 
+
 # Data file builder
 
 dataFileHandler = snmprec.SnmprecRecord()
@@ -253,21 +274,21 @@ mibBuilder = builder.MibBuilder()
 
 mibBuilder.setMibSources(
     *mibBuilder.getMibSources() + tuple(
-      [ builder.ZipMibSource(m).init() for m in mibDirs ]
+        [builder.ZipMibSource(m).init() for m in mibDirs]
     )
 )
 
 # Load MIB tree foundation classes
-( MibScalar,
-  MibTable,
-  MibTableRow,
-  MibTableColumn ) = mibBuilder.importSymbols(
+(MibScalar,
+ MibTable,
+ MibTableRow,
+ MibTableColumn) = mibBuilder.importSymbols(
     'SNMPv2-SMI',
     'MibScalar',
     'MibTable',
     'MibTableRow',
     'MibTableColumn'
-    )
+)
 
 mibViewController = view.MibViewController(mibBuilder)
 
@@ -284,10 +305,12 @@ output = []
 # MIBs walk
 for modName in modNames:
     if verboseFlag:
-        sys.stderr.write('# MIB module: %s, from %s till %s\r\n' % (modName, startOID or 'the beginning', stopOID or 'the end'))
+        sys.stderr.write('# MIB module: %s, from %s till %s\r\n' % (
+        modName, startOID or 'the beginning', stopOID or 'the end'))
     modOID = oid = ObjectIdentity(modName).resolveWithMib(mibViewController)
-    hint = ''
+    hint = rowHint = ''
     rowOID = None
+    thisTableSize = 0
     while modOID.isPrefixOf(oid):
         try:
             oid, label, _ = mibViewController.getNextNodeName(oid)
@@ -306,10 +329,8 @@ for modName in modNames:
                         sys.stderr.write('# Finished table %s (%d rows)\r\n' % (rowOID, thisTableSize))
                     rowOID = None
             else:
-                while 1:
-                    sys.stderr.write(
-                        '# Synthesize row #%d for table %s (y/n)? ' % (thisTableSize, rowOID)
-                    )
+                while True:
+                    sys.stderr.write('# Synthesize row #%d for table %s (y/n)? ' % (thisTableSize, rowOID))
                     sys.stderr.flush()
                     line = sys.stdin.readline().strip()
                     if line:
@@ -323,13 +344,13 @@ for modName in modNames:
                             break
 
         if startOID and oid < startOID:
-            continue # skip on premature OID
+            continue  # skip on premature OID
         if stopOID and oid > stopOID:
             break  # stop on out of range condition
 
         mibName, symName, _ = mibViewController.getNodeLocation(oid)
         node, = mibBuilder.importSymbols(mibName, symName)
-    
+
         if isinstance(node, MibTable):
             hint = '# Table %s::%s\r\n' % (mibName, symName)
             if verboseFlag:
@@ -341,7 +362,8 @@ for modName in modNames:
             rowHint = hint + '# Row %s::%s\r\n' % (mibName, symName)
             for impliedFlag, idxModName, idxSymName in node.getIndexNames():
                 idxNode, = mibBuilder.importSymbols(idxModName, idxSymName)
-                rowHint += '# Index %s::%s (type %s)\r\n' % (idxModName, idxSymName, idxNode.syntax.__class__.__name__)
+                rowHint += '# Index %s::%s (type %s)\r\n' % (
+                idxModName, idxSymName, idxNode.syntax.__class__.__name__)
                 rowIndices[idxNode.name] = getValue(idxNode.syntax, verboseFlag and rowHint or '')
                 suffix = suffix + node.getAsName(rowIndices[idxNode.name], impliedFlag)
             if rowOID is None:
@@ -353,18 +375,24 @@ for modName in modNames:
             if oid in rowIndices:
                 val = rowIndices[oid]
             else:
-                val = getValue(node.syntax, verboseFlag and rowHint + '# Column %s::%s (type %s)\r\n' % (mibName, symName, node.syntax.__class__.__name__) or '')
+                val = getValue(node.syntax,
+                               verboseFlag and rowHint + '# Column %s::%s (type %s)\r\n' % (
+                               mibName, symName,
+                               node.syntax.__class__.__name__) or '')
         elif isinstance(node, MibScalar):
             hint = ''
             oid = node.name
             suffix = (0,)
-            val = getValue(node.syntax, verboseFlag and '# Scalar %s::%s (type %s)\r\n' % (mibName, symName, node.syntax.__class__.__name__) or '')
+            val = getValue(node.syntax,
+                           verboseFlag and '# Scalar %s::%s (type %s)\r\n' % (
+                           mibName, symName,
+                           node.syntax.__class__.__name__) or '')
         else:
             hint = ''
             continue
-  
+
         output.append((oid + suffix, val))
-    
+
     output.sort(
         key=lambda x: univ.ObjectIdentifier(x[0])
     )
@@ -374,9 +402,7 @@ for modName in modNames:
     for oid, val in output:
         if oid in unique:
             if verboseFlag:
-                sys.stderr.write(
-                    '# Dropping duplicate OID %s\r\n' % (univ.ObjectIdentifier(oid),)
-                )
+                sys.stderr.write('# Dropping duplicate OID %s\r\n' % (univ.ObjectIdentifier(oid),))
         else:
             try:
                 outputFile.write(

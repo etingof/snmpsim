@@ -12,7 +12,10 @@ from snmpsim.grammar.snmprec import SnmprecGrammar
 from snmpsim.mltsplit import split
 from snmpsim import error, log
 
-def init(**context): pass
+
+def init(**context):
+    pass
+
 
 typeMap = {
     's': OctetString,
@@ -26,14 +29,17 @@ typeMap = {
     'I': Counter64
 }
 
+
 def _cbFun(sendRequestHandle,
-          errorIndication,
-          errorStatus, errorIndex,
-          varBinds,
-          cbCtx):
+           errorIndication,
+           errorStatus, errorIndex,
+           varBinds,
+           cbCtx):
     oid, value = cbCtx
     if errorIndication or errorStatus:
-        log.msg('notification: for %s=%r failed with errorIndication %s, errorStatus %s' % (oid, value, errorIndication, errorStatus))
+        log.msg('notification: for %s=%r failed with errorIndication %s, errorStatus %s' % (
+        oid, value, errorIndication, errorStatus))
+
 
 def variate(oid, tag, value, **context):
     if 'snmpEngine' in context and context['snmpEngine']:
@@ -47,12 +53,12 @@ def variate(oid, tag, value, **context):
             snmpEngine.registerTransportDispatcher(
                 snmpEngine.transportDispatcher,
                 UdpTransportTarget.transportDomain + \
-                    context['transportDomain']
+                context['transportDomain']
             )
             snmpEngine.registerTransportDispatcher(
                 snmpEngine.transportDispatcher,
                 Udp6TransportTarget.transportDomain + \
-                    context['transportDomain']
+                context['transportDomain']
             )
             moduleContext[snmpEngine][context['transportDomain']] = 1
     else:
@@ -63,7 +69,7 @@ def variate(oid, tag, value, **context):
 
     if 'settings' not in recordContext:
         recordContext['settings'] = dict([split(x, '=') for x in split(value, ',')])
-        for k,v in ( ('op', 'set'),
+        for k, v in (('op', 'set'),
                      ('community', 'public'),
                      ('authkey', None),
                      ('authproto', 'md5'),
@@ -72,17 +78,18 @@ def variate(oid, tag, value, **context):
                      ('proto', 'udp'),
                      ('port', '162'),
                      ('ntftype', 'trap'),
-                     ('trapoid', '1.3.6.1.6.3.1.1.5.1') ):
+                     ('trapoid', '1.3.6.1.6.3.1.1.5.1')):
             recordContext['settings'].setdefault(k, v)
 
         if 'hexvalue' in recordContext['settings']:
-            recordContext['settings']['value'] = [int(recordContext['settings']['hexvalue'][x:x+2], 16) for x in range(0, len(recordContext['settings']['hexvalue']), 2)]
+            recordContext['settings']['value'] = [int(recordContext['settings']['hexvalue'][x:x + 2], 16) for x in
+                                                  range(0, len(recordContext['settings']['hexvalue']), 2)]
 
         if 'vlist' in recordContext['settings']:
             vlist = {}
             recordContext['settings']['vlist'] = split(recordContext['settings']['vlist'], ':')
             while recordContext['settings']['vlist']:
-                o,v = recordContext['settings']['vlist'][:2]
+                o, v = recordContext['settings']['vlist'][:2]
                 recordContext['settings']['vlist'] = recordContext['settings']['vlist'][2:]
                 v = SnmprecGrammar.tagMap[tag](v)
                 if o not in vlist:
@@ -96,16 +103,16 @@ def variate(oid, tag, value, **context):
             recordContext['settings']['vlist'] = vlist
 
     args = recordContext['settings']
-   
+
     if context['setFlag'] and 'vlist' in args:
-        if 'eq' in args['vlist'] and  \
-                 context['origValue'] in args['vlist']['eq']:
+        if 'eq' in args['vlist'] and \
+                        context['origValue'] in args['vlist']['eq']:
             pass
-        elif 'lt' in args['vlist'] and  \
-                 context['origValue'] < args['vlist']['lt']:
+        elif 'lt' in args['vlist'] and \
+                        context['origValue'] < args['vlist']['lt']:
             pass
-        elif 'gt' in args['vlist'] and  \
-                 context['origValue'] > args['vlist']['gt']:
+        elif 'gt' in args['vlist'] and \
+                        context['origValue'] > args['vlist']['gt']:
             pass
         else:
             return oid, tag, context['origValue']
@@ -115,8 +122,8 @@ def variate(oid, tag, value, **context):
         return context['origOid'], tag, context['errorStatus']
 
     if args['op'] == 'get' and not context['setFlag'] or \
-       args['op'] == 'set' and context['setFlag'] or \
-       args['op'] in ('any', '*'):
+                            args['op'] == 'set' and context['setFlag'] or \
+                    args['op'] in ('any', '*'):
         if args['version'] in ('1', '2c'):
             authData = CommunityData(args['community'], mpModel=args['version'] == '2c' and 1 or 0)
         elif args['version'] == '3':
@@ -138,15 +145,16 @@ def variate(oid, tag, value, **context):
             else:
                 log.msg('notification: unknown privacy proto %s' % args['privproto'])
                 return context['origOid'], tag, context['errorStatus']
-            authData = UsmUserData(args['user'], args['authkey'], args['privkey'], authProtocol=authProtocol, privProtocol=privProtocol)
+            authData = UsmUserData(args['user'], args['authkey'], args['privkey'], authProtocol=authProtocol,
+                                   privProtocol=privProtocol)
         else:
             log.msg('notification: unknown SNMP version %s' % args['version'])
             return context['origOid'], tag, context['errorStatus']
 
         if 'host' not in args:
-            log.msg('notification: target hostname not configured for OID' % (oid,))
+            log.msg('notification: target hostname not configured for OID %s' % (oid,))
             return context['origOid'], tag, context['errorStatus']
-        
+
         if args['proto'] == 'udp':
             target = UdpTransportTarget((args['host'], int(args['port'])))
         elif args['proto'] == 'udp6':
@@ -154,17 +162,19 @@ def variate(oid, tag, value, **context):
         else:
             log.msg('notification: unknown transport %s' % args['proto'])
             return context['origOid'], tag, context['errorStatus']
-       
+
         localAddress = None
 
         if 'bindaddr' in args:
             localAddress = args['bindaddr']
         else:
             if context['transportDomain'][:len(target.transportDomain)] == \
-                        target.transportDomain:
-                localAddress = snmpEngine.transportDispatcher.getTransport(context['transportDomain']).getLocalAddress()[0]
+                    target.transportDomain:
+                localAddress = \
+                snmpEngine.transportDispatcher.getTransport(context['transportDomain']).getLocalAddress()[0]
             else:
-                log.msg('notification: incompatible network transport types used by CommandResponder vs NotificationOriginator')
+                log.msg(
+                    'notification: incompatible network transport types used by CommandResponder vs NotificationOriginator')
                 if 'bindaddr' in args:
                     localAddress = args['bindaddr']
 
@@ -180,24 +190,24 @@ def variate(oid, tag, value, **context):
 
         if 'uptime' in args:
             varBinds.append(
-                ( ObjectIdentifier('1.3.6.1.2.1.1.3.0'),
-                  TimeTicks(args['uptime']) )
+                (ObjectIdentifier('1.3.6.1.2.1.1.3.0'),
+                 TimeTicks(args['uptime']))
             )
 
         if args['version'] == '1':
             if 'agentaddress' in args:
                 varBinds.append(
-                    ( ObjectIdentifier('1.3.6.1.6.3.18.1.3.0'),
-                      IpAddress(args['agentaddress']) )
+                    (ObjectIdentifier('1.3.6.1.6.3.18.1.3.0'),
+                     IpAddress(args['agentaddress']))
                 )
             if 'enterprise' in args:
                 varBinds.append(
-                    ( ObjectIdentifier('1.3.6.1.6.3.1.1.4.3.0'),
-                      ObjectIdentifier(args['enterprise']) )
+                    (ObjectIdentifier('1.3.6.1.6.3.1.1.4.3.0'),
+                     ObjectIdentifier(args['enterprise']))
                 )
 
         if 'varbinds' in args:
-            vbs = split(args['varbinds'], ':') 
+            vbs = split(args['varbinds'], ':')
             while vbs:
                 varBinds.append(
                     (ObjectIdentifier(vbs[0]), typeMap[vbs[1]](vbs[2]))
@@ -217,4 +227,6 @@ def variate(oid, tag, value, **context):
     else:
         return oid, tag, args['value']
 
-def shutdown(**context): pass 
+
+def shutdown(**context):
+    pass

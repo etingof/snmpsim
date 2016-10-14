@@ -1122,7 +1122,7 @@
 .1.3.6.1.2.1.25.6.3.1.1.154 = INTEGER: 154
 .1.3.6.1.2.1.25.6.3.1.1.155 = INTEGER: 155
 .1.3.6.1.2.1.25.6.3.1.1.156 = INTEGER: 156
-.1.3.6.1.2.1.25.6.3.1.2.1 = STRING: "Windows Driver Package - Nokia pccsmcfd “LegacyDriver”  (05/31/2"
+.1.3.6.1.2.1.25.6.3.1.2.1 = STRING: "Windows Driver Package - Nokia pccsmcfd ï¿½LegacyDriverï¿½  (05/31/2"
 .1.3.6.1.2.1.25.6.3.1.2.2 = STRING: "7-Zip 9.20"
 .1.3.6.1.2.1.25.6.3.1.2.3 = STRING: "Adobe AIR"
 .1.3.6.1.2.1.25.6.3.1.2.4 = STRING: "Adobe Flash Player 11 Plugin"
@@ -1209,7 +1209,7 @@
 .1.3.6.1.2.1.25.6.3.1.2.85 = STRING: "Python 2.7 setuptools-0.6c11"
 .1.3.6.1.2.1.25.6.3.1.2.86 = STRING: "SMPlayer 0.6.10"
 .1.3.6.1.2.1.25.6.3.1.2.87 = STRING: "Synaptics Pointing Device Driver"
-.1.3.6.1.2.1.25.6.3.1.2.88 = STRING: "µTorrent"
+.1.3.6.1.2.1.25.6.3.1.2.88 = STRING: "ï¿½Torrent"
 .1.3.6.1.2.1.25.6.3.1.2.89 = STRING: "Microsoft Kernel-Mode Driver Framework Feature Pack 1.9"
 .1.3.6.1.2.1.25.6.3.1.2.90 = STRING: "Windows Genuine Advantage Validation Tool (KB892130)"
 .1.3.6.1.2.1.25.6.3.1.2.91 = STRING: "Windows Genuine Advantage Notifications (KB905474)"
@@ -1250,7 +1250,7 @@
 .1.3.6.1.2.1.25.6.3.1.2.126 = STRING: "MSXML 4.0 SP2 (KB954430)"
 .1.3.6.1.2.1.25.6.3.1.2.127 = STRING: "Intel(R) Extreme Graphics 2 Driver"
 .1.3.6.1.2.1.25.6.3.1.2.128 = STRING: "TomTom HOME Visual Studio Merge Modules"
-.1.3.6.1.2.1.25.6.3.1.2.129 = STRING: "Microsoft Office - ïðîôåññèîíàëüíûé âûïóñê âåðñèè 2003"
+.1.3.6.1.2.1.25.6.3.1.2.129 = STRING: "Microsoft Office - ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ 2003"
 .1.3.6.1.2.1.25.6.3.1.2.130 = STRING: "Microsoft Office Access database engine 2007 (English)"
 .1.3.6.1.2.1.25.6.3.1.2.131 = STRING: "TomTom HOME"
 .1.3.6.1.2.1.25.6.3.1.2.132 = STRING: "Falk Navi-Manager"

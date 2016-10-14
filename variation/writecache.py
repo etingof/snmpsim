@@ -15,22 +15,23 @@ from snmpsim.mltsplit import split
 from snmpsim import log
 
 errorTypes = {
-        'generror': error.GenError,
-        'noaccess': error.NoAccessError,
-        'wrongtype': error.WrongTypeError,
-        'wrongvalue': error.WrongValueError,
-        'nocreation': error.NoCreationError,
-        'inconsistentvalue': error.InconsistentValueError,
-        'resourceunavailable': error.ResourceUnavailableError,
-        'commitfailed': error.CommitFailedError,
-        'undofailed': error.UndoFailedError,
-        'authorizationerror': error.AuthorizationError,
-        'notwritable': error.NotWritableError,
-        'inconsistentname': error.InconsistentNameError,
-        'nosuchobject': error.NoSuchObjectError,
-        'nosuchinstance': error.NoSuchInstanceError,
-        'endofmib': error.EndOfMibViewError
+    'generror': error.GenError,
+    'noaccess': error.NoAccessError,
+    'wrongtype': error.WrongTypeError,
+    'wrongvalue': error.WrongValueError,
+    'nocreation': error.NoCreationError,
+    'inconsistentvalue': error.InconsistentValueError,
+    'resourceunavailable': error.ResourceUnavailableError,
+    'commitfailed': error.CommitFailedError,
+    'undofailed': error.UndoFailedError,
+    'authorizationerror': error.AuthorizationError,
+    'notwritable': error.NotWritableError,
+    'inconsistentname': error.InconsistentNameError,
+    'nosuchobject': error.NoSuchObjectError,
+    'nosuchinstance': error.NoSuchInstanceError,
+    'endofmib': error.EndOfMibViewError
 }
+
 
 def init(**context):
     moduleContext['settings'] = {}
@@ -43,6 +44,7 @@ def init(**context):
     else:
         moduleContext['cache'] = {}
 
+
 def variate(oid, tag, value, **context):
     if not context['nextFlag'] and not context['exactMatch']:
         return context['origOid'], tag, context['errorStatus']
@@ -54,7 +56,7 @@ def variate(oid, tag, value, **context):
             vlist = {}
             recordContext['settings']['vlist'] = split(recordContext['settings']['vlist'], ':')
             while recordContext['settings']['vlist']:
-                o,v,e = recordContext['settings']['vlist'][:3]
+                o, v, e = recordContext['settings']['vlist'][:3]
                 recordContext['settings']['vlist'] = recordContext['settings']['vlist'][3:]
                 v = SnmprecGrammar.tagMap[tag](v)
                 if o not in vlist:
@@ -68,7 +70,6 @@ def variate(oid, tag, value, **context):
 
             recordContext['settings']['vlist'] = vlist
 
-
         if 'status' in recordContext['settings']:
             recordContext['settings']['status'] = recordContext['settings']['status'].lower()
 
@@ -80,21 +81,21 @@ def variate(oid, tag, value, **context):
 
     if context['setFlag']:
         if 'vlist' in recordContext['settings']:
-            if 'eq' in recordContext['settings']['vlist'] and  \
-                     context['origValue'] in recordContext['settings']['vlist']['eq']:
+            if 'eq' in recordContext['settings']['vlist'] and \
+                            context['origValue'] in recordContext['settings']['vlist']['eq']:
                 e = recordContext['settings']['vlist']['eq'][context['origValue']]
-            elif 'lt' in recordContext['settings']['vlist'] and  \
-                     context['origValue']<recordContext['settings']['vlist']['lt'][0]:
+            elif 'lt' in recordContext['settings']['vlist'] and \
+                            context['origValue'] < recordContext['settings']['vlist']['lt'][0]:
                 e = recordContext['settings']['vlist']['lt'][1]
-            elif 'gt' in recordContext['settings']['vlist'] and  \
-                     context['origValue']>recordContext['settings']['vlist']['gt'][0]:
+            elif 'gt' in recordContext['settings']['vlist'] and \
+                            context['origValue'] > recordContext['settings']['vlist']['gt'][0]:
                 e = recordContext['settings']['vlist']['gt'][1]
             else:
                 e = None
 
             if e in errorTypes:
                 raise errorTypes[e](
-                    name=oid, idx=max(0, context['varsTotal']-context['varsRemaining']-1)
+                    name=oid, idx=max(0, context['varsTotal'] - context['varsRemaining'] - 1)
                 )
 
         if moduleContext[oid]['type'].isSameTypeWith(context['origValue']):
@@ -104,13 +105,13 @@ def variate(oid, tag, value, **context):
 
     if 'status' in recordContext['settings']:
         if 'op' not in recordContext['settings'] or \
-                recordContext['settings']['op'] == 'any' or \
-                recordContext['settings']['op'] == 'set' and context['setFlag'] or \
-                recordContext['settings']['op'] == 'get' and not context['setFlag']:
+                        recordContext['settings']['op'] == 'any' or \
+                                recordContext['settings']['op'] == 'set' and context['setFlag'] or \
+                                recordContext['settings']['op'] == 'get' and not context['setFlag']:
             e = recordContext['settings']['status']
             if e in errorTypes:
                 raise errorTypes[e](
-                    name=oid, idx=max(0, context['varsTotal']-context['varsRemaining']-1)
+                    name=oid, idx=max(0, context['varsTotal'] - context['varsRemaining'] - 1)
                 )
 
     if textOid in moduleContext['cache']:
@@ -121,6 +122,7 @@ def variate(oid, tag, value, **context):
         return oid, tag, moduleContext[oid]['type'].clone(recordContext['settings']['value'])
     else:
         return oid, tag, context['errorStatus']
+
 
 def shutdown(**context):
     if 'file' in moduleContext['settings']:

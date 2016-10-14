@@ -12,6 +12,7 @@ from pyasn1.compat.octets import octs2str, ints2octs
 from snmpsim.grammar import abstract
 from snmpsim import error
 
+
 class WalkGrammar(abstract.AbstractGrammar):
     # case-insensitive keys as snmpwalk output tend to vary
     tagMap = {
@@ -26,7 +27,7 @@ class WalkGrammar(abstract.AbstractGrammar):
         'IPADDRESS:': rfc1902.IpAddress,
         'OPAQUE:': rfc1902.Opaque,
         'UNSIGNED32:': rfc1902.Unsigned32,  # this is not needed
-        'TIMETICKS:': rfc1902.TimeTicks     # this is made up
+        'TIMETICKS:': rfc1902.TimeTicks  # this is made up
     }
 
     # possible DISPLAY-HINTs parsing should occur here
@@ -40,7 +41,7 @@ class WalkGrammar(abstract.AbstractGrammar):
                 for y in x:
                     if y not in '0123456789ABCDEFabcdef':
                         return value
-            return [ int(x, 16) for x in value.split(':') ]
+            return [int(x, 16) for x in value.split(':')]
         else:
             return value
 
@@ -76,7 +77,7 @@ class WalkGrammar(abstract.AbstractGrammar):
     }
 
     def parse(self, line):
-        line = line.decode('ascii', 'ignore').encode() # drop possible 8-bits
+        line = line.decode('ascii', 'ignore').encode()  # drop possible 8-bits
         try:
             oid, value = octs2str(line).strip().split(' = ', 1)
         except:
@@ -84,7 +85,7 @@ class WalkGrammar(abstract.AbstractGrammar):
         if oid and oid[0] == '.':
             oid = oid[1:]
         if value.startswith('Wrong Type (should be'):
-            value = value[value.index(': ')+2:]
+            value = value[value.index(': ') + 2:]
         if value.startswith('No more variables left in this MIB View'):
             value = 'STRING: '
         try:
