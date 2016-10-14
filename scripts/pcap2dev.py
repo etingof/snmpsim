@@ -438,7 +438,7 @@ try:
     if listenInterface:
         log.msg(
             'Listening on interface "%s", kill me when you are done.' % listenInterface)
-        while 1:
+        while True:
             pcapObj.dispatch(1, handlePacket)
     elif captureFile:
         log.msg('Processing capture file "%s"....' % captureFile)

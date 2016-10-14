@@ -203,7 +203,7 @@ def getValue(syntax, hint='', automaticValues=automaticValues):
     # Optionally approve chosen value with the user
     makeGuess = automaticValues
     val = None
-    while 1:
+    while True:
         if makeGuess:
             # Pick a value
             if isinstance(syntax, rfc1902.IpAddress):

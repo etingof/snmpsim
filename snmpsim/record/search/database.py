@@ -38,7 +38,8 @@ class RecordIndex:
             self.__textFile, self.__dbType, self.__db and 'opened' or 'closed'
         )
 
-    def isOpen(self): return self.__db is not None
+    def isOpen(self):
+        return self.__db is not None
 
     def getHandles(self):
         if self.isOpen():
@@ -101,7 +102,7 @@ class RecordIndex:
             lineNo = 0
             offset = 0
             prevOffset = -1
-            while 1:
+            while True:
                 line, lineNo, offset = getRecord(text, lineNo, offset)
                 if not line:
                     # reference to last OID in data file
