@@ -22,9 +22,23 @@ def getRecord(fileObj, lineNo=None, offset=0):
             break
     return line, lineNo, offset
 
+def findEol(fileObj, offset, blockSize=256, eol=str2octs('\n')):
+    while True:
+        if offset < blockSize:
+            offset, blockSize = 0, offset
+        else:
+            offset -= blockSize
+        fileObj.seek(offset)
+        chunk = fileObj.read(blockSize)
+        try:
+            return offset + chunk.rindex(eol) + 1
+        except ValueError:
+            if offset == 0:
+                return offset
+            continue
 
 # In-place, by-OID binary search
-def searchRecordByOid(oid, fileObj, textParser, eol=str2octs('\n')):
+def searchRecordByOid(oid, fileObj, textParser):
     lo = mid = 0;
     prev_mid = -1
     fileObj.seek(0, 2)
@@ -32,13 +46,8 @@ def searchRecordByOid(oid, fileObj, textParser, eol=str2octs('\n')):
     while lo < hi:
         mid = (lo + hi) // 2
         fileObj.seek(mid)
-        while mid:
-            c = fileObj.read(1)
-            if c == eol:
-                mid += 1
-                break
-            mid -= 1  # pivot stepping back in search for full line
-            fileObj.seek(mid)
+        mid = findEol(fileObj, mid)
+        fileObj.seek(mid)
         if mid == prev_mid:  # loop condition due to stepping back pivot
             break
         if mid >= sz:
