@@ -9,3 +9,6 @@ MANIFEST
 dist/
 build/
 pyasn1.egg-info/
+
+# PyCharm
+.idea/

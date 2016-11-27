@@ -1,9 +1,8 @@
 
 SNMP Simulator
 --------------
-
-[![Downloads](https://img.shields.io/pypi/dm/snmpsim.svg)](https://pypi.python.org/pypi/snmpsim)
 [![PyPI](https://img.shields.io/pypi/v/snmpsim.svg?maxAge=2592000)](https://pypi.python.org/pypi/snmpsim)
+[![Python Versions](https://img.shields.io/pypi/pyversions/snmpsim.svg)](https://pypi.python.org/pypi/snmpsim/)
 [![Build status](https://travis-ci.org/etingof/snmpsim.svg?branch=master)](https://secure.travis-ci.org/etingof/snmpsim)
 [![GitHub license](https://img.shields.io/badge/license-BSD-blue.svg)](https://raw.githubusercontent.com/etingof/snmpsim/master/LICENSE.txt)
 
