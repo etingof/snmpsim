@@ -9,7 +9,8 @@ Revision 0.3.1, released XX-XX-2016
 - Default string pool for mib2dev.py tool changed to a pangram
 - Fix to PID file creation when running Python 3.
 - Fix to datafile.py tool that apparently stopped working.
-- Fix to snmpwalk Timeticks parser 
+- Fix to snmpwalk Timeticks parser
+- Fix to mib2dev.py stopping prematurely iterating over OIDs in MIB
 
 Revision 0.3.0, released 28-09-2015
 -----------------------------------

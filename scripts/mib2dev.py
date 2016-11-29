@@ -300,12 +300,12 @@ for modName in modNames:
     if verboseFlag:
         sys.stderr.write('# MIB module: %s, from %s till %s\r\n' % (
         modName, startOID or 'the beginning', stopOID or 'the end'))
-    modOID = oid = ObjectIdentity(modName).resolveWithMib(mibViewController)
+    oid = ObjectIdentity(modName).resolveWithMib(mibViewController)
     hint = rowHint = ''
     rowOID = None
     suffix = ()
     thisTableSize = 0
-    while modOID.isPrefixOf(oid):
+    while True:
         try:
             oid, label, _ = mibViewController.getNextNodeName(oid)
         except error.NoSuchObjectError:
