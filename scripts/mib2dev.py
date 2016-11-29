@@ -74,13 +74,11 @@ try:
         'unsigned-range=', 'timeticks-range='
     ])
 except Exception:
-    sys.stderr.write(
-        'ERROR: %s\r\n%s\r\n' % (sys.exc_info()[1], helpMessage))
+    sys.stderr.write('ERROR: %s\r\n%s\r\n' % (sys.exc_info()[1], helpMessage))
     sys.exit(-1)
 
 if params:
-    sys.stderr.write('ERROR: extra arguments supplied %s\r\n%s\r\n' % (
-    params, helpMessage))
+    sys.stderr.write('ERROR: extra arguments supplied %s\r\n%s\r\n' % (params, helpMessage))
     sys.exit(-1)
 
 for opt in opts:
@@ -366,6 +364,9 @@ for modName in modNames:
                 idxModName, idxSymName, idxNode.syntax.__class__.__name__)
                 rowIndices[idxNode.name] = getValue(idxNode.syntax, verboseFlag and rowHint or '')
                 suffix = suffix + node.getAsName(rowIndices[idxNode.name], impliedFlag)
+            if not rowIndices:
+                if verboseFlag:
+                    sys.stderr.write('# WARNING: %s::%s table has no index!\r\n' % (mibName, symName))
             if rowOID is None:
                 thisTableSize = 0
             rowOID = univ.ObjectIdentifier(oid)
