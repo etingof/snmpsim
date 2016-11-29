@@ -27,7 +27,7 @@ defaultMibSources = ['http://mibs.snmplabs.com/asn1/@mib@']
 outputFile = sys.stdout
 if hasattr(outputFile, 'buffer'):
     outputFile = outputFile.buffer
-stringPool = 'Portez ce vieux whisky au juge blond qui fume!'.split()
+stringPool = 'Jaded zombies acted quaintly but kept driving their oxen forward'.split()
 counterRange = (0, 0xffffffff)
 counter64Range = (0, 0xffffffffffffffff)
 gaugeRange = (0, 0xffffffff)
@@ -52,6 +52,7 @@ helpMessage = """Usage: %s [--help]
     [--table-size=<number>]
     [--output-file=<filename>]
     [--string-pool=<words>]
+    [--string-pool-file=</path/to/text/file>]
     [--counter-range=<min,max>]
     [--counter64-range=<min,max>]
     [--gauge-range=<min,max>]
@@ -69,7 +70,7 @@ try:
         'pysnmp-mib-dir=', 'mib-module=', 'start-oid=', 'stop-oid=',
         'mib-source=', 'start-object=', 'stop-object=',
         'manual-values', 'automatic-values=', 'table-size=',
-        'output-file=', 'string-pool=', 'integer32-range=',
+        'output-file=', 'string-pool=', 'string-pool-file=', 'integer32-range=',
         'counter-range=', 'counter64-range=', 'gauge-range=',
         'unsigned-range=', 'timeticks-range='
     ])
@@ -134,20 +135,26 @@ Software documentation and support at http://snmpsim.sf.net
         try:
             automaticValues = int(opt[1])
         except ValueError:
-            sys.stderr.write(
-                'ERROR: bad value %s: %s\r\n' % (opt[1], sys.exc_info()[1]))
+            sys.stderr.write('ERROR: bad value %s: %s\r\n' % (opt[1], sys.exc_info()[1]))
             sys.exit(-1)
     if opt[0] == '--table-size':
         try:
             tableSize = int(opt[1])
         except ValueError:
-            sys.stderr.write(
-                'ERROR: bad value %s: %s\r\n' % (opt[1], sys.exc_info()[1]))
+            sys.stderr.write('ERROR: bad value %s: %s\r\n' % (opt[1], sys.exc_info()[1]))
             sys.exit(-1)
     if opt[0] == '--output-file':
         outputFile = open(opt[1], 'wb')
     if opt[0] == '--string-pool':
         stringPool = opt[1].split()
+    if opt[0] == '--string-pool-file':
+        try:
+            f = open(opt[1])
+            stringPool = f.read().split()
+            f.close()
+        except Exception:
+            sys.stderr.write('ERROR: text file "%s" open failure %s\r\n' % (opt[1], sys.exc_info()[1]))
+            sys.exit(-1)
     if opt[0] == '--counter-range':
         try:
             counterRange = [int(x) for x in opt[1].split(',')]
@@ -159,36 +166,31 @@ Software documentation and support at http://snmpsim.sf.net
         try:
             counter64Range = [int(x) for x in opt[1].split(',')]
         except ValueError:
-            sys.stderr.write(
-                'ERROR: bad value %s: %s\r\n' % (opt[1], sys.exc_info()[1]))
+            sys.stderr.write('ERROR: bad value %s: %s\r\n' % (opt[1], sys.exc_info()[1]))
             sys.exit(-1)
     if opt[0] == '--gauge-range':
         try:
             gaugeRange = [int(x) for x in opt[1].split(',')]
         except ValueError:
-            sys.stderr.write(
-                'ERROR: bad value %s: %s\r\n' % (opt[1], sys.exc_info()[1]))
+            sys.stderr.write('ERROR: bad value %s: %s\r\n' % (opt[1], sys.exc_info()[1]))
             sys.exit(-1)
     if opt[0] == '--timeticks-range':
         try:
             timeticksRange = [int(x) for x in opt[1].split(',')]
         except ValueError:
-            sys.stderr.write(
-                'ERROR: bad value %s: %s\r\n' % (opt[1], sys.exc_info()[1]))
+            sys.stderr.write('ERROR: bad value %s: %s\r\n' % (opt[1], sys.exc_info()[1]))
             sys.exit(-1)
     if opt[0] == '--integer32-range':
         try:
             int32Range = [int(x) for x in opt[1].split(',')]
         except ValueError:
-            sys.stderr.write(
-                'ERROR: bad value %s: %s\r\n' % (opt[1], sys.exc_info()[1]))
+            sys.stderr.write('ERROR: bad value %s: %s\r\n' % (opt[1], sys.exc_info()[1]))
             sys.exit(-1)
     if opt[0] == '--unsigned-range':
         try:
             unsignedRange = [int(x) for x in opt[1].split(',')]
         except ValueError:
-            sys.stderr.write(
-                'ERROR: bad value %s: %s\r\n' % (opt[1], sys.exc_info()[1]))
+            sys.stderr.write('ERROR: bad value %s: %s\r\n' % (opt[1], sys.exc_info()[1]))
             sys.exit(-1)
 
 # Catch missing params
@@ -205,9 +207,7 @@ def getValue(syntax, hint='', automaticValues=automaticValues):
         if makeGuess:
             # Pick a value
             if isinstance(syntax, rfc1902.IpAddress):
-                val = '.'.join(
-                    [str(random.randrange(1, 256)) for x in range(4)]
-                )
+                val = '.'.join([str(random.randrange(1, 256)) for x in range(4)])
             elif isinstance(syntax, rfc1902.TimeTicks):
                 val = random.randrange(timeticksRange[0], timeticksRange[1])
             elif isinstance(syntax, rfc1902.Gauge32):
@@ -221,18 +221,13 @@ def getValue(syntax, hint='', automaticValues=automaticValues):
             elif isinstance(syntax, rfc1902.Counter64):
                 val = random.randrange(counter64Range[0], counter64Range[1])
             elif isinstance(syntax, univ.OctetString):
-                val = ' '.join(
-                    [stringPool[i] for i in
-                     range(random.randrange(0, len(stringPool)),
-                           random.randrange(0, len(stringPool)))]
-                )
+                maxWords = 10
+                val = ' '.join([stringPool[random.randrange(0, len(stringPool))] for i in range(random.randrange(1, maxWords))])
             elif isinstance(syntax, univ.ObjectIdentifier):
                 val = '.'.join(['1', '3', '6', '1', '3'] + [
-                    '%d' % random.randrange(0, 255) for x in
-                    range(random.randrange(0, 10))])
+                    '%d' % random.randrange(0, 255) for x in range(random.randrange(0, 10))])
             elif isinstance(syntax, rfc1902.Bits):
-                val = [random.randrange(0, 256) for x in
-                       range(random.randrange(0, 9))]
+                val = [random.randrange(0, 256) for x in range(random.randrange(0, 9))]
             else:
                 val = '?'
 
@@ -308,6 +303,7 @@ for modName in modNames:
     modOID = oid = ObjectIdentity(modName).resolveWithMib(mibViewController)
     hint = rowHint = ''
     rowOID = None
+    suffix = ()
     thisTableSize = 0
     while modOID.isPrefixOf(oid):
         try:
@@ -394,9 +390,7 @@ for modName in modNames:
 
         output.append((oid + suffix, val))
 
-    output.sort(
-        key=lambda x: univ.ObjectIdentifier(x[0])
-    )
+    output.sort(key=lambda x: univ.ObjectIdentifier(x[0]))
 
     unique = set()
 
@@ -410,16 +404,12 @@ for modName in modNames:
                     dataFileHandler.format(oid, val)
                 )
             except SnmpsimError:
-                sys.stderr.write(
-                    'ERROR: %s\r\n' % (sys.exc_info()[1],)
-                )
+                sys.stderr.write('ERROR: %s\r\n' % (sys.exc_info()[1],))
             else:
                 unique.add(oid)
 
     if verboseFlag:
-        sys.stderr.write(
-            '# End of %s, %s OID(s) dumped\r\n' % (modName, len(unique))
-        )
+        sys.stderr.write('# End of %s, %s OID(s) dumped\r\n' % (modName, len(unique)))
 
 outputFile.flush()
 outputFile.close()
