@@ -1,12 +1,13 @@
-Revision 0.3.1, released XX-XX-2016
+Revision 0.3.1, released XX-XX-2017
 -----------------------------------
 
 - Fix to __doc__ use in setup.py to make -O0 installation mode working.
-- Copyright notice added to source code files.
+- Copyright notes added to source code files.
 - Per-OID access control added to 'writecache' variation module.
 - Data file binary search performance improved
 - Option --string-pool-file for mib2dev.py tool implemented
 - Default string pool for mib2dev.py tool changed to a pangram
+- Author's e-mail changed, copyright extended to year 2017
 - Fix to PID file creation when running Python 3.
 - Fix to datafile.py tool that apparently stopped working.
 - Fix to snmpwalk Timeticks parser

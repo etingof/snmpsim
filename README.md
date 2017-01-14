@@ -120,4 +120,4 @@ Feedback and collaboration
 I'm interested in bug reports, fixes, suggestions and improvements. Your
 pull requests are very welcome!
 
-Copyright (c) 2010-2016, [Ilya Etingof](http://ilya@glas.net). All rights reserved.
+Copyright (c) 2010-2017, [Ilya Etingof](mailto:etingof@gmail.com). All rights reserved.

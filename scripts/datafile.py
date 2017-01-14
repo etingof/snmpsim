@@ -2,7 +2,7 @@
 #
 # This file is part of snmpsim software.
 #
-# Copyright (c) 2010-2016, Ilya Etingof <ilya@glas.net>
+# Copyright (c) 2010-2017, Ilya Etingof <etingof@gmail.com>
 # License: http://snmpsim.sf.net/license.html
 #
 # SNMP Simulator data file management tool
@@ -107,7 +107,7 @@ Documentation:
         import snmpsim, pysmi, pysnmp, pyasn1
 
         sys.stderr.write("""\
-SNMP Simulator version %s, written by Ilya Etingof <ilya@glas.net>
+SNMP Simulator version %s, written by Ilya Etingof <etingof@gmail.com>
 Using foundation libraries: pysmi %s, pysnmp %s, pyasn1 %s.
 Python interpreter: %s
 Software documentation and support at http://snmpsim.sf.net

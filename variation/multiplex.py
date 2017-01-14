@@ -1,7 +1,7 @@
 #
 # This file is part of snmpsim software.
 #
-# Copyright (c) 2010-2016, Ilya Etingof <ilya@glas.net>
+# Copyright (c) 2010-2017, Ilya Etingof <etingof@gmail.com>
 # License: http://snmpsim.sf.net/license.html
 #
 # Managed value variation module: simulate a live Agent using
