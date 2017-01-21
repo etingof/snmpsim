@@ -12,6 +12,7 @@ Revision 0.3.1, released XX-XX-2017
 - Fix to datafile.py tool that apparently stopped working.
 - Fix to snmpwalk Timeticks parser
 - Fix to mib2dev.py stopping prematurely iterating over OIDs in MIB
+- Fix to accidentally expanded shebang in console scripts (hopefuly)
 
 Revision 0.3.0, released 28-09-2015
 -----------------------------------
