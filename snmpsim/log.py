@@ -67,7 +67,7 @@ class FileLogger(AbstractLogger):
         if sys.platform[:3] == 'win':
             # fix possibly corrupted absolute windows path
             if len(priv[0]) == 1 and priv[0].isalpha() and len(priv) > 1:
-                priv = [priv[0] + ':' + priv[1]] + priv[2:]
+                priv = [priv[0] + ':' + priv[1]] + list(priv[2:])
 
         maxsize = 0
         maxage = None

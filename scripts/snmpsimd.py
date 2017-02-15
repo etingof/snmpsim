@@ -249,9 +249,9 @@ class DataFile(AbstractLayout):
         except SnmpsimError:
             log.msg('Problem with data file or its index: %s' % sys.exc_info()[1])
             return [ (vb[0],errorStatus) for vb in varBinds ]
-       
+
         varsRemaining = varsTotal = len(varBinds)
-        
+
         log.msg('Request var-binds: %s, flags: %s, %s' % (', '.join(['%s=<%s>' % (vb[0], vb[1].prettyPrint()) for vb in varBinds]), context.get('nextFlag') and 'NEXT' or 'EXACT', context.get('setFlag') and 'SET' or 'GET'))
 
         for oid, val in varBinds:
@@ -267,7 +267,7 @@ class DataFile(AbstractLayout):
                 offset = searchRecordByOid(oid, text, self.__textParser)
                 subtreeFlag = exactMatch = False
             else:
-                offset, subtreeFlag, prevOffset = line.split(str2octs(','))
+                offset, subtreeFlag, prevOffset = line.split(str2octs(',', 2))
                 subtreeFlag, exactMatch = int(subtreeFlag), True
 
             offset = int(offset)
@@ -285,7 +285,7 @@ class DataFile(AbstractLayout):
                         if _nextLine:
                             _nextOid, _ = self.__textParser.evaluate(_nextLine, oidOnly=True)
                             try:
-                                _, subtreeFlag, _ = self.__recordIndex.lookup(str(_nextOid)).split(str2octs(','))
+                                _, subtreeFlag, _ = self.__recordIndex.lookup(str(_nextOid)).split(str2octs(','), 2)
                             except KeyError:
                                 log.msg('data error for %s at %s, index broken?' % (self, _nextOid))
                                 line = ''  # fatal error
@@ -303,7 +303,7 @@ class DataFile(AbstractLayout):
                         _oid = 'last'
 
                     try:
-                        _, _, _prevOffset = self.__recordIndex.lookup(str(_oid)).split(str2octs(','))
+                        _, _, _prevOffset = self.__recordIndex.lookup(str(_oid)).split(str2octs(','), 2)
                     except KeyError:
                         log.msg('data error for %s at %s, index broken?' % (self, _oid))
                         line = ''  # fatal error
@@ -384,7 +384,7 @@ def getDataFiles(tgtDir, topLen=None):
             relPath = fullPath.split(os.path.sep)[topLen:]
         if stat.S_ISDIR(inode.st_mode):
             dirContent = dirContent + getDataFiles(fullPath, topLen)
-            continue            
+            continue
         if not stat.S_ISREG(inode.st_mode):
             continue
         dExt = os.path.splitext(dFile)[1][1:]

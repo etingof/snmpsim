@@ -1,6 +1,12 @@
-Revision 0.3.1, released 21-01-2017
+
+Revision 0.3.2, released XX-02-2017
 -----------------------------------
 
+- Fixes to Windows path to log file handling.
+- Fixes to MIB objects command-line parsing.
+
+Revision 0.3.1, released 21-01-2017
+-----------------------------------
 - Fix to __doc__ use in setup.py to make -O0 installation mode working.
 - Copyright notes added to source code files.
 - Per-OID access control added to 'writecache' variation module.
