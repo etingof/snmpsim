@@ -267,7 +267,7 @@ class DataFile(AbstractLayout):
                 offset = searchRecordByOid(oid, text, self.__textParser)
                 subtreeFlag = exactMatch = False
             else:
-                offset, subtreeFlag, prevOffset = line.split(str2octs(',', 2))
+                offset, subtreeFlag, prevOffset = line.split(str2octs(','), 2)
                 subtreeFlag, exactMatch = int(subtreeFlag), True
 
             offset = int(offset)
