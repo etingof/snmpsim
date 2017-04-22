@@ -135,6 +135,7 @@ class StderrLogger(StreamLogger):
 class NullLogger(AbstractLogger):
     def init(self, *priv):
         handler = logging.NullHandler()
+        self._logger.addHandler(handler)
 
     def __call__(self, s):
         pass
