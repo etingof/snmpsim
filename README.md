@@ -110,9 +110,10 @@ Detailed information on SNMP simulator usage could be found at
 Getting help
 ------------
 
-If something does not work as expected, try browsing
-[mailing list archives](https://sourceforge.net/p/snmpsim/mailman/snmpsim-users/) or post
-your question [to Stack Overflow](http://stackoverflow.com/questions/ask).
+If something does not work as expected,
+[open an issue](https://github.com/etingof/snmpsim/issues) at GitHub or
+post your question [on Stack Overflow](http://stackoverflow.com/questions/ask)
+or try browsing snmpsim [mailing list archives](https://sourceforge.net/p/snmpsim/mailman/snmpsim-users/).
 
 Feedback and collaboration
 --------------------------
