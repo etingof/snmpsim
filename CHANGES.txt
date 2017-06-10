@@ -1,7 +1,8 @@
 
-Revision 0.3.2, released XX-02-2017
+Revision 0.3.2, released XX-05-2017
 -----------------------------------
 
+-
 - Fixes to Windows path to log file handling.
 - Fixes to MIB objects command-line parsing.
 

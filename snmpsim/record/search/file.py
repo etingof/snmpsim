@@ -10,17 +10,20 @@ from pyasn1.compat.octets import str2octs
 # read lines from text file ignoring #comments and blank lines
 def getRecord(fileObj, lineNo=None, offset=0):
     line = fileObj.readline()
-    if lineNo is not None and line: lineNo += 1
+    if lineNo is not None and line:
+        lineNo += 1
     while line:
         tline = line.strip()
         # skip comment or blank line
         if not tline or tline.startswith(str2octs('#')):
             offset += len(line)
             line = fileObj.readline()
-            if lineNo is not None and line: lineNo += 1
+            if lineNo is not None and line:
+                lineNo += 1
         else:
             break
     return line, lineNo, offset
+
 
 def findEol(fileObj, offset, blockSize=256, eol=str2octs('\n')):
     while True:
@@ -36,6 +39,7 @@ def findEol(fileObj, offset, blockSize=256, eol=str2octs('\n')):
             if offset == 0:
                 return offset
             continue
+
 
 # In-place, by-OID binary search
 def searchRecordByOid(oid, fileObj, textParser):

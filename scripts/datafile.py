@@ -24,8 +24,11 @@ startOID = stopOID = None
 srcRecordType = dstRecordType = 'snmprec'
 inputFiles = []
 outputFile = sys.stdout
+textValues = False
+
 if hasattr(outputFile, 'buffer'):
     outputFile = outputFile.buffer
+
 writtenCount = skippedCount = duplicateCount = brokenCount = variationCount = 0
 
 
@@ -42,7 +45,7 @@ class SnmprecRecord(snmprec.SnmprecRecord):
         if 'textTag' in context['backdoor']:
             return self.formatOid(oid), context['backdoor']['textTag'], value
         else:
-            return snmprec.SnmprecRecord.formatValue(self, oid, value)
+            return snmprec.SnmprecRecord.formatValue(self, oid, value, **context)
 
 
 # data file types and parsers
@@ -61,6 +64,7 @@ Usage: %s [--help]
     [--sort-records]
     [--ignore-broken-records]
     [--deduplicate-records]
+    [--text-values]
     [--mib-source=<url>]
     [--start-object=<MIB-NAME::[symbol-name]|OID>]
     [--stop-object=<MIB-NAME::[symbol-name]|OID>]
@@ -76,6 +80,7 @@ try:
                                  ['help', 'version', 'quiet', 'sort-records',
                                   'ignore-broken-records',
                                   'deduplicate-records',
+                                  'text-values',
                                   'start-oid=', 'stop-oid=', 'start-object=',
                                   'stop-object=',
                                   'mib-source=', 'source-record-type=',
@@ -126,6 +131,8 @@ Software documentation and support at http://snmpsim.sf.net
         ignoreBrokenRecords = True
     if opt[0] == '--deduplicate-records':
         deduplicateRecords = True
+    if opt[0] == '--text-values':
+        textValues = True
     # obsolete begin
     if opt[0] == '--start-oid':
         startOID = univ.ObjectIdentifier(opt[1])
@@ -194,16 +201,16 @@ for inputFile in inputFiles:
         except error.SnmpsimError:
             if ignoreBrokenRecords:
                 if verboseFlag:
-                    sys.stderr.write('# Skipping broken record <%s>\r\n' % line)
+                    sys.stderr.write('# Skipping broken record <%s>: %s\r\n' % (line, sys.exc_info()[1]))
                 brokenCount += 1
                 continue
             else:
                 if verboseFlag:
-                    sys.stderr.write('ERROR: broken record <%s>\r\n' % line)
+                    sys.stderr.write('ERROR: broken record <%s>: %s\r\n' % (line, sys.exc_info()[1]))
                 sys.exit(-1)
 
-        if startOID and startOID > oid or \
-                        stopOID and stopOID < oid:
+        if (startOID and startOID > oid or
+                stopOID and stopOID < oid):
             skippedCount += 1
             continue
 
@@ -226,7 +233,7 @@ for record in recordsList:
     try:
         outputFile.write(
             recordsSet[dstRecordType].format(
-                record[0], record[1], backdoor=record[2]
+                record[0], record[1], backdoor=record[2], nohex=textValues
             )
         )
     except:
