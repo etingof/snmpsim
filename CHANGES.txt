@@ -4,10 +4,11 @@ Revision 0.3.2, released XX-06-2017
 
 - Simulator's SNMPv3 command line option processing hardened to
   make easier to understand.
+- Fixes to Windows path to log file handling.
+- Fixes to MIB objects command-line parsing.
 
 Revision 0.3.1, released 21-01-2017
 -----------------------------------
-
 - Fix to __doc__ use in setup.py to make -O0 installation mode working.
 - Copyright notes added to source code files.
 - Per-OID access control added to 'writecache' variation module.

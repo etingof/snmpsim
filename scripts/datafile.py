@@ -135,9 +135,9 @@ Software documentation and support at http://snmpsim.sf.net
     if opt[0] == '--mib-source':
         mibSources.append(opt[1])
     if opt[0] == '--start-object':
-        startOID = rfc1902.ObjectIdentity(*opt[1].split('::'))
+        startOID = rfc1902.ObjectIdentity(*opt[1].split('::', 1))
     if opt[0] == '--stop-object':
-        stopOID = rfc1902.ObjectIdentity(*opt[1].split('::'),
+        stopOID = rfc1902.ObjectIdentity(*opt[1].split('::', 1),
                                          **dict(last=True))
     if opt[0] == '--source-record-type':
         if opt[1] not in recordsSet:
