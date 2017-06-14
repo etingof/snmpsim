@@ -328,7 +328,8 @@ class DataFile(AbstractLayout):
                     break
 
                 callContext = context.copy()
-                callContext.update((),
+                callContext.update(
+                    (),
                     origOid=oid, 
                     origValue=val,
                     dataFile=self.__textFile,
@@ -1211,25 +1212,27 @@ else:  # v3 mode
 
                 if not v3Users:
                     v3Users = [ 'simulator' ]
-                    v3AuthKeys[v3Users[0]] = None not in v3AuthKeys and \
-                                             'auctoritas' or v3AuthKeys[None]
-                    v3AuthProtos[v3Users[0]] = None not in v3AuthProtos and \
-                                             'MD5' or v3AuthProtos[None]
-                    v3PrivKeys[v3Users[0]] = None not in v3PrivKeys and \
-                                             'privatus' or v3PrivKeys[None]
-                    v3PrivProtos[v3Users[0]] = None not in v3PrivProtos and \
-                                               'DES' or v3PrivProtos[None]
+                    v3AuthKeys[v3Users[0]] = 'auctoritas'
+                    v3AuthProtos[v3Users[0]] = 'MD5'
+                    v3PrivKeys[v3Users[0]] = 'privatus'
+                    v3PrivProtos[v3Users[0]] = 'DES'
 
                 for v3User in v3Users:
                     if v3User in v3AuthKeys:
                         if v3User not in v3AuthProtos:
                             v3AuthProtos[v3User] = 'MD5'
+                    elif v3User in v3AuthProtos:
+                        log.msg('ERROR: auth protocol configured without key for user %s' % v3User)
+                        sys.exit(-1)
                     else:
                         v3AuthKeys[v3User] = None
                         v3AuthProtos[v3User] = 'NONE'
                     if v3User in v3PrivKeys:
                         if v3User not in v3PrivProtos:
                             v3PrivProtos[v3User] = 'DES'
+                    elif v3User in v3PrivProtos:
+                        log.msg('ERROR: privacy protocol configured without key for user %s' % v3User)
+                        sys.exit(-1)
                     else:
                         v3PrivKeys[v3User] = None
                         v3PrivProtos[v3User] = 'NONE'
@@ -1360,24 +1363,46 @@ else:  # v3 mode
             localMaxVarBinds = opt[1]
         elif opt[0] == '--v3-user':
             v3Users.append(opt[1])
-            if None in v3AuthKeys:
-                v3AuthKeys[None] = v3Users[-1]
         elif opt[0] == '--v3-auth-key':
-            v3AuthKeys[v3Users and v3Users[-1] or None] = opt[1]
+            if not v3Users:
+                log.msg('ERROR: --v3-user should precede %s' % opt[0])
+                sys.exit(-1)
+            if v3Users[-1] in v3AuthKeys:
+                log.msg('ERROR: repetitive %s option for user %s' % (opt[0], v3Users[-1]))
+                sys.exit(-1)
+            v3AuthKeys[v3Users[-1]] = opt[1]
         elif opt[0] == '--v3-auth-proto':
             if opt[1].upper() not in authProtocols:
                 log.msg('ERROR: bad v3 auth protocol %s' % opt[1])
                 sys.exit(-1)
             else:
-                v3AuthProtos[v3Users and v3Users[-1] or None] = opt[1].upper()
+                if not v3Users:
+                    log.msg('ERROR: --v3-user should precede %s' % opt[0])
+                    sys.exit(-1)
+                if v3Users[-1] in v3AuthProtos:
+                    log.msg('ERROR: repetitive %s option for user %s' % (opt[0], v3Users[-1]))
+                    sys.exit(-1)
+                v3AuthProtos[v3Users[-1]] = opt[1].upper()
         elif opt[0] == '--v3-priv-key':
-            v3PrivKeys[v3Users and v3Users[-1] or None] = opt[1]
+            if not v3Users:
+                log.msg('ERROR: --v3-user should precede %s' % opt[0])
+                sys.exit(-1)
+            if v3Users[-1] in v3PrivKeys:
+                log.msg('ERROR: repetitive %s option for user %s' % (opt[0], v3Users[-1]))
+                sys.exit(-1)
+            v3PrivKeys[v3Users[-1]] = opt[1]
         elif opt[0] == '--v3-priv-proto':
             if opt[1].upper() not in privProtocols:
                 log.msg('ERROR: bad v3 privacy protocol %s' % opt[1])
                 sys.exit(-1)
             else:
-                v3PrivProtos[v3Users and v3Users[-1] or None] = opt[1].upper()
+                if not v3Users:
+                    log.msg('ERROR: --v3-user should precede %s' % opt[0])
+                    sys.exit(-1)
+                if v3Users[-1] in v3PrivProtos:
+                    log.msg('ERROR: repetitive %s option for user %s' % (opt[0], v3Users[-1]))
+                    sys.exit(-1)
+                v3PrivProtos[v3Users[-1]] = opt[1].upper()
         elif opt[0] == '--agent-udpv4-endpoint':
             agentUDPv4Endpoints.append(opt[1])
         elif opt[0] == '--agent-udpv6-endpoint':
