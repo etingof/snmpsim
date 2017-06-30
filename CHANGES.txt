@@ -4,7 +4,6 @@ Revision 0.3.2, released XX-06-2017
 
 - Simulator's SNMPv3 command line option processing hardened to
   make easier to understand.
-- Notification variation module now accepts hex strings in var-binds
 - Fixes to Windows path to log file handling.
 - Fixes to MIB objects command-line parsing.
 
