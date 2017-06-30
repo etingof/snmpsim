@@ -104,6 +104,7 @@ class RecordIndex:
             prevOffset = -1
             while True:
                 line, lineNo, offset = getRecord(text, lineNo, offset)
+                log.msg('DEBUG: %r %d %d %d %d %d' % (line, len(line), lineNo, offset, prevOffset, text.tell()))
                 if not line:
                     # reference to last OID in data file
                     db['last'] = '%d,%d,%d' % (offset, 0, prevOffset)
