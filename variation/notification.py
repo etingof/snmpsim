@@ -19,6 +19,7 @@ def init(**context):
 
 typeMap = {
     's': OctetString,
+    'h': lambda x: OctetString(hexValue=x),
     'i': Integer32,
     'o': ObjectIdentifier,
     'a': IpAddress,
