@@ -25,9 +25,9 @@ class RecordIndex:
             self.__dbFile = textFile
 
         self.__dbFile = self.__dbFile + os.path.extsep + 'dbm'
-   
+
         self.__dbFile = os.path.join(confdir.cache, os.path.splitdrive(self.__dbFile)[1].replace(os.path.sep, '_'))
-         
+
         self.__db = self.__text = None
         self.__dbType = '?'
 
@@ -55,9 +55,9 @@ class RecordIndex:
         textFileTime = os.stat(self.__textFile)[8]
 
         # gdbm on OS X seems to voluntarily append .db, trying to catch that
-        
+
         indexNeeded = forceIndexBuild
-        
+
         for dbFile in (
             self.__dbFile + os.path.extsep + 'db',
             self.__dbFile
@@ -76,10 +76,10 @@ class RecordIndex:
         else:
             indexNeeded = True
             log.msg('Index %s does not exist for data file %s' % (self.__dbFile, self.__textFile))
-            
+
         if indexNeeded:
             # these might speed-up indexing
-            open_flags = 'nfu' 
+            open_flags = 'nfu'
             while open_flags:
                 try:
                     db = dbm.open(self.__dbFile, open_flags)
@@ -98,18 +98,17 @@ class RecordIndex:
 
             log.msg('Building index %s for data file %s (open flags \"%s\")...' % (self.__dbFile, self.__textFile, open_flags))
             sys.stdout.flush()
-        
+
             lineNo = 0
             offset = 0
             prevOffset = -1
             while True:
                 line, lineNo, offset = getRecord(text, lineNo, offset)
-                log.msg('DEBUG: %r %d %d %d %d %d' % (line, len(line), lineNo, offset, prevOffset, text.tell()))
                 if not line:
                     # reference to last OID in data file
                     db['last'] = '%d,%d,%d' % (offset, 0, prevOffset)
                     break
-             
+
                 try:
                     oid, tag, val = self.__textParser.grammar.parse(line)
                 except Exception:
@@ -154,7 +153,7 @@ class RecordIndex:
 
             text.close()
             db.close()
-       
+
             log.msg('...%d entries indexed' % lineNo)
 
         self.__textFileTime = os.stat(self.__textFile)[8]
