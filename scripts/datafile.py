@@ -202,8 +202,7 @@ for inputFile in inputFiles:
                     sys.stderr.write('ERROR: broken record <%s>\r\n' % line)
                 sys.exit(-1)
 
-        if startOID and startOID > oid or \
-                        stopOID and stopOID < oid:
+        if startOID and startOID > oid or stopOID and stopOID < oid:
             skippedCount += 1
             continue
 
