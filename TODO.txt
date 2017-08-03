@@ -1,0 +1,3 @@
+* Improve .snmprec comments handling in the `datafile.py` tool. Possibly
+  allow dropping/rearranging comments and empty lines
+* Refactor the documentation into Sphinx form
