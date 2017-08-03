@@ -61,12 +61,21 @@ authProtocols = {
     'MD5': config.usmHMACMD5AuthProtocol,
     'SHA': config.usmHMACSHAAuthProtocol,
     'SHA96': config.usmHMACSHAAuthProtocol,
-    'SHA128': config.usmHMAC128SHA224AuthProtocol,
-    'SHA192': config.usmHMAC192SHA256AuthProtocol,
-    'SHA256': config.usmHMAC256SHA384AuthProtocol,
-    'SHA512': config.usmHMAC384SHA512AuthProtocol,
     'NONE': config.usmNoAuthProtocol
 }
+
+try:
+    authProtocols.update(
+        {
+            'SHA128': config.usmHMAC128SHA224AuthProtocol,
+            'SHA192': config.usmHMAC192SHA256AuthProtocol,
+            'SHA256': config.usmHMAC256SHA384AuthProtocol,
+            'SHA384': config.usmHMAC384SHA512AuthProtocol,
+        }
+    )
+
+except AttributeError:
+    pass
 
 privProtocols = {
   'DES': config.usmDESPrivProtocol,
