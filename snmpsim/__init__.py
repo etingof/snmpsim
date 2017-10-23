@@ -1,2 +1,2 @@
 # http://www.python.org/dev/peps/pep-0396/
-__version__ = '0.3.2'
+__version__ = '0.4.1'
