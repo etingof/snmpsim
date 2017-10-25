@@ -61,8 +61,7 @@ helpMessage = """Usage: %s [--help]
     [--unsigned-range=<min,max>]
     [--integer32-range=<min,max>]""" % (
     sys.argv[0],
-    '|'.join([x for x in debug.flagMap.keys() if x not in (
-    'app', 'msgproc', 'proxy', 'io', 'secmod', 'dsp', 'acl')])
+    '|'.join([x for x in debug.flagMap.keys() if x not in ('app', 'msgproc', 'proxy', 'io', 'secmod', 'dsp', 'acl')])
 )
 
 try:
@@ -96,7 +95,10 @@ Documentation:
 """ % helpMessage)
         sys.exit(-1)
     if opt[0] == '-v' or opt[0] == '--version':
-        import snmpsim, pysmi, pysnmp, pyasn1
+        import snmpsim
+        import pysmi
+        import pysnmp
+        import pyasn1
 
         sys.stderr.write("""\
 SNMP Simulator version %s, written by Ilya Etingof <etingof@gmail.com>
@@ -238,8 +240,7 @@ def getValue(syntax, hint='', automaticValues=automaticValues):
         except PyAsn1Error:
             if makeGuess == 1:
                 sys.stderr.write(
-                    '*** Inconsistent value: %s\r\n*** See constraints and suggest a better one for:\r\n' % (
-                    sys.exc_info()[1],)
+                    '*** Inconsistent value: %s\r\n*** See constraints and suggest a better one for:\r\n' % (sys.exc_info()[1],)
                 )
             if makeGuess:
                 makeGuess -= 1
@@ -299,8 +300,7 @@ output = []
 # MIBs walk
 for modName in modNames:
     if verboseFlag:
-        sys.stderr.write('# MIB module: %s, from %s till %s\r\n' % (
-        modName, startOID or 'the beginning', stopOID or 'the end'))
+        sys.stderr.write('# MIB module: %s, from %s till %s\r\n' % (modName, startOID or 'the beginning', stopOID or 'the end'))
     oid = ObjectIdentity(modName).resolveWithMib(mibViewController)
     hint = rowHint = ''
     rowOID = None
@@ -357,8 +357,7 @@ for modName in modNames:
             rowHint = hint + '# Row %s::%s\r\n' % (mibName, symName)
             for impliedFlag, idxModName, idxSymName in node.getIndexNames():
                 idxNode, = mibBuilder.importSymbols(idxModName, idxSymName)
-                rowHint += '# Index %s::%s (type %s)\r\n' % (
-                idxModName, idxSymName, idxNode.syntax.__class__.__name__)
+                rowHint += '# Index %s::%s (type %s)\r\n' % (idxModName, idxSymName, idxNode.syntax.__class__.__name__)
                 rowIndices[idxNode.name] = getValue(idxNode.syntax, verboseFlag and rowHint or '')
                 suffix = suffix + node.getAsName(rowIndices[idxNode.name], impliedFlag)
             if not rowIndices:
@@ -374,17 +373,12 @@ for modName in modNames:
                 val = rowIndices[oid]
             else:
                 val = getValue(node.syntax,
-                               verboseFlag and rowHint + '# Column %s::%s (type %s)\r\n' % (
-                               mibName, symName,
-                               node.syntax.__class__.__name__) or '')
+                               verboseFlag and rowHint + '# Column %s::%s (type %s)\r\n' % (mibName, symName, node.syntax.__class__.__name__) or '')
         elif isinstance(node, MibScalar):
             hint = ''
             oid = node.name
             suffix = (0,)
-            val = getValue(node.syntax,
-                           verboseFlag and '# Scalar %s::%s (type %s)\r\n' % (
-                           mibName, symName,
-                           node.syntax.__class__.__name__) or '')
+            val = getValue(node.syntax, verboseFlag and '# Scalar %s::%s (type %s)\r\n' % (mibName, symName, node.syntax.__class__.__name__) or '')
         else:
             hint = ''
             continue

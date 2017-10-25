@@ -38,8 +38,7 @@ def _cbFun(sendRequestHandle,
            cbCtx):
     oid, value = cbCtx
     if errorIndication or errorStatus:
-        log.msg('notification: for %s=%r failed with errorIndication %s, errorStatus %s' % (
-        oid, value, errorIndication, errorStatus))
+        log.msg('notification: for %s=%r failed with errorIndication %s, errorStatus %s' % (oid, value, errorIndication, errorStatus))
 
 
 def variate(oid, tag, value, **context):
@@ -53,13 +52,11 @@ def variate(oid, tag, value, **context):
             # transportDomains concatenation)
             snmpEngine.registerTransportDispatcher(
                 snmpEngine.transportDispatcher,
-                UdpTransportTarget.transportDomain + \
-                context['transportDomain']
+                UdpTransportTarget.transportDomain + context['transportDomain']
             )
             snmpEngine.registerTransportDispatcher(
                 snmpEngine.transportDispatcher,
-                Udp6TransportTarget.transportDomain + \
-                context['transportDomain']
+                Udp6TransportTarget.transportDomain + context['transportDomain']
             )
             moduleContext[snmpEngine][context['transportDomain']] = 1
     else:
@@ -106,14 +103,14 @@ def variate(oid, tag, value, **context):
     args = recordContext['settings']
 
     if context['setFlag'] and 'vlist' in args:
-        if 'eq' in args['vlist'] and \
-                        context['origValue'] in args['vlist']['eq']:
+        if ('eq' in args['vlist'] and
+                context['origValue'] in args['vlist']['eq']):
             pass
-        elif 'lt' in args['vlist'] and \
-                        context['origValue'] < args['vlist']['lt']:
+        elif ('lt' in args['vlist'] and
+                context['origValue'] < args['vlist']['lt']):
             pass
-        elif 'gt' in args['vlist'] and \
-                        context['origValue'] > args['vlist']['gt']:
+        elif ('gt' in args['vlist'] and
+                context['origValue'] > args['vlist']['gt']):
             pass
         else:
             return oid, tag, context['origValue']
@@ -122,9 +119,9 @@ def variate(oid, tag, value, **context):
         log.msg('notification: unknown SNMP request type configured: %s' % args['op'])
         return context['origOid'], tag, context['errorStatus']
 
-    if args['op'] == 'get' and not context['setFlag'] or \
-                            args['op'] == 'set' and context['setFlag'] or \
-                    args['op'] in ('any', '*'):
+    if (args['op'] == 'get' and not context['setFlag'] or
+                args['op'] == 'set' and context['setFlag'] or
+                args['op'] in ('any', '*')):
         if args['version'] in ('1', '2c'):
             authData = CommunityData(args['community'], mpModel=args['version'] == '2c' and 1 or 0)
         elif args['version'] == '3':
@@ -169,13 +166,10 @@ def variate(oid, tag, value, **context):
         if 'bindaddr' in args:
             localAddress = args['bindaddr']
         else:
-            if context['transportDomain'][:len(target.transportDomain)] == \
-                    target.transportDomain:
-                localAddress = \
-                snmpEngine.transportDispatcher.getTransport(context['transportDomain']).getLocalAddress()[0]
+            if context['transportDomain'][:len(target.transportDomain)] == target.transportDomain:
+                localAddress = snmpEngine.transportDispatcher.getTransport(context['transportDomain']).getLocalAddress()[0]
             else:
-                log.msg(
-                    'notification: incompatible network transport types used by CommandResponder vs NotificationOriginator')
+                log.msg('notification: incompatible network transport types used by CommandResponder vs NotificationOriginator')
                 if 'bindaddr' in args:
                     localAddress = args['bindaddr']
 
@@ -184,8 +178,7 @@ def variate(oid, tag, value, **context):
             target.setLocalAddress((localAddress, 0))
 
         # this will make target objects different based on their bind address 
-        target.transportDomain = target.transportDomain + \
-                                 context['transportDomain']
+        target.transportDomain = target.transportDomain + context['transportDomain']
 
         varBinds = []
 

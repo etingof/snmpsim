@@ -89,8 +89,7 @@ except Exception:
 
 if params:
     if verboseFlag:
-        sys.stderr.write('ERROR: extra arguments supplied %s\r\n%s\r\n' % (
-        params, helpMessage))
+        sys.stderr.write('ERROR: extra arguments supplied %s\r\n%s\r\n' % (params, helpMessage))
     sys.exit(-1)
 
 for opt in opts:
@@ -104,7 +103,10 @@ Documentation:
 """ % helpMessage)
         sys.exit(-1)
     if opt[0] == '-v' or opt[0] == '--version':
-        import snmpsim, pysmi, pysnmp, pyasn1
+        import snmpsim
+        import pysmi
+        import pysnmp
+        import pyasn1
 
         sys.stderr.write("""\
 SNMP Simulator version %s, written by Ilya Etingof <etingof@gmail.com>

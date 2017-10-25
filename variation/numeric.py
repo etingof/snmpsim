@@ -158,8 +158,8 @@ def record(oid, tag, value, **context):
                 value = context['hexvalue']
             return oid, tag, value
 
-        if 'taglist' not in moduleContext['settings'] or \
-                        tag not in moduleContext['settings']['taglist']:
+        if ('taglist' not in moduleContext['settings'] or
+                tag not in moduleContext['settings']['taglist']):
             return oid, tag, value
 
         value = 'initial=%s' % value
@@ -225,8 +225,7 @@ def record(oid, tag, value, **context):
             if tag not in moduleContext['settings']['taglist']:
                 return oid, tag, moduleContext[oid]['value']
 
-            moduleContext[oid]['settings']['rate'] = (int(context['origValue']) - int(moduleContext[oid]['value'])) / (
-            time.time() - moduleContext[oid]['time'])
+            moduleContext[oid]['settings']['rate'] = (int(context['origValue']) - int(moduleContext[oid]['value'])) / (time.time() - moduleContext[oid]['time'])
 
             tag += ':numeric'
             value = ','.join(

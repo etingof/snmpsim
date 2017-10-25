@@ -170,7 +170,10 @@ Documentation:
 """ % helpMessage)
         sys.exit(-1)
     if opt[0] == '-v' or opt[0] == '--version':
-        import snmpsim, pysnmp, pysmi, pyasn1
+        import snmpsim
+        import pysnmp
+        import pysmi
+        import pyasn1
 
         sys.stderr.write("""\
 SNMP Simulator version %s, written by Ilya Etingof <etingof@gmail.com>
@@ -570,8 +573,7 @@ def cbFun(snmpEngine, sendRequestHandle, errorIndication,
             # fuzzy logic of walking a broken OID
             if len(nextOID) < 4:
                 pass
-            elif (continueOnErrors - cbCtx[
-                'retries']) * 10 / continueOnErrors > 5:
+            elif (continueOnErrors - cbCtx['retries']) * 10 / continueOnErrors > 5:
                 nextOID = nextOID[:-2] + (nextOID[-2] + 1,)
             elif nextOID[-1]:
                 nextOID = nextOID[:-1] + (nextOID[-1] + 1,)
@@ -620,10 +622,10 @@ def cbFun(snmpEngine, sendRequestHandle, errorIndication,
             # EOM
             if stopOID and oid >= stopOID:
                 stopFlag = True  # stop on out of range condition
-            elif val is None or \
-                            val.tagSet in (rfc1905.NoSuchObject.tagSet,
-                                           rfc1905.NoSuchInstance.tagSet,
-                                           rfc1905.EndOfMibView.tagSet):
+            elif (val is None or
+                          val.tagSet in (rfc1905.NoSuchObject.tagSet,
+                                         rfc1905.NoSuchInstance.tagSet,
+                                         rfc1905.EndOfMibView.tagSet)):
                 stopFlag = True
 
             # Build .snmprec record

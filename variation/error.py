@@ -70,14 +70,14 @@ def variate(oid, tag, value, **context):
 
     if context['setFlag']:
         if 'vlist' in recordContext['settings']:
-            if 'eq' in recordContext['settings']['vlist'] and \
-                            context['origValue'] in recordContext['settings']['vlist']['eq']:
+            if ('eq' in recordContext['settings']['vlist'] and
+                    context['origValue'] in recordContext['settings']['vlist']['eq']):
                 e = recordContext['settings']['vlist']['eq'][context['origValue']]
-            elif 'lt' in recordContext['settings']['vlist'] and \
-                            context['origValue'] < recordContext['settings']['vlist']['lt'][0]:
+            elif ('lt' in recordContext['settings']['vlist'] and
+                    context['origValue'] < recordContext['settings']['vlist']['lt'][0]):
                 e = recordContext['settings']['vlist']['lt'][1]
-            elif 'gt' in recordContext['settings']['vlist'] and \
-                            context['origValue'] > recordContext['settings']['vlist']['gt'][0]:
+            elif ('gt' in recordContext['settings']['vlist'] and
+                    context['origValue'] > recordContext['settings']['vlist']['gt'][0]):
                 e = recordContext['settings']['vlist']['gt'][1]
         elif recordContext['settings']['op'] in ('set', 'any'):
             if 'status' in recordContext['settings']:

@@ -81,14 +81,14 @@ def variate(oid, tag, value, **context):
 
     if context['setFlag']:
         if 'vlist' in recordContext['settings']:
-            if 'eq' in recordContext['settings']['vlist'] and \
-                            context['origValue'] in recordContext['settings']['vlist']['eq']:
+            if ('eq' in recordContext['settings']['vlist'] and
+                    context['origValue'] in recordContext['settings']['vlist']['eq']):
                 e = recordContext['settings']['vlist']['eq'][context['origValue']]
-            elif 'lt' in recordContext['settings']['vlist'] and \
-                            context['origValue'] < recordContext['settings']['vlist']['lt'][0]:
+            elif ('lt' in recordContext['settings']['vlist'] and
+                    context['origValue'] < recordContext['settings']['vlist']['lt'][0]):
                 e = recordContext['settings']['vlist']['lt'][1]
-            elif 'gt' in recordContext['settings']['vlist'] and \
-                            context['origValue'] > recordContext['settings']['vlist']['gt'][0]:
+            elif ('gt' in recordContext['settings']['vlist'] and
+                    context['origValue'] > recordContext['settings']['vlist']['gt'][0]):
                 e = recordContext['settings']['vlist']['gt'][1]
             else:
                 e = None
@@ -104,10 +104,10 @@ def variate(oid, tag, value, **context):
             return context['origOid'], tag, context['errorStatus']
 
     if 'status' in recordContext['settings']:
-        if 'op' not in recordContext['settings'] or \
-                        recordContext['settings']['op'] == 'any' or \
-                                recordContext['settings']['op'] == 'set' and context['setFlag'] or \
-                                recordContext['settings']['op'] == 'get' and not context['setFlag']:
+        if ('op' not in recordContext['settings'] or
+                recordContext['settings']['op'] == 'any' or
+                recordContext['settings']['op'] == 'set' and context['setFlag'] or
+                recordContext['settings']['op'] == 'get' and not context['setFlag']):
             e = recordContext['settings']['status']
             if e in errorTypes:
                 raise errorTypes[e](
