@@ -5,7 +5,7 @@ Building simulation data
 ========================
 
 Simulation data can be put together by :ref:`SNMP walking donor agent <snmprec.py>`,
-:ref:`wire-tapping SNMP traffic <pcap2dev.py>` or :ref:`generating from MIBs <mib2dev.p2>`.
+:ref:`wire-tapping SNMP traffic <pcap2dev.py>` or :ref:`generating from MIBs <mib2dev.py>`.
 
 Regular output from :ref:`Net-SNMP snmpwalk <snmpwalk-dump>` or :ref:`Agent Pro <agent-pro-dump>`
 tools can be used as-is. Finally, *.snmprec* files can be created by hand in a text editor or
@@ -49,12 +49,16 @@ The donor SNMP agent recording session would look like this:
     1.3.6.1.2.1.1.6.0|4|4, Petersburger strasse, Berlin, Germany
     1.3.6.1.2.1.1.8.0|67|4
 
-No special requirements exist for device file name and location. However,
-Simulator treats device file path as an SNMPv1/v2c community string
-and its MD5 hash constitutes SNMPv3 context name.
+The *snmprec.py* tool can run over SNMPv1, v2c and v3. To configure SNMPv3 USM user
+authentication and privacy algorithms, :ref:`follow the instructions <auth-algos>`
+for *snmpsimd.py*.
+
+No special requirements exist for device file name and location. Just keep in
+mind that at simulation time, *snmpsimd.py* treats *.snmprec* file path as SNMPv1/v2c
+community name or SNMPv3 context name.
 
 If you don't readily have some SNMP agent to play with, you're welcome to
-use our publicly available :ref:`SNMP Simulator instance <public-snmp-simulator>`.
+use our publicly available :ref:`SNMP Simulator instance <snmp-simulation-service>`.
 
 .. code-block:: bash
 
@@ -238,7 +242,7 @@ selection, use *--manual-value* command line switch. If you would rather
 have *mib2dev.py* tool to work out all the values by itself, consider
 raising the *--automatic-values* max probes value (default is 5000 probes).
 
-.. _pcapdev.py:
+.. _pcap2dev.py:
 
 Snooping SNMP traffic
 ---------------------
@@ -371,7 +375,7 @@ The *pcap2dev.py* tool can also invoke
 :ref:`variation modules <recording-with-variation-modules>` to feed recorded
 data through them.
 
-.. _snmpwalk:
+.. _snmpwalk-dump:
 
 Using snmpwalk reporting
 ------------------------
@@ -409,7 +413,7 @@ sometimes produced by the *snmpwalk* tool.
 Alternatively, you can convert the *.snmpwalk* files into *.snmprec* ones
 by running them through the :ref:`datafile.py <datafile.py>` tool.
 
-.. _simpleagentpro:
+.. _agent-pro-dump:
 
 Using Simple Agent Pro samples
 ------------------------------

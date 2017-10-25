@@ -34,7 +34,7 @@ Configuring variation modules
 To make use of a variation module you will have to *edit* existing
 or create a new data file adding reference to a variation module into 
 the *tag* field by means of
-:ref:`recording variation modules <recording-variation-modules>`.
+:ref:`recording variation modules <recording-with-variation-modules>`.
 
 Remember :ref:`.snmprec file format <snmprec>` is a sequence of lines having
 the *OID|TAG|VALUE* fields? With variation module in use, the *TAG* field complies
@@ -206,7 +206,7 @@ Examples
     1.3.6.1.2.1.2.2.1.14.1|66:numeric|min=5,max=50,initial=25
 
 You are welcome to try the *numeric* module in action at our online
-:ref:`public SNMP simulation service <public-snmp-simulation-service>`:
+:ref:`public SNMP simulation service <snmp-simulation-service>`:
 
 .. code-block:: bash
 
@@ -381,7 +381,7 @@ on SET. Second entry flags *commitfailed* on SET but responds without errors
 to GET*. Third entry fails with *wrongvalue* only on SET with values > 2.
 Finally, forth entry always flags *noaccess* error.
 
-.. _ariate-writecache:
+.. _variate-writecache:
 
 Writecache module
 +++++++++++++++++

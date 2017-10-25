@@ -66,7 +66,7 @@ The *snmpsimd.py* tool hosts multiple independent SNMP Command Responders.
 It can run multiple SNMP engines exchanging data over multiple network interfaces.
 Each SNMP engine instance can serve many independent sets of SNMP management
 objects (MIBs) sourced from :ref:`local .snmprec files <snmprec>`
-or :ref:`variation modules <variation-modules>`.
+or :ref:`variation modules <simulation-with-variation-modules>`.
 
 .. _multiple-listen-interfaces:
 
@@ -188,10 +188,12 @@ Multiple USM users
 
 It is also possible to configure many SNMPv3 (USM) users to Simulator. Each
 set of *--v3-user*, *--v3-auth-key*, *--v3-priv-key* parameters adds one SNMPv3
-user to Simulator. There is no correlation between SNMPv3 users and
-simulated resources, all users have the same view of the Simulator and the
-same access permissions. But your can use SNMPv3 contextNames and/or transport
-endpoints for addressing different Simulator data files.
+user to Simulator.
+
+There is no correlation between SNMPv3 users and simulated resources, all users
+have the same view of the Simulator and the same access permissions. But
+you can use SNMPv3 contextNames and/or transport endpoints for addressing
+different data files e.g. simulated SNMP agents.
 
 .. code-block:: bash
 
@@ -211,6 +213,61 @@ endpoints for addressing different Simulator data files.
     SNMPv3 USM encryption (privacy) key: testkey6534, encryption protocol: DES
     Listening at UDP/IPv4 endpoint 127.0.0.1:161, transport ID 1.3.6.1.6.1.1.0
     ...
+
+SNMP simulator supports many SNMPv3 authentication and encryption algorithms. For
+each user you can configure any authentication and any encryption (privacy)
+algorithm.
+
+.. _auth-algos:
+
+The following authentication algorithms are currently supported (via
+*--v3-auth-proto=<ID>* option):
+
++--------+-------------+-------------+
+| *ID*   | *Algorithm* | *Reference* |
++--------+-------------+-------------+
+| NONE   | -           | RFC3414     |
++--------+-------------+-------------+
+| MD5    | HMAC MD5    | RFC3414     |
++--------+-------------+-------------+
+| SHA96  | HMAC SHA128 | RFC3414     |
++--------+-------------+-------------+
+| SHA128 | HMAC SHA224 | RFC7860     |
++--------+-------------+-------------+
+| SHA192 | HMAC SHA256 | RFC7860     |
++--------+-------------+-------------+
+| SHA256 | HMAC SHA384 | RFC7860     |
++--------+-------------+-------------+
+| SHA384 | HMAC SHA512 | RFC7860     |
++--------+-------------+-------------+
+
+.. _priv-algos:
+
+The following privacy (encryption) algorithms are currently supported (via
+*--v3-priv-proto=<ID>* option):
+
++--------+----------------+----------------------+
+| *ID*   | *Algorithm*    | *Reference*          |
++--------+----------------+----------------------+
+| NONE   | -              | RFC3414              |
++--------+----------------+----------------------+
+| DES    | DES            | RFC3414              |
++--------+----------------+----------------------+
+| AES    | AES CFB 128    | RFC3826              |
++--------+----------------+----------------------+
+| AES192 | AES CFB 192    | RFC Draft            |
++--------+----------------+----------------------+
+| AES256 | AES CFB 256    | RFC Draft            |
++--------+----------------+----------------------+
+| 3DES   | Triple DES EDE | RFC Draft            |
++--------+----------------+----------------------+
+
+.. note::
+
+    The AES192, AES256 and 3DES are implemented based on
+    `Blumenthal <http://tools.ietf.org/html/draft-blumenthal-aes-usm-04>`_ and
+    `Reeder <https://tools.ietf.org/html/draft-reeder-snmpv3-usm-3desede-00>`_
+    draft RFCs.
 
 Another configurable parameter is SNMPv3 snmpEngineId value. It's normally
 automatically generated but can also be configured through

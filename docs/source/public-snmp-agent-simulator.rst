@@ -1,4 +1,6 @@
 
+.. _snmp-simulation-service:
+
 SNMP simulation service
 =======================
 
