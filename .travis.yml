@@ -14,6 +14,6 @@ python:
 #  - "pypy3"
 install:
   - pip install -r requirements.txt -r devel-requirements.txt
-  - python setup.py install
+  - pip install -e .
 script:
   - sh runtests.sh
