@@ -90,12 +90,28 @@ html_theme = 'alabaster'
 # documentation.
 #
 html_theme_options = {
-    'description': 'SNMP Simulator',
+    'logo': 'logo.svg',
+    'description': '<p align=center><i>Brought by SNMP Labs</i></p>',
     'show_powered_by': False,
     'github_user': 'etingof',
     'github_repo': 'snmpsim',
     'fixed_sidebar': True,
 }
+
+html_sidebars = {
+    '**': [
+        'about.html',
+        'navigation.html',
+        'relations.html',
+        'searchbox.html',
+        'donate.html',
+    ]
+}
+
+# The name of an image file (within the static path) to use as favicon of the
+# docs.  This file should be a Windows icon file (.ico) being 16x16 or 32x32
+# pixels large.
+html_favicon = '.static/favicon.ico'
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
