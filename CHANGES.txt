@@ -1,5 +1,5 @@
 
-Revision 0.4.1, released XX-10-2017
+Revision 0.4.1, released 29-10-2017
 -----------------------------------
 
 - SHA2 authentication protocol suite added.
