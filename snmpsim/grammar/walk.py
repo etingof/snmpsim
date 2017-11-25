@@ -30,6 +30,21 @@ class WalkGrammar(abstract.AbstractGrammar):
         'TIMETICKS:': rfc1902.TimeTicks  # this is made up
     }
 
+    def __integerFilter(value):
+        try:
+            int(value)
+            return value
+        except ValueError:
+            # Clean enumeration values
+            match = re.match('.*?\((\-?[0-9]+)\)', value) # .1.3.6.1.2.1.2.2.1.3.1 = INTEGER: ethernetCsmacd(6)
+            if match:
+                return match.groups()[0]
+            # Clean values with UNIT suffix
+            match = re.match('(\-?[0-9]+)\s.+', value) # .1.3.6.1.2.1.4.13.0 = INTEGER: 60 seconds
+            if match:
+                return match.groups()[0]
+            return value
+
     # possible DISPLAY-HINTs parsing should occur here
     def __stringFilter(value):
         if not value:
@@ -58,6 +73,17 @@ class WalkGrammar(abstract.AbstractGrammar):
     def __hexStringFilter(value):
         return [int(y, 16) for y in value.split(' ')]
 
+    def __gaugeFilter(value):
+        try:
+            int(value)
+            return value
+        except ValueError:
+            # Clean values with UNIT suffix
+            match = re.match('(\-?[0-9]+)\s.+', value) # .1.3.6.1.2.1.4.31.1.1.47.1 = Gauge32: 10000 milli-seconds
+            if match:
+                return match.groups()[0]
+            return value
+
     def __netAddressFilter(value):
         return '.'.join([str(int(y, 16)) for y in value.split(':')])
 
@@ -69,9 +95,11 @@ class WalkGrammar(abstract.AbstractGrammar):
 
     filterMap = {
         'OPAQUE:': __opaqueFilter,
+        'INTEGER:': __integerFilter,
         'STRING:': __stringFilter,
         'BITS:': __bitsFilter,
         'HEX-STRING:': __hexStringFilter,
+        'GAUGE32:': __gaugeFilter,
         'Network Address:': __netAddressFilter,
         'TIMETICKS:': __timeTicksFilter
     }

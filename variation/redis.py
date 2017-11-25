@@ -109,15 +109,13 @@ def variate(oid, tag, value, **context):
 
     keySpacesId = recordContext['settings']['key-spaces-id']
     if recordContext['settings']['period']:
-        keySpaceIdx = int((time.time() - moduleContext['booted']) % (
-        recordContext['settings']['period'] * int(dbConn.llen(keySpacesId))) // recordContext['settings']['period'])
+        keySpaceIdx = int((time.time() - moduleContext['booted']) % (recordContext['settings']['period'] * int(dbConn.llen(keySpacesId))) // recordContext['settings']['period'])
     else:
         keySpaceIdx = 0
     keySpace = dbConn.lindex(keySpacesId, keySpaceIdx)
-    if 'current-keyspace' not in recordContext or \
-                    recordContext['current-keyspace'] != keySpace:
-        log.msg('redis: now using keyspace %s (cycling period %s)' % (
-        keySpace, recordContext['settings']['period'] or '<disabled>'))
+    if ('current-keyspace' not in recordContext or
+            recordContext['current-keyspace'] != keySpace):
+        log.msg('redis: now using keyspace %s (cycling period %s)' % (keySpace, recordContext['settings']['period'] or '<disabled>'))
         recordContext['current-keyspace'] = keySpace
 
     if keySpace is None:
@@ -260,4 +258,5 @@ def record(oid, tag, value, **context):
 
 
 def shutdown(**context):
-    if 'dbConn' in moduleContext: moduleContext.pop('dbConn')
+    if 'dbConn' in moduleContext:
+        moduleContext.pop('dbConn')
