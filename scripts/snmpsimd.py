@@ -3,7 +3,7 @@
 # This file is part of snmpsim software.
 #
 # Copyright (c) 2010-2017, Ilya Etingof <etingof@gmail.com>
-# License: http://snmpsim.sf.net/license.html
+# License: http://snmplabs.com/snmpsim/license.html
 #
 # SNMP Agent Simulator
 #
@@ -623,7 +623,7 @@ Synopsis:
   based on transport addresses, SNMP community name or SNMPv3 context name.
   Can implement highly complex behavior through variation modules.
 Documentation:
-  http://snmpsim.sourceforge.net/simulating-agents.html
+  http://snmplabs.com/snmpsim/simulating-agents.html
 %s
 """ % helpMessage)
         sys.exit(-1)
@@ -636,7 +636,7 @@ Documentation:
 SNMP Simulator version %s, written by Ilya Etingof <etingof@gmail.com>
 Using foundation libraries: pysnmp %s, pyasn1 %s.
 Python interpreter: %s
-Software documentation and support at http://snmpsim.sf.net
+Software documentation and support at http://snmplabs.com/snmpsim
 %s
 """ % (snmpsim.__version__, hasattr(pysnmp, '__version__') and pysnmp.__version__ or 'unknown', hasattr(pyasn1, '__version__') and pyasn1.__version__ or 'unknown', sys.version, helpMessage))
         sys.exit(-1)

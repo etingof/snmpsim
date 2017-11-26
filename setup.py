@@ -3,7 +3,7 @@
 # This file is part of snmpsim software.
 #
 # Copyright (c) 2010-2017, Ilya Etingof <etingof@gmail.com>
-# License: http://snmpsim.sf.net/license.html
+# License: http://snmplabs.com/snmpsim/license.html
 #
 """SNMP Agents simulator
 

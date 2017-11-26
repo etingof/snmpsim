@@ -7,7 +7,7 @@ SNMP Simulator
 [![GitHub license](https://img.shields.io/badge/license-BSD-blue.svg)](https://raw.githubusercontent.com/etingof/snmpsim/master/LICENSE.txt)
 
 This is a pure-Python, open source and free implementation of SNMP agents simulator
-distributed under 2-clause [BSD license](http://pysnmp.sourceforge.net/license.html).
+distributed under 2-clause [BSD license](http://snmplabs.com/snmpsim/license.html).
 
 Features
 --------
@@ -31,7 +31,7 @@ Download
 --------
 
 SNMP simulator software is freely available for download from [PyPI](https://pypi.python.org/pypi/snmpsim)
-and [project site](http://snmpsim.sf.net/download.html).
+and [project site](http://snmplabs.com/snmpsim/download.html).
 
 Installation
 ------------
@@ -98,14 +98,14 @@ for simulation data. We ship plugins to interface SQL and noSQL databases, file-
 key-value stores and other sources of information.
 
 We maintain publicly available SNMP simulator instance at 
-[demo.snmplabs.com](http://snmpsim.sourceforge.net/public-snmp-simulator.html). You are
+[demo.snmplabs.com](http://snmplabs.com/snmpsim/public-snmp-simulator.html). You are
 welcome to query it as much as you wish.
 
 Documentation
 -------------
 
 Detailed information on SNMP simulator usage could be found at
-[snmpsim site](http://snmpsim.sf.net/).
+[snmpsim site](http://snmplabs.com/snmpsim/).
 
 Getting help
 ------------
