@@ -2,7 +2,7 @@
 # This file is part of snmpsim software.
 #
 # Copyright (c) 2010-2017, Ilya Etingof <etingof@gmail.com>
-# License: http://snmpsim.sf.net/license.html
+# License: http://snmplabs.com/snmpsim/license.html
 #
 from pysnmp.proto import rfc1902
 from pyasn1.type import univ

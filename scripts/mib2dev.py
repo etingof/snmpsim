@@ -3,7 +3,7 @@
 # This file is part of snmpsim software.
 #
 # Copyright (c) 2010-2017, Ilya Etingof <etingof@gmail.com>
-# License: http://snmpsim.sf.net/license.html
+# License: http://snmplabs.com/snmpsim/license.html
 #
 # SNMP Simulator MIB to data file converter
 #
@@ -90,7 +90,7 @@ Synopsis:
   Chooses random values or can ask for them interactively.
   Able to fill SNMP conceptual tables with consistent indices.
 Documentation:
-  http://snmpsim.sourceforge.net/simulation-based-on-mibs.html
+  http://snmplabs.com/snmpsim/simulation-based-on-mibs.html
 %s
 """ % helpMessage)
         sys.exit(-1)
@@ -104,7 +104,7 @@ Documentation:
 SNMP Simulator version %s, written by Ilya Etingof <etingof@gmail.com>
 Using foundation libraries: pysmi %s, pysnmp %s, pyasn1 %s.
 Python interpreter: %s
-Software documentation and support at http://snmpsim.sf.net
+Software documentation and support at http://snmplabs.com/snmpsim
 %s
 """ % (snmpsim.__version__,
        hasattr(pysmi, '__version__') and pysmi.__version__ or 'unknown',
