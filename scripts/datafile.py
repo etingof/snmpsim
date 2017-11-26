@@ -24,7 +24,7 @@ startOID = stopOID = None
 srcRecordType = dstRecordType = 'snmprec'
 inputFiles = []
 outputFile = sys.stdout
-textValues = False
+escapedStrings = False
 
 if hasattr(outputFile, 'buffer'):
     outputFile = outputFile.buffer
@@ -64,7 +64,7 @@ Usage: %s [--help]
     [--sort-records]
     [--ignore-broken-records]
     [--deduplicate-records]
-    [--text-values]
+    [--escaped-strings]
     [--mib-source=<url>]
     [--start-object=<MIB-NAME::[symbol-name]|OID>]
     [--stop-object=<MIB-NAME::[symbol-name]|OID>]
@@ -80,7 +80,7 @@ try:
                                  ['help', 'version', 'quiet', 'sort-records',
                                   'ignore-broken-records',
                                   'deduplicate-records',
-                                  'text-values',
+                                  'escaped-strings',
                                   'start-oid=', 'stop-oid=', 'start-object=',
                                   'stop-object=',
                                   'mib-source=', 'source-record-type=',
@@ -133,8 +133,8 @@ Software documentation and support at http://snmpsim.sf.net
         ignoreBrokenRecords = True
     if opt[0] == '--deduplicate-records':
         deduplicateRecords = True
-    if opt[0] == '--text-values':
-        textValues = True
+    if opt[0] == '--escaped-strings':
+        escapedStrings = True
     # obsolete begin
     if opt[0] == '--start-oid':
         startOID = univ.ObjectIdentifier(opt[1])
@@ -235,7 +235,7 @@ for record in recordsList:
     try:
         outputFile.write(
             recordsSet[dstRecordType].format(
-                record[0], record[1], backdoor=record[2], nohex=textValues
+                record[0], record[1], backdoor=record[2], nohex=escapedStrings
             )
         )
     except:

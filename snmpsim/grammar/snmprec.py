@@ -59,5 +59,6 @@ class SnmprecGrammar(AbstractGrammar):
                             rfc1902.IpAddress.tagSet):
             nval = value.asNumbers()
             for x in nval:
-                if x not in self.alnums:
+                if (value.tagSet == rfc1902.IpAddress.tagSet or
+                            x not in self.alnums):
                     return ''.join(['%.2x' % x for x in nval])

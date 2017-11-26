@@ -27,9 +27,15 @@ file content:
 There is a pipe-separated triplet of *OID|tag|value* items where:
 
 * OID is a dot-separated set of numbers
-* Tag is a BER-encoded ASN.1 tag. When value is hexified, an 'x' literal
-  is appended. Reference to a variation module can also be embedded into tag.
-* Value is either a printable string, a number or a hexifed value.
+* Tag is a BER-encoded ASN.1 tag. A modifier can be appended to the
+  tag number. The following modifiers are known:
+
+    - *x* when the value is hexified (e.g. '0102')
+    - *e* when the value is a Python string literal (e.g. '\x01\x02hello')
+    - Colon-separated reference to a variation module
+
+* The value is either a printable string or a hexified string or a raw
+  Python string. Unless it's a number.
 
 Valid tag values and their corresponding ASN.1/SNMP types are:
 
@@ -74,7 +80,7 @@ for using variation modules), run the *datafile.py* tool like this:
 
 SNMP Simulator requires data files to be sorted (by OID) and containing no
 duplicate OIDs. In case your data file does not comply with these requirements
-for some reason, you could pass it through the datafile.py tool to
+for some reason, you could pass it through the *datafile.py* tool to
 fix data file:
 
 .. code-block:: bash
@@ -120,3 +126,19 @@ Merge of multiple data files into a single data file is also supported:
     1.3.6.1.2.1.7.8.0|70|3896031866066683889
     1.3.6.1.2.1.7.9.0|70|3518073560493506800
     # Records: written 49, filtered out 0, deduplicated 0, broken 0, variated 0
+
+Having string values more human-readable may be more convenient in the
+course of adjusting simulation data, debugging etc. By default, strings in
+simulation data are hexified. By passing such *.snmprec* file through
+the *datafile.py --escaped-strings* call, you can convert your *.snmprec*
+data into Python string literal representation:
+
+.. code-block:: bash
+
+    $ head data/sample.snmprec
+    1.3.6.1.2.1.55.1.5.1.8.2|4x|00127962f940
+    $
+    $ datafile.py --source-record-type=snmprec  --input-file=data/sample.snmprec
+        --escaped-strings
+    1.3.6.1.2.1.55.1.5.1.8.2|4e|\x00\x12yb\xf9@
+    # Records: written 1, filtered out 0, deduplicated 0, broken 0, variated 0
