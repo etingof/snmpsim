@@ -60,17 +60,16 @@ variationModules = {}
 authProtocols = {
     'MD5': config.usmHMACMD5AuthProtocol,
     'SHA': config.usmHMACSHAAuthProtocol,
-    'SHA96': config.usmHMACSHAAuthProtocol,
     'NONE': config.usmNoAuthProtocol
 }
 
 try:
     authProtocols.update(
         {
-            'SHA128': config.usmHMAC128SHA224AuthProtocol,
-            'SHA192': config.usmHMAC192SHA256AuthProtocol,
-            'SHA256': config.usmHMAC256SHA384AuthProtocol,
-            'SHA384': config.usmHMAC384SHA512AuthProtocol,
+            'SHA224': config.usmHMAC128SHA224AuthProtocol,
+            'SHA256': config.usmHMAC192SHA256AuthProtocol,
+            'SHA384': config.usmHMAC256SHA384AuthProtocol,
+            'SHA512': config.usmHMAC384SHA512AuthProtocol,
         }
     )
 
@@ -582,8 +581,8 @@ Usage: %s [--help]
         '|'.join([x for x in pysnmp_debug.flagMap.keys() if x != 'mibview']),
         '|'.join([x for x in pyasn1_debug.flagMap.keys()]),
         '|'.join(log.gMap.keys()),
-        '|'.join(authProtocols),
-        '|'.join(privProtocols)
+        '|'.join(sorted([x for x in authProtocols if x != 'NONE'])),
+        '|'.join(sorted([x for x in privProtocols if x != 'NONE']))
     )
 
 try:
