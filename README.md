@@ -14,7 +14,8 @@ Features
 
 * Pure-Python, easy to deploy and highly portable
 * SNMPv1/v2c/v3 support
-* USM supports MD5/SHA auth and DES/AES/3DES/AES256 privacy
+* USM supports MD5/SHA/SHA224/SHA256/SHA385/SHA512 auth and
+  DES/3DES/AES128/AES192/AES256 privacy crypto algorithms
 * Runs over IPv4 and/or IPv6 transports
 * Simulates many EngineID's, each with its own set of simulated objects
 * Varies response based on SNMP Community, Context, source/destination addresses and ports

@@ -30,7 +30,7 @@ There are four independent SNMP engines configured at different UDP ports:
 SNMP community names
 --------------------
 
-Each :ref:`SNMP engines <simulated-snmp-engines>` supports a
+Each of the :ref:`SNMP engines <simulated-snmp-engines>` supports a
 :ref:`bunch of SNMP community names <simulated-data>` to address distinct
 simulated SNMP agent.
 
