@@ -6,6 +6,7 @@ Revision 0.4.2, released XX-11-2017
   string type field (4e)
 - Migrated references from SourceForge
 - Integer and enumerations parsing of snmpwalk output improved
+- Added strong AES privacy algorithms with Blumenthal key localization
 - Fixed SNMP crypto algorithm identifiers to be named consistently after
   key length rather than MAC length
 
