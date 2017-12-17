@@ -87,7 +87,9 @@ privProtocols = {
     'AES': config.usmAesCfb128Protocol,
     'AES128': config.usmAesCfb128Protocol,
     'AES192': config.usmAesCfb192Protocol,
+    'AES192BLMT': config.usmAesBlumenthalCfb192Protocol,
     'AES256': config.usmAesCfb256Protocol,
+    'AES256BLMT': config.usmAesBlumenthalCfb256Protocol,
     'NONE': config.usmNoPrivProtocol
 }
 
