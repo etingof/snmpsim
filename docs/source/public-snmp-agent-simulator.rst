@@ -20,10 +20,17 @@ There are four independent SNMP engines configured at different UDP ports:
 +--------------------------------+-------------------+----------------+
 | 0x80004fb805636c6f75644dab22cd | demo.snmplabs.com | 1161           |
 +--------------------------------+-------------------+----------------+
-| 0x80004fb805636c6f75644dab22ce | demo.snmplabs.com | 1162           |
+| 0x80004fb805636c6f75644dab22ce | demo.snmplabs.com | 2161           |
 +--------------------------------+-------------------+----------------+
-| 0x80004fb805636c6f75644dab22cf | demo.snmplabs.com | 1163           |
+| 0x80004fb805636c6f75644dab22cf | demo.snmplabs.com | 3161           |
 +--------------------------------+-------------------+----------------+
+
+.. note::
+
+   The simulation service is implemented by two independent UNIX processes.
+   One process runs the first SNMP engine (*0x80004fb805636c6f75644dab22cc*)
+   while the rest of SNMP engines in the table above are all local to the
+   second SNMP simulator process.
 
 .. _simulated-community-names:
 
@@ -159,7 +166,7 @@ by USM user name.
 .. note::
 
    The *Triple DES* authentication algorithm is implemented according to
-   `draft-reeder-snmpv3-usm-3desede-00 <https://tools.ietf.org/html/draft-reeder-snmpv3-usm-3desede-00#section-5>`.
+   `draft-reeder-snmpv3-usm-3desede-00 <https://tools.ietf.org/html/draft-reeder-snmpv3-usm-3desede-00#section-5>`_.
    The AES-based privacy algorithms with key size 192bit+ are implemented along the lines of
    `draft-blumenthal-aes-usm-04 <https://tools.ietf.org/html/draft-blumenthal-aes-usm-04#section-3>`_)
    with either Reeder or Blumenthal  key localization.
