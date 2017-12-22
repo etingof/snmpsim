@@ -65,7 +65,7 @@ try:
     from setuptools import setup
 
     params = {
-        'install_requires': ['pysnmp>=4.3.0'],
+        'install_requires': ['pysnmp>=4.4.3'],
         'zip_safe': False  # this is due to data and variation dirs
     }
 except ImportError:
@@ -77,7 +77,7 @@ except ImportError:
 
     params = {}
     if sys.version_info[:2] > (2, 4):
-        params['requires'] = ['pysnmp(>=4.3.0)']
+        params['requires'] = ['pysnmp(>=4.4.3)']
 
 doclines = [x.strip() for x in (__doc__ or '').split('\n') if x]
 
