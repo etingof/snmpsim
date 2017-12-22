@@ -1,5 +1,5 @@
 
-Revision 0.4.2, released XX-11-2017
+Revision 0.4.2, released 22-12-2017
 -----------------------------------
 
 - Python literal string representation added as a new flavor of .snmprec
