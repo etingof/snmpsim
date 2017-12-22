@@ -60,21 +60,12 @@ variationModules = {}
 authProtocols = {
     'MD5': config.usmHMACMD5AuthProtocol,
     'SHA': config.usmHMACSHAAuthProtocol,
+    'SHA224': config.usmHMAC128SHA224AuthProtocol,
+    'SHA256': config.usmHMAC192SHA256AuthProtocol,
+    'SHA384': config.usmHMAC256SHA384AuthProtocol,
+    'SHA512': config.usmHMAC384SHA512AuthProtocol,
     'NONE': config.usmNoAuthProtocol
 }
-
-try:
-    authProtocols.update(
-        {
-            'SHA224': config.usmHMAC128SHA224AuthProtocol,
-            'SHA256': config.usmHMAC192SHA256AuthProtocol,
-            'SHA384': config.usmHMAC256SHA384AuthProtocol,
-            'SHA512': config.usmHMAC384SHA512AuthProtocol,
-        }
-    )
-
-except AttributeError:
-    pass
 
 privProtocols = {
   'DES': config.usmDESPrivProtocol,
@@ -87,7 +78,6 @@ privProtocols = {
   'AES256BLMT': config.usmAesBlumenthalCfb256Protocol,
   'NONE': config.usmNoPrivProtocol
 }
-
 
 # Transport endpoints collection
 
