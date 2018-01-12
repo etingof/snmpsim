@@ -487,6 +487,17 @@ for context in contexts:
                 stats['SNMP exceptions'] += 1
                 continue
 
+            # remove value enumeration
+
+            if value.tagSet == rfc1902.Integer32.tagSet:
+                value = rfc1902.Integer32(value)
+
+            if value.tagSet == rfc1902.Unsigned32.tagSet:
+                value = rfc1902.Unsigned32(value)
+
+            if value.tagSet == rfc1902.Bits.tagSet:
+                value = rfc1902.OctetString(value)
+
             # Build .snmprec record
 
             ctx = {

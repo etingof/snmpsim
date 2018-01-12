@@ -14,6 +14,7 @@ import os
 import socket
 import traceback
 from pyasn1.type import univ
+from pysnmp.proto import rfc1902
 from pysnmp.proto import rfc1905
 from pysnmp.entity import engine, config
 from pysnmp.carrier.asynsock.dgram import udp
@@ -27,7 +28,8 @@ try:
 except ImportError:
     unix = None
 from pysnmp.entity.rfc3413 import cmdgen
-from pysnmp.smi import rfc1902, view, compiler
+from pysnmp.smi.rfc1902 import ObjectIdentity, ObjectType
+from pysnmp.smi import view, compiler
 from pyasn1 import debug as pyasn1_debug
 from pysnmp import debug as pysnmp_debug
 from snmpsim.record import snmprec
@@ -309,9 +311,9 @@ Software documentation and support at http://snmplabs.com/snmpsim
     elif opt[0] == '--mib-source':
         mibSources.append(opt[1])
     elif opt[0] == '--start-object':
-        startOID = rfc1902.ObjectIdentity(*opt[1].split('::', 1))
+        startOID = ObjectIdentity(*opt[1].split('::', 1))
     elif opt[0] == '--stop-object':
-        stopOID = rfc1902.ObjectIdentity(*opt[1].split('::', 1), **dict(last=True))
+        stopOID = ObjectIdentity(*opt[1].split('::', 1), **dict(last=True))
     elif opt[0] == '--output-file':
         outputFile = open(opt[1], 'wb')
     elif opt[0] == '--variation-modules-dir':
@@ -479,16 +481,16 @@ elif agentUDPv4Endpoint:
 
 log.msg('Agent response timeout: %.2f secs, retries: %s' % (timeout / 100, retryCount))
 
-if isinstance(startOID, rfc1902.ObjectIdentity) or \
-        isinstance(stopOID, rfc1902.ObjectIdentity):
+if (isinstance(startOID, ObjectIdentity) or
+        isinstance(stopOID, ObjectIdentity)):
     compiler.addMibCompiler(
         snmpEngine.getMibBuilder(),
         sources=mibSources or defaultMibSources
     )
     mibViewController = view.MibViewController(snmpEngine.getMibBuilder())
-    if isinstance(startOID, rfc1902.ObjectIdentity):
+    if isinstance(startOID, ObjectIdentity):
         startOID.resolveWithMib(mibViewController)
-    if isinstance(stopOID, rfc1902.ObjectIdentity):
+    if isinstance(stopOID, ObjectIdentity):
         stopOID.resolveWithMib(mibViewController)
 
 # Variation module initialization
@@ -610,21 +612,31 @@ def cbFun(snmpEngine, sendRequestHandle, errorIndication,
 
     # Walk var-binds
     for varBindRow in varBindTable:
-        for oid, val in varBindRow:
+        for oid, value in varBindRow:
             # EOM
             if stopOID and oid >= stopOID:
                 stopFlag = True  # stop on out of range condition
-            elif (val is None or
-                          val.tagSet in (rfc1905.NoSuchObject.tagSet,
-                                         rfc1905.NoSuchInstance.tagSet,
-                                         rfc1905.EndOfMibView.tagSet)):
+            elif (value is None or
+                          value.tagSet in (rfc1905.NoSuchObject.tagSet,
+                                           rfc1905.NoSuchInstance.tagSet,
+                                           rfc1905.EndOfMibView.tagSet)):
                 stopFlag = True
+
+            # remove value enumeration
+            if value.tagSet == rfc1902.Integer32.tagSet:
+                value = rfc1902.Integer32(value)
+
+            if value.tagSet == rfc1902.Unsigned32.tagSet:
+                value = rfc1902.Unsigned32(value)
+
+            if value.tagSet == rfc1902.Bits.tagSet:
+                value = rfc1902.OctetString(value)
 
             # Build .snmprec record
 
             context = {
                 'origOid': oid,
-                'origValue': val,
+                'origValue': value,
                 'count': cbCtx['count'],
                 'total': cbCtx['total'],
                 'iteration': cbCtx['iteration'],
@@ -636,7 +648,7 @@ def cbFun(snmpEngine, sendRequestHandle, errorIndication,
             }
 
             try:
-                line = dataFileHandler.format(oid, val, **context)
+                line = dataFileHandler.format(oid, value, **context)
             except error.MoreDataNotification:
                 cbCtx['count'] = 0
                 cbCtx['iteration'] += 1

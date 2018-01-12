@@ -235,8 +235,19 @@ def getValue(syntax, hint='', automaticValues=automaticValues):
                 val = '?'
 
         try:
-            if val is not None:
-                return syntax.clone(val)
+            # remove value enumeration
+
+            if syntax.tagSet == rfc1902.Integer32.tagSet:
+                return rfc1902.Integer32(val)
+
+            if syntax.tagSet == rfc1902.Unsigned32.tagSet:
+                return rfc1902.Unsigned32(val)
+
+            if syntax.tagSet == rfc1902.Bits.tagSet:
+                return rfc1902.OctetString(val)
+
+            return syntax.clone(val)
+
         except PyAsn1Error:
             if makeGuess == 1:
                 sys.stderr.write(
