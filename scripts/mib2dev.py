@@ -238,13 +238,13 @@ def getValue(syntax, hint='', automaticValues=automaticValues):
             # remove value enumeration
 
             if syntax.tagSet == rfc1902.Integer32.tagSet:
-                return rfc1902.Integer32(val)
+                return rfc1902.Integer32(syntax.clone(val))
 
             if syntax.tagSet == rfc1902.Unsigned32.tagSet:
-                return rfc1902.Unsigned32(val)
+                return rfc1902.Unsigned32(syntax.clone(val))
 
             if syntax.tagSet == rfc1902.Bits.tagSet:
-                return rfc1902.OctetString(val)
+                return rfc1902.OctetString(syntax.clone(val))
 
             return syntax.clone(val)
 
