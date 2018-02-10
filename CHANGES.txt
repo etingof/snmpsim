@@ -1,9 +1,11 @@
 
-Revision 0.4.3, released XX-02-2018
+Revision 0.4.3, released 12-02-2018
 -----------------------------------
 
-- Strip labels from enumerations when producing .snmprec file
-- Fixed SNMP GET command processing by the non-snmprec storage
+- Copyright notice bumped up to year 2018
+- Fix to strip labels from enumerations when producing .snmprec
+  file
+- Fix to SNMP GET command processing by the non-snmprec storage
   backends - it used to return next OID instead of noSuchObject
 
 Revision 0.4.2, released 22-12-2017

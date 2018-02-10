@@ -2,7 +2,7 @@
 #
 # This file is part of snmpsim software.
 #
-# Copyright (c) 2010-2017, Ilya Etingof <etingof@gmail.com>
+# Copyright (c) 2010-2018, Ilya Etingof <etingof@gmail.com>
 # License: http://snmplabs.com/snmpsim/license.html
 #
 # SNMP Simulator data file management tool
