@@ -21,9 +21,15 @@ class DumpRecord(abstract.AbstractRecord):
 
     def evaluateValue(self, oid, tag, value, **context):
         try:
-            return oid, tag, self.grammar.tagMap[tag](value)
+            value = self.grammar.tagMap[tag](value)
         except:
             raise SnmpsimError('value evaluation error for tag %r, value %r' % (tag, value))
+
+        if (not context['nextFlag'] and not context['exactMatch'] or
+                context['setFlag']):
+            return context['origOid'], tag, context['errorStatus']
+
+        return oid, tag, value
 
     def evaluate(self, line, **context):
         oid, tag, value = self.grammar.parse(line)
