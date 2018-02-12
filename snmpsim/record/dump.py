@@ -25,9 +25,15 @@ class DumpRecord(abstract.AbstractRecord):
         except:
             raise SnmpsimError('value evaluation error for tag %r, value %r' % (tag, value))
 
-        if (not context['nextFlag'] and not context['exactMatch'] or
-                context['setFlag']):
-            return context['origOid'], tag, context['errorStatus']
+        # not all callers supply the context - just ignore it
+        try:
+            if (not context['nextFlag'] and
+                not context['exactMatch'] or
+                    context['setFlag']):
+                return context['origOid'], tag, context['errorStatus']
+
+        except KeyError:
+            pass
 
         return oid, tag, value
 
