@@ -88,7 +88,7 @@ def variate(oid, tag, value, **context):
 
     try:
         cursor.execute(
-            'set session transaction isolation level %s' % moduleContext['isolationLevel']
+            'set session transaction isolation level %s' % isolationLevels[moduleContext['isolationLevel']]
         )
         cursor.fetchall()
     except:  # non-MySQL/Postgres
