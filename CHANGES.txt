@@ -1,5 +1,5 @@
 
-Revision 0.4.4, released XX-02-2018
+Revision 0.4.4, released 20-02-2018
 -----------------------------------
 
 - Fixed regression to non-snmprec format evaluator when
