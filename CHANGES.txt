@@ -1,4 +1,10 @@
 
+Revision 0.4.5, released XX-02-2018
+-----------------------------------
+
+- Fixed DBM file index detection code to operate correctly
+
+
 Revision 0.4.4, released 20-02-2018
 -----------------------------------
 
