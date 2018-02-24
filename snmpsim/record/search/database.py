@@ -60,13 +60,14 @@ class RecordIndex:
 
         for dbFile in (
             self.__dbFile + os.path.extsep + 'db',
+            self.__dbFile + os.path.extsep + 'dat',
             self.__dbFile
             ):
             if os.path.exists(dbFile):
                 if textFileTime < os.stat(dbFile)[8]:
                     if indexNeeded:
                         log.msg('Forced index rebuild %s' % dbFile)
-                    elif not whichdb(dbFile):
+                    elif not whichdb(self.__dbFile):
                         indexNeeded = True
                         log.msg('Unsupported index format, rebuilding index %s' % dbFile)
                 else:
