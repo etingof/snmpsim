@@ -195,7 +195,7 @@ if params:
     sys.exit(-1)
 
 if not pcap:
-    sys.stderr.write('ERROR: pylibpcap package is missing!\r\nGet it from http://sourceforge.net/projects/pylibpcap/\r\n%s\r\n' % helpMessage)
+    sys.stderr.write('ERROR: pylibpcap package is missing!\r\nGet it by running `pip install https://downloads.sourceforge.net/project/pylibpcap/pylibpcap/0.6.4/pylibpcap-0.6.4.tar.gz`\r\n%s\r\n' % helpMessage)
     sys.exit(-1)
 
 log.setLogger('pcap2dev', 'stdout')
