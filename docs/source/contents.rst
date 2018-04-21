@@ -57,7 +57,7 @@ version from PyPI:
    $ pip install snmpsim
 
 Alternatively, you can download the latest release from `GitHub <https://github.com/etingof/snmpsim/releases>`_
-or `PyPI <https://pypi.python.org/pypi/snmpsim>`_.
+or `PyPI <https://pypi.org/project/snmpsim/>`_.
 
 License
 -------
