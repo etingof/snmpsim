@@ -1,8 +1,8 @@
 #
 # This file is part of snmpsim software.
 #
-# Copyright (c) 2010-2017, Ilya Etingof <etingof@gmail.com>
-# License: http://snmpsim.sf.net/license.html
+# Copyright (c) 2010-2018, Ilya Etingof <etingof@gmail.com>
+# License: http://snmplabs.com/snmpsim/license.html
 #
 from string import digits, ascii_letters
 from pysnmp.proto import rfc1902, rfc1905
@@ -59,5 +59,6 @@ class SnmprecGrammar(AbstractGrammar):
                             rfc1902.IpAddress.tagSet):
             nval = value.asNumbers()
             for x in nval:
-                if x not in self.alnums:
+                if (value.tagSet == rfc1902.IpAddress.tagSet or
+                            x not in self.alnums):
                     return ''.join(['%.2x' % x for x in nval])

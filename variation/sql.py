@@ -1,8 +1,8 @@
 #
 # This file is part of snmpsim software.
 #
-# Copyright (c) 2010-2017, Ilya Etingof <etingof@gmail.com>
-# License: http://snmpsim.sf.net/license.html
+# Copyright (c) 2010-2018, Ilya Etingof <etingof@gmail.com>
+# License: http://snmplabs.com/snmpsim/license.html
 #
 # Managed value variation module: simulate a writable Agent using
 # SQL backend for storing Managed Objects
@@ -88,7 +88,7 @@ def variate(oid, tag, value, **context):
 
     try:
         cursor.execute(
-            'set session transaction isolation level %s' % moduleContext['isolationLevel']
+            'set session transaction isolation level %s' % isolationLevels[moduleContext['isolationLevel']]
         )
         cursor.fetchall()
     except:  # non-MySQL/Postgres

@@ -2,8 +2,8 @@
 #
 # This file is part of snmpsim software.
 #
-# Copyright (c) 2010-2017, Ilya Etingof <etingof@gmail.com>
-# License: http://snmpsim.sf.net/license.html
+# Copyright (c) 2010-2018, Ilya Etingof <etingof@gmail.com>
+# License: http://snmplabs.com/snmpsim/license.html
 #
 # SNMP Simulator data file management tool
 #
@@ -24,8 +24,11 @@ startOID = stopOID = None
 srcRecordType = dstRecordType = 'snmprec'
 inputFiles = []
 outputFile = sys.stdout
+escapedStrings = False
+
 if hasattr(outputFile, 'buffer'):
     outputFile = outputFile.buffer
+
 writtenCount = skippedCount = duplicateCount = brokenCount = variationCount = 0
 
 
@@ -42,7 +45,7 @@ class SnmprecRecord(snmprec.SnmprecRecord):
         if 'textTag' in context['backdoor']:
             return self.formatOid(oid), context['backdoor']['textTag'], value
         else:
-            return snmprec.SnmprecRecord.formatValue(self, oid, value)
+            return snmprec.SnmprecRecord.formatValue(self, oid, value, **context)
 
 
 # data file types and parsers
@@ -61,6 +64,7 @@ Usage: %s [--help]
     [--sort-records]
     [--ignore-broken-records]
     [--deduplicate-records]
+    [--escaped-strings]
     [--mib-source=<url>]
     [--start-object=<MIB-NAME::[symbol-name]|OID>]
     [--stop-object=<MIB-NAME::[symbol-name]|OID>]
@@ -76,6 +80,7 @@ try:
                                  ['help', 'version', 'quiet', 'sort-records',
                                   'ignore-broken-records',
                                   'deduplicate-records',
+                                  'escaped-strings',
                                   'start-oid=', 'stop-oid=', 'start-object=',
                                   'stop-object=',
                                   'mib-source=', 'source-record-type=',
@@ -89,8 +94,7 @@ except Exception:
 
 if params:
     if verboseFlag:
-        sys.stderr.write('ERROR: extra arguments supplied %s\r\n%s\r\n' % (
-        params, helpMessage))
+        sys.stderr.write('ERROR: extra arguments supplied %s\r\n%s\r\n' % (params, helpMessage))
     sys.exit(-1)
 
 for opt in opts:
@@ -99,18 +103,21 @@ for opt in opts:
 Synopsis:
   SNMP Simulator data files management and repair tool.
 Documentation:
-  http://snmpsim.sourceforge.net/managing-data-files.html
+  http://snmplabs.com/snmpsim/managing-data-files.html
 %s
 """ % helpMessage)
         sys.exit(-1)
     if opt[0] == '-v' or opt[0] == '--version':
-        import snmpsim, pysmi, pysnmp, pyasn1
+        import snmpsim
+        import pysmi
+        import pysnmp
+        import pyasn1
 
         sys.stderr.write("""\
 SNMP Simulator version %s, written by Ilya Etingof <etingof@gmail.com>
 Using foundation libraries: pysmi %s, pysnmp %s, pyasn1 %s.
 Python interpreter: %s
-Software documentation and support at http://snmpsim.sf.net
+Software documentation and support at http://snmplabs.com/snmpsim
 %s
 """ % (snmpsim.__version__,
        hasattr(pysmi, '__version__') and pysmi.__version__ or 'unknown',
@@ -126,6 +133,8 @@ Software documentation and support at http://snmpsim.sf.net
         ignoreBrokenRecords = True
     if opt[0] == '--deduplicate-records':
         deduplicateRecords = True
+    if opt[0] == '--escaped-strings':
+        escapedStrings = True
     # obsolete begin
     if opt[0] == '--start-oid':
         startOID = univ.ObjectIdentifier(opt[1])
@@ -194,16 +203,16 @@ for inputFile in inputFiles:
         except error.SnmpsimError:
             if ignoreBrokenRecords:
                 if verboseFlag:
-                    sys.stderr.write('# Skipping broken record <%s>\r\n' % line)
+                    sys.stderr.write('# Skipping broken record <%s>: %s\r\n' % (line, sys.exc_info()[1]))
                 brokenCount += 1
                 continue
             else:
                 if verboseFlag:
-                    sys.stderr.write('ERROR: broken record <%s>\r\n' % line)
+                    sys.stderr.write('ERROR: broken record <%s>: %s\r\n' % (line, sys.exc_info()[1]))
                 sys.exit(-1)
 
-        if startOID and startOID > oid or \
-                        stopOID and stopOID < oid:
+        if (startOID and startOID > oid or
+                stopOID and stopOID < oid):
             skippedCount += 1
             continue
 
@@ -226,7 +235,7 @@ for record in recordsList:
     try:
         outputFile.write(
             recordsSet[dstRecordType].format(
-                record[0], record[1], backdoor=record[2]
+                record[0], record[1], backdoor=record[2], nohex=escapedStrings
             )
         )
     except:

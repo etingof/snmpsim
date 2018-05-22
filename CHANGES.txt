@@ -1,9 +1,50 @@
 
-Revision 0.3.2, released XX-02-2017
+Revision 0.4.5, released XX-02-2018
 -----------------------------------
 
+- Fixed DBM file index detection code to operate correctly
+
+
+Revision 0.4.4, released 20-02-2018
+-----------------------------------
+
+- Fixed regression to non-snmprec format evaluator when
+  called in a non-simulation context (e.g. datafile.py)
+- Fixed non-functional SQL isolation level setup at the
+  `sql` variation module
+
+Revision 0.4.3, released 12-02-2018
+-----------------------------------
+
+- Copyright notice bumped up to year 2018
+- Fix to strip labels from enumerations when producing .snmprec
+  file
+- Fix to SNMP GET command processing by the non-snmprec storage
+  backends - it used to return next OID instead of noSuchObject
+
+Revision 0.4.2, released 22-12-2017
+-----------------------------------
+
+- Python literal string representation added as a new flavor of .snmprec
+  string type field (4e)
+- Migrated references from SourceForge
+- Integer and enumerations parsing of snmpwalk output improved
+- Added strong AES privacy algorithms with Blumenthal key localization
+- Fixed SNMP crypto algorithm identifiers to be named consistently after
+  key length rather than MAC length
+
+Revision 0.4.1, released 29-10-2017
+-----------------------------------
+
+- SHA2 authentication protocol suite added.
+- Sphinx documentation added based on the original web-site
+  user manual
+- Simulator's SNMPv3 command line option processing hardened to
+  make easier to understand.
+- Notification variation module now accepts hex strings in var-binds
 - Fixes to Windows path to log file handling.
 - Fixes to MIB objects command-line parsing.
+- Source code PEP8'ed
 
 Revision 0.3.1, released 21-01-2017
 -----------------------------------
@@ -58,7 +99,7 @@ Revision 0.3.0, released 28-09-2015
 - Configurable SNMP request timeout and retry count settings now supported
   by the snmprec.py tool.
 - The --context-engine-id option support added to snmprec.py tool.
-- Hex values can now be passed to --v3-context-* options to snmprec.py tool
+- Hex values can now be passed to --v3-context-\* options to snmprec.py tool
 - Variation modules options separators can now be escaped by doubling or
   tripling them.
 - All logging moved to Python logging framework. Some more log targets (such
@@ -111,8 +152,8 @@ Revision 0.2.4, released 04-10-2013
   in variate() context. This is due to the new multi-engine ID design.
 - New --args-from-file command-line parameter added to snmpsimd.py to 
   allow a large number of SNMP engines configured to Simulator. The
-  --agent-endpoint*-list= family of options discontinued in favor of
-  multiple --agent-*-endpoint options read from args file.
+  --agent-endpoint\*-list= family of options discontinued in favor of
+  multiple --agent-\*-endpoint options read from args file.
 - Distribute is gone, switching to setuptools completely.
 - Default logging destination for all tools is now stderr.
 - The --version option of snmprec.py renamed into --protocol-version.
@@ -128,13 +169,14 @@ Revision 0.2.3, released 01-08-2013
 -----------------------------------
 
 - Simulator now supports a list of interfaces to listen on through
-  the --agent-endpoint*-list=<file> family of options. It's intended
+  the --agent-endpoint\*-list=<file> family of options. It's intended
   for simulation a very large pool of devices.
 - Introducing new command-line utility "datafile.py" designed to manage data
   files. Features include: merging, splitting, sorting, de-duplicating,
   convertion between data file formats.
 - Automatic log file rotation feature implemented.
 - A number of improvement to the mib2dev.py tool:
+
   * Columnar objects for table indices are now automatically populated
     from index values
   * Tables are can now be populated with arbitrary number of rows
@@ -146,6 +188,7 @@ Revision 0.2.3, released 01-08-2013
     better automation
   * Produced values are sorted and de-duplicated.
   * Fix to OID range checking when specified at the command-line.
+
 - Help messages made more readable and complete.
 - Data file search code fixed (not to crash Simulator in corner cases)
   and simplified.
@@ -193,27 +236,32 @@ Revision 0.2.1, released 07-04-2013
 -----------------------------------
 
 - WARNING: this release brings some backward incompatibilities in
+
     * variation modules names and options
     * snmpsimd.py community names (in Windows platform)
     * stock variation modules installation location
     * sql module OID format stored in database
+
   Please read the changes below for more information.
+
 - License updated to vanilla BSD 2-Clause
   (http://opensource.org/licenses/BSD-2-Clause).
 - Variation modules can now participate in .snmprec production what
   can be used for capturing additional information about SNMP Agent
   being snapshotted in .snmprec files.
   The following changes have been made to the system:
+
   * the snmprec.py tool can be passed variation module name.
   * variation modules can now define the 'record' callable which
     will be given a chance to influence snmprec record being written.
   * existing 'process' callable in variation modules renamed into
     'variate' for clarity.
-  * variation modules' init() and shutdown() methods accept **context,
+  * variation modules' init() and shutdown() methods accept \*\*context,
     'mode' parameter being passed indicating current operation mode.
   * variation modules running in recording mode can communicate to
     the upper levels that they either won't produce any data on the
     current invocation or request another round of SNMP Agent walk.
+
 - Variation modules options now take shape of a key-value pairs. This
   might break backward compatibility with 0.2.0!
 - The counter.py and gauge.py variation modules merged into a single
@@ -253,6 +301,7 @@ Revision 0.2.0, released 12-03-2013
 
 - Major overhaul aimed at adding value variation features to the Simulator
   core:
+
   * data files may now hold not only terminal OIDs but also OID subtrees
   * pluggable value variation modules interfaces and basic modules added
   * write support added through the use of appropriate variation modules
@@ -263,6 +312,7 @@ Revision 0.2.0, released 12-03-2013
   * SNMP Notification Originator variation module added what could be
     used for sending SNMP TRAP/INFORM messages to SNMP entities
     on SNMP requests to Simulator
+
 - SNMP snapshots now being called 'data files' rather than 'device files'
   which is a legacy term.
 - Data files and variation modules are now installed into platform-specific
@@ -353,14 +403,14 @@ Revision 0.1.1, released 06-11-2011
 - Major overhawl for Python 2.4 -- 3.2 compatibility:
   + drop explicit long integer type use
   + map()/filter() replaced with list comprehension
-  + apply() replaced with */**args
+  + apply() replaced with \*/\*\*args
   + dictionary operations made 2K/3K compatible
   + division operator made 2K/3K compatible
   + exception syntax made 2K/3K compatible
   + tuple function arguments resolved to scalars to become py3k compatible
 
 Revision 0.0.10, released 31-12-2010
------------------------------------
+------------------------------------
 
 - --agent-port handling bug fixed in snmprec.py
 - --v3-arch command-line flag added to save on large number of

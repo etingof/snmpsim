@@ -2,8 +2,8 @@
 #
 # This file is part of snmpsim software.
 #
-# Copyright (c) 2010-2017, Ilya Etingof <etingof@gmail.com>
-# License: http://snmpsim.sf.net/license.html
+# Copyright (c) 2010-2018, Ilya Etingof <etingof@gmail.com>
+# License: http://snmplabs.com/snmpsim/license.html
 #
 # SNMP Snapshot Data Recorder
 #
@@ -14,6 +14,7 @@ import os
 import socket
 import traceback
 from pyasn1.type import univ
+from pysnmp.proto import rfc1902
 from pysnmp.proto import rfc1905
 from pysnmp.entity import engine, config
 from pysnmp.carrier.asynsock.dgram import udp
@@ -27,7 +28,8 @@ try:
 except ImportError:
     unix = None
 from pysnmp.entity.rfc3413 import cmdgen
-from pysnmp.smi import rfc1902, view, compiler
+from pysnmp.smi.rfc1902 import ObjectIdentity, ObjectType
+from pysnmp.smi import view, compiler
 from pyasn1 import debug as pyasn1_debug
 from pysnmp import debug as pysnmp_debug
 from snmpsim.record import snmprec
@@ -65,6 +67,10 @@ variationModuleName = variationModule = None
 authProtocols = {
     'MD5': config.usmHMACMD5AuthProtocol,
     'SHA': config.usmHMACSHAAuthProtocol,
+    'SHA224': config.usmHMAC128SHA224AuthProtocol,
+    'SHA256': config.usmHMAC192SHA256AuthProtocol,
+    'SHA384': config.usmHMAC256SHA384AuthProtocol,
+    'SHA512': config.usmHMAC384SHA512AuthProtocol,
     'NONE': config.usmNoAuthProtocol
 }
 
@@ -74,7 +80,9 @@ privProtocols = {
     'AES': config.usmAesCfb128Protocol,
     'AES128': config.usmAesCfb128Protocol,
     'AES192': config.usmAesCfb192Protocol,
+    'AES192BLMT': config.usmAesBlumenthalCfb192Protocol,
     'AES256': config.usmAesCfb256Protocol,
+    'AES256BLMT': config.usmAesBlumenthalCfb256Protocol,
     'NONE': config.usmNoPrivProtocol
 }
 
@@ -111,8 +119,8 @@ Usage: %s [--help]
     '|'.join([x for x in pysnmp_debug.flagMap.keys() if x != 'mibview']),
     '|'.join([x for x in pyasn1_debug.flagMap.keys()]),
     '|'.join(log.gMap.keys()),
-    '|'.join([x for x in authProtocols if x != 'NONE']),
-    '|'.join([x for x in privProtocols if x != 'NONE'])
+    '|'.join(sorted([x for x in authProtocols if x != 'NONE'])),
+    '|'.join(sorted([x for x in privProtocols if x != 'NONE']))
 )
 
 try:
@@ -151,18 +159,21 @@ Synopsis:
   data in data files for subsequent playback by SNMP Simulation tool.
   Can store a series of recordings for a more dynamic playback.
 Documentation:
-  http://snmpsim.sourceforge.net/snapshotting.html
+  http://snmplabs.com/snmpsim/snapshotting.html
 %s
 """ % helpMessage)
         sys.exit(-1)
     if opt[0] == '-v' or opt[0] == '--version':
-        import snmpsim, pysnmp, pysmi, pyasn1
+        import snmpsim
+        import pysnmp
+        import pysmi
+        import pyasn1
 
         sys.stderr.write("""\
 SNMP Simulator version %s, written by Ilya Etingof <etingof@gmail.com>
 Using foundation libraries: pysmi %s, pysnmp %s, pyasn1 %s.
 Python interpreter: %s
-Software documentation and support at http://snmpsim.sf.net
+Software documentation and support at http://snmplabs.com/snmpsim
 %s
 """ % (snmpsim.__version__,
        hasattr(pysmi, '__version__') and pysmi.__version__ or 'unknown',
@@ -300,9 +311,9 @@ Software documentation and support at http://snmpsim.sf.net
     elif opt[0] == '--mib-source':
         mibSources.append(opt[1])
     elif opt[0] == '--start-object':
-        startOID = rfc1902.ObjectIdentity(*opt[1].split('::', 1))
+        startOID = ObjectIdentity(*opt[1].split('::', 1))
     elif opt[0] == '--stop-object':
-        stopOID = rfc1902.ObjectIdentity(*opt[1].split('::', 1), **dict(last=True))
+        stopOID = ObjectIdentity(*opt[1].split('::', 1), **dict(last=True))
     elif opt[0] == '--output-file':
         outputFile = open(opt[1], 'wb')
     elif opt[0] == '--variation-modules-dir':
@@ -470,16 +481,16 @@ elif agentUDPv4Endpoint:
 
 log.msg('Agent response timeout: %.2f secs, retries: %s' % (timeout / 100, retryCount))
 
-if isinstance(startOID, rfc1902.ObjectIdentity) or \
-        isinstance(stopOID, rfc1902.ObjectIdentity):
+if (isinstance(startOID, ObjectIdentity) or
+        isinstance(stopOID, ObjectIdentity)):
     compiler.addMibCompiler(
         snmpEngine.getMibBuilder(),
         sources=mibSources or defaultMibSources
     )
     mibViewController = view.MibViewController(snmpEngine.getMibBuilder())
-    if isinstance(startOID, rfc1902.ObjectIdentity):
+    if isinstance(startOID, ObjectIdentity):
         startOID.resolveWithMib(mibViewController)
-    if isinstance(stopOID, rfc1902.ObjectIdentity):
+    if isinstance(stopOID, ObjectIdentity):
         stopOID.resolveWithMib(mibViewController)
 
 # Variation module initialization
@@ -556,8 +567,7 @@ def cbFun(snmpEngine, sendRequestHandle, errorIndication,
             # fuzzy logic of walking a broken OID
             if len(nextOID) < 4:
                 pass
-            elif (continueOnErrors - cbCtx[
-                'retries']) * 10 / continueOnErrors > 5:
+            elif (continueOnErrors - cbCtx['retries']) * 10 / continueOnErrors > 5:
                 nextOID = nextOID[:-2] + (nextOID[-2] + 1,)
             elif nextOID[-1]:
                 nextOID = nextOID[:-1] + (nextOID[-1] + 1,)
@@ -602,21 +612,31 @@ def cbFun(snmpEngine, sendRequestHandle, errorIndication,
 
     # Walk var-binds
     for varBindRow in varBindTable:
-        for oid, val in varBindRow:
+        for oid, value in varBindRow:
             # EOM
             if stopOID and oid >= stopOID:
                 stopFlag = True  # stop on out of range condition
-            elif val is None or \
-                            val.tagSet in (rfc1905.NoSuchObject.tagSet,
+            elif (value is None or
+                          value.tagSet in (rfc1905.NoSuchObject.tagSet,
                                            rfc1905.NoSuchInstance.tagSet,
-                                           rfc1905.EndOfMibView.tagSet):
+                                           rfc1905.EndOfMibView.tagSet)):
                 stopFlag = True
+
+            # remove value enumeration
+            if value.tagSet == rfc1902.Integer32.tagSet:
+                value = rfc1902.Integer32(value)
+
+            if value.tagSet == rfc1902.Unsigned32.tagSet:
+                value = rfc1902.Unsigned32(value)
+
+            if value.tagSet == rfc1902.Bits.tagSet:
+                value = rfc1902.OctetString(value)
 
             # Build .snmprec record
 
             context = {
                 'origOid': oid,
-                'origValue': val,
+                'origValue': value,
                 'count': cbCtx['count'],
                 'total': cbCtx['total'],
                 'iteration': cbCtx['iteration'],
@@ -628,7 +648,7 @@ def cbFun(snmpEngine, sendRequestHandle, errorIndication,
             }
 
             try:
-                line = dataFileHandler.format(oid, val, **context)
+                line = dataFileHandler.format(oid, value, **context)
             except error.MoreDataNotification:
                 cbCtx['count'] = 0
                 cbCtx['iteration'] += 1

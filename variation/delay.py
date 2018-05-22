@@ -1,8 +1,8 @@
 #
 # This file is part of snmpsim software.
 #
-# Copyright (c) 2010-2017, Ilya Etingof <etingof@gmail.com>
-# License: http://snmpsim.sf.net/license.html
+# Copyright (c) 2010-2018, Ilya Etingof <etingof@gmail.com>
+# License: http://snmplabs.com/snmpsim/license.html
 #
 import time
 import random
@@ -61,7 +61,7 @@ def variate(oid, tag, value, **context):
             while recordContext['settings']['tlist']:
                 o, v, d = recordContext['settings']['tlist'][:3]
                 recordContext['settings']['tlist'] = recordContext['settings']['tlist'][3:]
-                v = int(v);
+                v = int(v)
                 d = int(d)
                 if o not in tlist:
                     tlist[o] = {}
@@ -74,28 +74,28 @@ def variate(oid, tag, value, **context):
             recordContext['settings']['tlist'] = tlist
 
     if context['setFlag'] and 'vlist' in recordContext['settings']:
-        if 'eq' in recordContext['settings']['vlist'] and \
-                        context['origValue'] in recordContext['settings']['vlist']['eq']:
+        if ('eq' in recordContext['settings']['vlist'] and
+                    context['origValue'] in recordContext['settings']['vlist']['eq']):
             delay = recordContext['settings']['vlist']['eq'][context['origValue']]
-        elif 'lt' in recordContext['settings']['vlist'] and \
-                        context['origValue'] < recordContext['settings']['vlist']['lt'][0]:
+        elif ('lt' in recordContext['settings']['vlist'] and
+                context['origValue'] < recordContext['settings']['vlist']['lt'][0]):
             delay = recordContext['settings']['vlist']['lt'][1]
-        elif 'gt' in recordContext['settings']['vlist'] and \
-                        context['origValue'] > recordContext['settings']['vlist']['gt'][0]:
+        elif ('gt' in recordContext['settings']['vlist'] and
+                context['origValue'] > recordContext['settings']['vlist']['gt'][0]):
             delay = recordContext['settings']['vlist']['gt'][1]
         else:
             delay = recordContext['settings']['wait']
 
     elif 'tlist' in recordContext['settings']:
         now = int(time.time())
-        if 'eq' in recordContext['settings']['tlist'] and \
-                        now == recordContext['settings']['tlist']['eq']:
+        if ('eq' in recordContext['settings']['tlist'] and
+                now == recordContext['settings']['tlist']['eq']):
             delay = recordContext['settings']['tlist']['eq'][now]
-        elif 'lt' in recordContext['settings']['tlist'] and \
-                        now < recordContext['settings']['tlist']['lt'][0]:
+        elif ('lt' in recordContext['settings']['tlist'] and
+                now < recordContext['settings']['tlist']['lt'][0]):
             delay = recordContext['settings']['tlist']['lt'][1]
-        elif 'gt' in recordContext['settings']['tlist'] and \
-                        now > recordContext['settings']['tlist']['gt'][0]:
+        elif ('gt' in recordContext['settings']['tlist'] and
+                now > recordContext['settings']['tlist']['gt'][0]):
             delay = recordContext['settings']['tlist']['gt'][1]
         else:
             delay = recordContext['settings']['wait']

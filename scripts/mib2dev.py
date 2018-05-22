@@ -2,8 +2,8 @@
 #
 # This file is part of snmpsim software.
 #
-# Copyright (c) 2010-2017, Ilya Etingof <etingof@gmail.com>
-# License: http://snmpsim.sf.net/license.html
+# Copyright (c) 2010-2018, Ilya Etingof <etingof@gmail.com>
+# License: http://snmplabs.com/snmpsim/license.html
 #
 # SNMP Simulator MIB to data file converter
 #
@@ -61,8 +61,7 @@ helpMessage = """Usage: %s [--help]
     [--unsigned-range=<min,max>]
     [--integer32-range=<min,max>]""" % (
     sys.argv[0],
-    '|'.join([x for x in debug.flagMap.keys() if x not in (
-    'app', 'msgproc', 'proxy', 'io', 'secmod', 'dsp', 'acl')])
+    '|'.join([x for x in debug.flagMap.keys() if x not in ('app', 'msgproc', 'proxy', 'io', 'secmod', 'dsp', 'acl')])
 )
 
 try:
@@ -91,18 +90,21 @@ Synopsis:
   Chooses random values or can ask for them interactively.
   Able to fill SNMP conceptual tables with consistent indices.
 Documentation:
-  http://snmpsim.sourceforge.net/simulation-based-on-mibs.html
+  http://snmplabs.com/snmpsim/simulation-based-on-mibs.html
 %s
 """ % helpMessage)
         sys.exit(-1)
     if opt[0] == '-v' or opt[0] == '--version':
-        import snmpsim, pysmi, pysnmp, pyasn1
+        import snmpsim
+        import pysmi
+        import pysnmp
+        import pyasn1
 
         sys.stderr.write("""\
 SNMP Simulator version %s, written by Ilya Etingof <etingof@gmail.com>
 Using foundation libraries: pysmi %s, pysnmp %s, pyasn1 %s.
 Python interpreter: %s
-Software documentation and support at http://snmpsim.sf.net
+Software documentation and support at http://snmplabs.com/snmpsim
 %s
 """ % (snmpsim.__version__,
        hasattr(pysmi, '__version__') and pysmi.__version__ or 'unknown',
@@ -233,13 +235,23 @@ def getValue(syntax, hint='', automaticValues=automaticValues):
                 val = '?'
 
         try:
-            if val is not None:
-                return syntax.clone(val)
+            # remove value enumeration
+
+            if syntax.tagSet == rfc1902.Integer32.tagSet:
+                return rfc1902.Integer32(syntax.clone(val))
+
+            if syntax.tagSet == rfc1902.Unsigned32.tagSet:
+                return rfc1902.Unsigned32(syntax.clone(val))
+
+            if syntax.tagSet == rfc1902.Bits.tagSet:
+                return rfc1902.OctetString(syntax.clone(val))
+
+            return syntax.clone(val)
+
         except PyAsn1Error:
             if makeGuess == 1:
                 sys.stderr.write(
-                    '*** Inconsistent value: %s\r\n*** See constraints and suggest a better one for:\r\n' % (
-                    sys.exc_info()[1],)
+                    '*** Inconsistent value: %s\r\n*** See constraints and suggest a better one for:\r\n' % (sys.exc_info()[1],)
                 )
             if makeGuess:
                 makeGuess -= 1
@@ -299,8 +311,7 @@ output = []
 # MIBs walk
 for modName in modNames:
     if verboseFlag:
-        sys.stderr.write('# MIB module: %s, from %s till %s\r\n' % (
-        modName, startOID or 'the beginning', stopOID or 'the end'))
+        sys.stderr.write('# MIB module: %s, from %s till %s\r\n' % (modName, startOID or 'the beginning', stopOID or 'the end'))
     oid = ObjectIdentity(modName).resolveWithMib(mibViewController)
     hint = rowHint = ''
     rowOID = None
@@ -357,8 +368,7 @@ for modName in modNames:
             rowHint = hint + '# Row %s::%s\r\n' % (mibName, symName)
             for impliedFlag, idxModName, idxSymName in node.getIndexNames():
                 idxNode, = mibBuilder.importSymbols(idxModName, idxSymName)
-                rowHint += '# Index %s::%s (type %s)\r\n' % (
-                idxModName, idxSymName, idxNode.syntax.__class__.__name__)
+                rowHint += '# Index %s::%s (type %s)\r\n' % (idxModName, idxSymName, idxNode.syntax.__class__.__name__)
                 rowIndices[idxNode.name] = getValue(idxNode.syntax, verboseFlag and rowHint or '')
                 suffix = suffix + node.getAsName(rowIndices[idxNode.name], impliedFlag)
             if not rowIndices:
@@ -374,17 +384,12 @@ for modName in modNames:
                 val = rowIndices[oid]
             else:
                 val = getValue(node.syntax,
-                               verboseFlag and rowHint + '# Column %s::%s (type %s)\r\n' % (
-                               mibName, symName,
-                               node.syntax.__class__.__name__) or '')
+                               verboseFlag and rowHint + '# Column %s::%s (type %s)\r\n' % (mibName, symName, node.syntax.__class__.__name__) or '')
         elif isinstance(node, MibScalar):
             hint = ''
             oid = node.name
             suffix = (0,)
-            val = getValue(node.syntax,
-                           verboseFlag and '# Scalar %s::%s (type %s)\r\n' % (
-                           mibName, symName,
-                           node.syntax.__class__.__name__) or '')
+            val = getValue(node.syntax, verboseFlag and '# Scalar %s::%s (type %s)\r\n' % (mibName, symName, node.syntax.__class__.__name__) or '')
         else:
             hint = ''
             continue

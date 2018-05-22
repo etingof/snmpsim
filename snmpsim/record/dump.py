@@ -1,8 +1,8 @@
 #
 # This file is part of snmpsim software.
 #
-# Copyright (c) 2010-2017, Ilya Etingof <etingof@gmail.com>
-# License: http://snmpsim.sf.net/license.html
+# Copyright (c) 2010-2018, Ilya Etingof <etingof@gmail.com>
+# License: http://snmplabs.com/snmpsim/license.html
 #
 import sys
 from pyasn1.type import univ
@@ -21,9 +21,21 @@ class DumpRecord(abstract.AbstractRecord):
 
     def evaluateValue(self, oid, tag, value, **context):
         try:
-            return oid, tag, self.grammar.tagMap[tag](value)
+            value = self.grammar.tagMap[tag](value)
         except:
             raise SnmpsimError('value evaluation error for tag %r, value %r' % (tag, value))
+
+        # not all callers supply the context - just ignore it
+        try:
+            if (not context['nextFlag'] and
+                not context['exactMatch'] or
+                    context['setFlag']):
+                return context['origOid'], tag, context['errorStatus']
+
+        except KeyError:
+            pass
+
+        return oid, tag, value
 
     def evaluate(self, line, **context):
         oid, tag, value = self.grammar.parse(line)

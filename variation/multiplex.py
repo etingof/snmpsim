@@ -1,13 +1,15 @@
 #
 # This file is part of snmpsim software.
 #
-# Copyright (c) 2010-2017, Ilya Etingof <etingof@gmail.com>
-# License: http://snmpsim.sf.net/license.html
+# Copyright (c) 2010-2018, Ilya Etingof <etingof@gmail.com>
+# License: http://snmplabs.com/snmpsim/license.html
 #
 # Managed value variation module: simulate a live Agent using
 # a series of snapshots.
 #
-import os, time, bisect
+import os
+import time
+import bisect
 from pyasn1.compat.octets import str2octs
 from pysnmp.proto import rfc1902
 from snmpsim.record.snmprec import SnmprecRecord
@@ -89,8 +91,7 @@ def variate(oid, tag, value, **context):
             recordContext['settings']['control'] = rfc1902.ObjectName(
                 recordContext['settings']['control']
             )
-            log.msg('multiplex: using control OID %s for subtree %s, time-based multiplexing disabled' % (
-            recordContext['settings']['control'], oid))
+            log.msg('multiplex: using control OID %s for subtree %s, time-based multiplexing disabled' % (recordContext['settings']['control'], oid))
 
         recordContext['ready'] = True
 
@@ -108,8 +109,7 @@ def variate(oid, tag, value, **context):
                 log.msg('multiplex: .snmprec file number %s over limit of %s' % (fileno, len(recordContext['keys'])))
                 return context['origOid'], tag, context['errorStatus']
             moduleContext[oid]['fileno'] = fileno
-            log.msg('multiplex: switched to file #%s (%s)' % (
-            recordContext['keys'][fileno], recordContext['dirmap'][recordContext['keys'][fileno]]))
+            log.msg('multiplex: switched to file #%s (%s)' % (recordContext['keys'][fileno], recordContext['dirmap'][recordContext['keys'][fileno]]))
             return context['origOid'], tag, context['origValue']
         else:
             return context['origOid'], tag, context['errorStatus']
@@ -117,8 +117,8 @@ def variate(oid, tag, value, **context):
     if 'control' in recordContext['settings']:
         if 'fileno' not in moduleContext[oid]:
             moduleContext[oid]['fileno'] = 0
-        if not context['nextFlag'] and \
-                        recordContext['settings']['control'] == context['origOid']:
+        if (not context['nextFlag'] and
+                recordContext['settings']['control'] == context['origOid']):
             return context['origOid'], tag, rfc1902.Integer32(moduleContext[oid]['fileno'])
     else:
         timeslot = (time.time() - moduleContext['booted']) % (
@@ -127,17 +127,17 @@ def variate(oid, tag, value, **context):
 
         fileno = bisect.bisect(recordContext['keys'], fileslot) - 1
 
-        if 'fileno' not in moduleContext[oid] or \
-                        moduleContext[oid]['fileno'] < fileno or \
-                recordContext['settings']['wrap']:
+        if ('fileno' not in moduleContext[oid] or
+                moduleContext[oid]['fileno'] < fileno or
+                recordContext['settings']['wrap']):
             moduleContext[oid]['fileno'] = fileno
 
     datafile = recordContext['dirmap'][
         recordContext['keys'][moduleContext[oid]['fileno']]
     ]
 
-    if 'datafile' not in moduleContext[oid] or \
-                    moduleContext[oid]['datafile'] != datafile:
+    if ('datafile' not in moduleContext[oid] or
+            moduleContext[oid]['datafile'] != datafile):
         if 'datafileobj' in moduleContext[oid]:
             moduleContext[oid]['datafileobj'].close()
         moduleContext[oid]['datafileobj'] = RecordIndex(

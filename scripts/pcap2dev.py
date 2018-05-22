@@ -2,8 +2,8 @@
 #
 # This file is part of snmpsim software.
 #
-# Copyright (c) 2010-2017, Ilya Etingof <etingof@gmail.com>
-# License: http://snmpsim.sf.net/license.html
+# Copyright (c) 2010-2018, Ilya Etingof <etingof@gmail.com>
+# License: http://snmplabs.com/snmpsim/license.html
 #
 # SNMP Simulator MIB to data file converter
 #
@@ -104,8 +104,7 @@ except Exception:
     sys.exit(-1)
 
 if params:
-    sys.stderr.write('ERROR: extra arguments supplied %s\r\n%s\r\n' % (
-    params, helpMessage))
+    sys.stderr.write('ERROR: extra arguments supplied %s\r\n%s\r\n' % (params, helpMessage))
     sys.exit(-1)
 
 for opt in opts:
@@ -116,18 +115,21 @@ Synopsis:
   data files.
   Can read capture files or listen live network interface.
 Documentation:
-  http://snmpsim.sourceforge.net/
+  http://snmplabs.com/snmpsim/
 %s
 """ % helpMessage)
         sys.exit(-1)
     if opt[0] == '-v' or opt[0] == '--version':
-        import snmpsim, pysmi, pysnmp, pyasn1
+        import snmpsim
+        import pysmi
+        import pysnmp
+        import pyasn1
 
         sys.stderr.write("""\
 SNMP Simulator version %s, written by Ilya Etingof <etingof@gmail.com>
 Using foundation libraries: pysmi %s, pysnmp %s, pyasn1 %s.
 Python interpreter: %s
-Software documentation and support at http://snmpsim.sf.net
+Software documentation and support at http://snmplabs.com/snmpsim
 %s
 """ % (snmpsim.__version__,
        hasattr(pysmi, '__version__') and pysmi.__version__ or 'unknown',
@@ -193,7 +195,7 @@ if params:
     sys.exit(-1)
 
 if not pcap:
-    sys.stderr.write('ERROR: pylibpcap package is missing!\r\nGet it from http://sourceforge.net/projects/pylibpcap/\r\n%s\r\n' % helpMessage)
+    sys.stderr.write('ERROR: pylibpcap package is missing!\r\nGet it by running `pip install https://downloads.sourceforge.net/project/pylibpcap/pylibpcap/0.6.4/pylibpcap-0.6.4.tar.gz`\r\n%s\r\n' % helpMessage)
     sys.exit(-1)
 
 log.setLogger('pcap2dev', 'stdout')
@@ -233,10 +235,11 @@ if variationModuleName:
                 exec(compile(open(mod).read(), mod, 'exec'), ctx)
             else:
                 execfile(mod, ctx)
+
         except Exception:
-            log.msg('Variation module "%s" execution failure: %s' % (
-            mod, sys.exc_info()[1]))
+            log.msg('Variation module "%s" execution failure: %s' % (mod, sys.exc_info()[1]))
             sys.exit(-1)
+
         else:
             variationModule = ctx
             log.msg('Variation module "%s" loaded' % variationModuleName)
@@ -297,22 +300,19 @@ pcapObj = pcap.pcapObject()
 
 if listenInterface:
     if verboseFlag:
-        log.msg('Listening on interface %s in %spromiscuous mode' % (
-        listenInterface, promiscuousMode == False and 'non-' or ''))
+        log.msg('Listening on interface %s in %spromiscuous mode' % (listenInterface, promiscuousMode is False and 'non-' or ''))
     try:
         pcapObj.open_live(listenInterface, 65536, promiscuousMode, 1000)
-    except:
-        log.msg('Error openning interface %s for snooping: %s' % (
-        listenInterface, sys.exc_info()[1]))
+    except Exception:
+        log.msg('Error opening interface %s for snooping: %s' % (listenInterface, sys.exc_info()[1]))
         sys.exit(-1)
 elif captureFile:
     if verboseFlag:
-        log.msg('Openning capture file %s' % captureFile)
+        log.msg('Opening capture file %s' % captureFile)
     try:
         pcapObj.open_offline(captureFile)
-    except:
-        log.msg('Error openning capture file %s for reading: %s' % (
-        captureFile, sys.exc_info()[1]))
+    except Exception:
+        log.msg('Error opening capture file %s for reading: %s' % (captureFile, sys.exc_info()[1]))
         sys.exit(-1)
 else:
     sys.stderr.write('ERROR: no capture file or live interface specified\r\n%s\r\n' % helpMessage)
@@ -324,8 +324,7 @@ if packetFilter:
     pcapObj.setfilter(packetFilter, 0, 0)
 
 if verboseFlag:
-    log.msg('Processing records from %s till %s' % (
-    startOID or 'the beginning', stopOID or 'the end'))
+    log.msg('Processing records from %s till %s' % (startOID or 'the beginning', stopOID or 'the end'))
 
 
 def parsePacket(s):
@@ -393,8 +392,7 @@ def handleSnmpMessage(d, t, private={}):
         else:
             endpoint = d['source_address'], d['source_port']
             if endpoint not in endpoints:
-                endpoints[endpoint] = udp.domainName + (
-                transportIdOffset + len(endpoints),)
+                endpoints[endpoint] = udp.domainName + (transportIdOffset + len(endpoints),)
                 stats['agents seen'] += 1
             context = '%s/%s' % (pMod.ObjectIdentifier(endpoints[endpoint]),
                                  pMod.apiMessage.getCommunity(rspMsg))
@@ -489,6 +487,17 @@ for context in contexts:
                 stats['SNMP exceptions'] += 1
                 continue
 
+            # remove value enumeration
+
+            if value.tagSet == rfc1902.Integer32.tagSet:
+                value = rfc1902.Integer32(value)
+
+            if value.tagSet == rfc1902.Unsigned32.tagSet:
+                value = rfc1902.Unsigned32(value)
+
+            if value.tagSet == rfc1902.Bits.tagSet:
+                value = rfc1902.OctetString(value)
+
             # Build .snmprec record
 
             ctx = {
@@ -514,8 +523,7 @@ for context in contexts:
                 if 'period' in moreDataNotification:
                     timeOffset += moreDataNotification['period']
                     log.msg(
-                        '%s OIDs dumped, advancing time window to %.2f sec(s)...' % (
-                        total, timeOffset))
+                        '%s OIDs dumped, advancing time window to %.2f sec(s)...' % (total, timeOffset))
                 break
 
             except error.NoDataNotification:

@@ -1,8 +1,8 @@
 #
 # This file is part of snmpsim software.
 #
-# Copyright (c) 2010-2017, Ilya Etingof <etingof@gmail.com>
-# License: http://snmpsim.sf.net/license.html
+# Copyright (c) 2010-2018, Ilya Etingof <etingof@gmail.com>
+# License: http://snmplabs.com/snmpsim/license.html
 #
 # Managed value variation module
 # Get/set managed value by invoking an external program
@@ -63,9 +63,9 @@ def variate(oid, tag, value, **context):
 
     log.msg('subprocess: executing external process "%s"' % ' '.join(args))
 
-    call = hasattr(subprocess, 'check_output') and subprocess.check_output or \
-           hasattr(subprocess, 'check_call') and subprocess.check_call or \
-           subprocess.call
+    call = (hasattr(subprocess, 'check_output') and subprocess.check_output or
+            hasattr(subprocess, 'check_call') and subprocess.check_call or
+            subprocess.call)
     if not hasattr(subprocess, 'check_output'):
         log.msg('subprocess: old Python, expect no output!')
 
@@ -73,8 +73,8 @@ def variate(oid, tag, value, **context):
         return oid, tag, call(
             args, shell=moduleContext['settings']['shell']
         )
-    except hasattr(subprocess, 'CalledProcessError') and \
-            subprocess.CalledProcessError or Exception:
+    except (hasattr(subprocess, 'CalledProcessError') and
+            subprocess.CalledProcessError or Exception):
         log.msg('subprocess: external program execution failed')
         return context['origOid'], tag, context['errorStatus']
 

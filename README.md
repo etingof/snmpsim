@@ -1,20 +1,21 @@
 
 SNMP Simulator
 --------------
-[![PyPI](https://img.shields.io/pypi/v/snmpsim.svg?maxAge=2592000)](https://pypi.python.org/pypi/snmpsim)
-[![Python Versions](https://img.shields.io/pypi/pyversions/snmpsim.svg)](https://pypi.python.org/pypi/snmpsim/)
+[![PyPI](https://img.shields.io/pypi/v/snmpsim.svg?maxAge=2592000)](https://pypi.org/project/snmpsim/)
+[![Python Versions](https://img.shields.io/pypi/pyversions/snmpsim.svg)](https://pypi.org/project/snmpsim/)
 [![Build status](https://travis-ci.org/etingof/snmpsim.svg?branch=master)](https://secure.travis-ci.org/etingof/snmpsim)
 [![GitHub license](https://img.shields.io/badge/license-BSD-blue.svg)](https://raw.githubusercontent.com/etingof/snmpsim/master/LICENSE.txt)
 
 This is a pure-Python, open source and free implementation of SNMP agents simulator
-distributed under 2-clause [BSD license](http://pysnmp.sourceforge.net/license.html).
+distributed under 2-clause [BSD license](http://snmplabs.com/snmpsim/license.html).
 
 Features
 --------
 
 * Pure-Python, easy to deploy and highly portable
 * SNMPv1/v2c/v3 support
-* USM supports MD5/SHA auth and DES/AES/3DES/AES256 privacy
+* SNMPv3 USM supports MD5/SHA/SHA224/SHA256/SHA384/SHA512 auth and
+  DES/3DES/AES128/AES192/AES256 privacy crypto algorithms
 * Runs over IPv4 and/or IPv6 transports
 * Simulates many EngineID's, each with its own set of simulated objects
 * Varies response based on SNMP Community, Context, source/destination addresses and ports
@@ -30,8 +31,8 @@ Features
 Download
 --------
 
-SNMP simulator software is freely available for download from [PyPI](https://pypi.python.org/pypi/snmpsim)
-and [project site](http://snmpsim.sf.net/download.html).
+SNMP simulator software is freely available for download from [PyPI](https://pypi.org/project/snmpsim/)
+and [project site](http://snmplabs.com/snmpsim/download.html).
 
 Installation
 ------------
@@ -98,14 +99,14 @@ for simulation data. We ship plugins to interface SQL and noSQL databases, file-
 key-value stores and other sources of information.
 
 We maintain publicly available SNMP simulator instance at 
-[demo.snmplabs.com](http://snmpsim.sourceforge.net/public-snmp-simulator.html). You are
+[demo.snmplabs.com](http://snmplabs.com/snmpsim/public-snmp-simulator.html). You are
 welcome to query it as much as you wish.
 
 Documentation
 -------------
 
 Detailed information on SNMP simulator usage could be found at
-[snmpsim site](http://snmpsim.sf.net/).
+[snmpsim site](http://snmplabs.com/snmpsim/).
 
 Getting help
 ------------
@@ -121,4 +122,4 @@ Feedback and collaboration
 I'm interested in bug reports, fixes, suggestions and improvements. Your
 pull requests are very welcome!
 
-Copyright (c) 2010-2017, [Ilya Etingof](mailto:etingof@gmail.com). All rights reserved.
+Copyright (c) 2010-2018, [Ilya Etingof](mailto:etingof@gmail.com). All rights reserved.
