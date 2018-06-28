@@ -1,9 +1,9 @@
 
-Revision 0.4.5, released XX-02-2018
+Revision 0.4.5, released XX-07-2018
 -----------------------------------
 
+- Bumped upper Python version to 3.7
 - Fixed DBM file index detection code to operate correctly
-
 
 Revision 0.4.4, released 20-02-2018
 -----------------------------------
