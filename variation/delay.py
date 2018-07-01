@@ -7,6 +7,7 @@
 import time
 import random
 from snmpsim.grammar.snmprec import SnmprecGrammar
+from snmpsim.record.snmprec import SnmprecRecord
 from snmpsim.mltsplit import split
 from snmpsim import log
 from snmpsim import error
@@ -44,7 +45,8 @@ def variate(oid, tag, value, **context):
                 o, v, d = recordContext['settings']['vlist'][:3]
                 recordContext['settings']['vlist'] = recordContext['settings']['vlist'][3:]
                 d = int(d)
-                v = SnmprecGrammar.tagMap[tag](v)
+                typeTag, _ = SnmprecRecord.unpackTag(tag)
+                v = SnmprecGrammar.tagMap[typeTag](v)
                 if o not in vlist:
                     vlist[o] = {}
                 if o == 'eq':

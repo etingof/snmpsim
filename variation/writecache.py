@@ -11,6 +11,7 @@
 import shelve
 from pysnmp.smi import error
 from snmpsim.grammar.snmprec import SnmprecGrammar
+from snmpsim.record.snmprec import SnmprecRecord
 from snmpsim.mltsplit import split
 from snmpsim import log
 
@@ -58,7 +59,8 @@ def variate(oid, tag, value, **context):
             while recordContext['settings']['vlist']:
                 o, v, e = recordContext['settings']['vlist'][:3]
                 recordContext['settings']['vlist'] = recordContext['settings']['vlist'][3:]
-                v = SnmprecGrammar.tagMap[tag](v)
+                typeTag, _ = SnmprecRecord.unpackTag(tag)
+                v = SnmprecGrammar.tagMap[typeTag](v)
                 if o not in vlist:
                     vlist[o] = {}
                 if o == 'eq':
@@ -75,7 +77,8 @@ def variate(oid, tag, value, **context):
 
     if oid not in moduleContext:
         moduleContext[oid] = {}
-        moduleContext[oid]['type'] = SnmprecGrammar().tagMap[tag]()
+        typeTag, _ = SnmprecRecord.unpackTag(tag)
+        moduleContext[oid]['type'] = SnmprecGrammar.tagMap[typeTag]()
 
     textOid = str(oid)
 
