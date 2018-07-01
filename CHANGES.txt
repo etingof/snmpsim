@@ -3,6 +3,8 @@ Revision 0.4.5, released XX-07-2018
 -----------------------------------
 
 - Bumped upper Python version to 3.7
+- Use absolute paths of Simulator data files and variation modules
+  and reflect that in the log -- that should ease troubleshooting
 - Optional .snmprec tag modifier is ignored by the *error*,
   *delay*, *writecache* and *notification* variation modules
 - Fixed DBM file index detection code to operate correctly
