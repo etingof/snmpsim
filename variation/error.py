@@ -5,6 +5,7 @@
 # License: http://snmplabs.com/snmpsim/license.html
 #
 from snmpsim.grammar.snmprec import SnmprecGrammar
+from snmpsim.record.snmprec import SnmprecRecord
 from snmpsim import log
 from snmpsim.mltsplit import split
 from pysnmp.smi import error
@@ -55,7 +56,8 @@ def variate(oid, tag, value, **context):
             while recordContext['settings']['vlist']:
                 o, v, e = recordContext['settings']['vlist'][:3]
                 recordContext['settings']['vlist'] = recordContext['settings']['vlist'][3:]
-                v = SnmprecGrammar.tagMap[tag](v)
+                typeTag, _ = SnmprecRecord.unpackTag(tag)
+                v = SnmprecGrammar.tagMap[typeTag](v)
                 if o not in vlist:
                     vlist[o] = {}
                 if o == 'eq':

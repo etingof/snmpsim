@@ -27,7 +27,8 @@ class SnmprecRecord(dump.DumpRecord):
         118: 11,
     }
 
-    def unpackTag(self, tag):
+    @staticmethod
+    def unpackTag(tag):
         if tag.endswith('x') or tag.endswith('e'):
             return tag[:-1], tag[-1]
 

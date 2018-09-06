@@ -231,7 +231,7 @@ class DataFile(AbstractLayout):
     def __init__(self, textFile, textParser):
         self.__recordIndex = RecordIndex(textFile, textParser)
         self.__textParser = textParser
-        self.__textFile = textFile
+        self.__textFile = os.path.abspath(textFile)
         
     def indexText(self, forceIndexBuild=False):
         self.__recordIndex.create(forceIndexBuild, validateData)
@@ -786,7 +786,7 @@ for variationModulesDir in confdir.variation:
         else:
             _toLoad.append((modName, ''))
 
-        mod = variationModulesDir + os.path.sep + dFile
+        mod = os.path.abspath(variationModulesDir + os.path.sep + dFile)
 
         for alias, args in _toLoad:
             if alias in variationModules:
@@ -837,9 +837,10 @@ if variationModules:
         try:
             body['init'](options=body['args'], mode='variating')
         except Exception:
-            log.msg('Variation module "%s" load FAILED: %s' % (name, sys.exc_info()[1]))
+            log.msg('Variation module "%s" from "%s" load FAILED: %s' % (body['alias'], body['path'],
+                                                                         sys.exc_info()[1]))
         else:
-            log.msg('Variation module "%s" loaded OK' % name)
+            log.msg('Variation module "%s" from "%s" loaded OK' % (body['alias'], body['path']))
 
 
 # Build pysnmp Managed Objects base from data files information

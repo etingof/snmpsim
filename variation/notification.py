@@ -9,6 +9,7 @@
 #
 from pysnmp.hlapi.asyncore import *
 from snmpsim.grammar.snmprec import SnmprecGrammar
+from snmpsim.record.snmprec import SnmprecRecord
 from snmpsim.mltsplit import split
 from snmpsim import error, log
 
@@ -89,7 +90,8 @@ def variate(oid, tag, value, **context):
             while recordContext['settings']['vlist']:
                 o, v = recordContext['settings']['vlist'][:2]
                 recordContext['settings']['vlist'] = recordContext['settings']['vlist'][2:]
-                v = SnmprecGrammar.tagMap[tag](v)
+                typeTag, _ = SnmprecRecord.unpackTag(tag)
+                v = SnmprecGrammar.tagMap[typeTag](v)
                 if o not in vlist:
                     vlist[o] = set()
                 if o == 'eq':

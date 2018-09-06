@@ -247,6 +247,10 @@ in *.snmprec* value field:
   request delay based on time of day (seconds, UNIX time).
   The following comprison operators are supported: *eq*, *lt*, *gt*.
 
+.. note::
+
+   Optional tag modifier in :ref:`.snmprec file <snmprec>` is ignored by this variation module.
+
 Examples
 ~~~~~~~~
 
@@ -366,6 +370,10 @@ in *.snmprec* value field:
   - *noSuchInstance*
   - *endOfMib*
 
+.. note::
+
+   Optional tag modifier in :ref:`.snmprec file <snmprec>` is ignored by this variation module.
+
 Examples
 ~~~~~~~~
 
@@ -438,6 +446,10 @@ parameters in *.snmprec* value field:
   - *noSuchObject*
   - *noSuchInstance*
   - *endOfMib*
+
+.. note::
+
+   Optional tag modifier in :ref:`.snmprec file <snmprec>` is ignored by this variation module.
 
 Examples
 ~~~~~~~~
@@ -672,6 +684,10 @@ parameters in *.snmprec* value field:
   - *t* - TimeTicks
   - *b* - Bits
   - *I* - Counter64
+
+.. note::
+
+   Optional tag modifier in :ref:`.snmprec file <snmprec>` is ignored by this variation module.
 
 Examples
 ~~~~~~~~
