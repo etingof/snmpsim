@@ -82,9 +82,10 @@ helpMessage = """Usage: %s [--help]
     [--variation-module=<module>]
     [--variation-module-options=<args>]""" % (
     sys.argv[0],
-    '|'.join([x for x in pysnmp_debug.flagMap.keys() if x != 'mibview']),
-    '|'.join([x for x in pyasn1_debug.flagMap.keys()]),
-    '|'.join(log.gMap.keys())
+    '|'.join([x for x in getattr(pysnmp_debug, 'FLAG_MAP', getattr(pysnmp_debug, 'flagMap', ()))
+              if x != 'mibview']),
+    '|'.join([x for x in getattr(pyasn1_debug, 'FLAG_MAP', getattr(pyasn1_debug, 'flagMap', ()))]),
+    '|'.join(log.gMap)
 )
 
 try:

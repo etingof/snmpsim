@@ -61,7 +61,8 @@ helpMessage = """Usage: %s [--help]
     [--unsigned-range=<min,max>]
     [--integer32-range=<min,max>]""" % (
     sys.argv[0],
-    '|'.join([x for x in debug.flagMap.keys() if x not in ('app', 'msgproc', 'proxy', 'io', 'secmod', 'dsp', 'acl')])
+    '|'.join([x for x in getattr(debug, 'FLAG_MAP', getattr(debug, 'flagMap', ()))
+              if x not in ('app', 'msgproc', 'proxy', 'io', 'secmod', 'dsp', 'acl')])
 )
 
 try:

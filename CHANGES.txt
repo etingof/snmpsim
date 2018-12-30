@@ -9,6 +9,8 @@ Revision 0.4.5, released 30-12-2018
 - Optional .snmprec tag modifier is ignored by the *error*,
   *delay*, *writecache* and *notification* variation modules
 - Fixed DBM file index detection code to operate correctly
+- Fixed pysnmp/pyasn1 debugging flags print out in `--help` to work
+  with newer pyasn1/pysnmp
 
 Revision 0.4.4, released 20-02-2018
 -----------------------------------
