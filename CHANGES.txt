@@ -2,6 +2,7 @@
 Revision 0.4.5, released XX-07-2018
 -----------------------------------
 
+- Copyright notice bumped up to year 2019
 - Bumped upper Python version to 3.7
 - Use absolute paths of Simulator data files and variation modules
   and reflect that in the log -- that should ease troubleshooting
