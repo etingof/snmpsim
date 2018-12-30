@@ -1,5 +1,5 @@
 
-Revision 0.4.5, released XX-07-2018
+Revision 0.4.5, released 30-12-2018
 -----------------------------------
 
 - Copyright notice bumped up to year 2019
