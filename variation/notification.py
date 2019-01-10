@@ -61,7 +61,9 @@ def variate(oid, tag, value, **context):
             )
             moduleContext[snmpEngine][context['transportDomain']] = 1
     else:
-        raise error.SnmpsimError('variation module not given snmpEngine')
+        raise error.SnmpsimError(
+            'Variation module is not given snmpEngine. '
+            'Make sure you are not running in --v2c-arch mode')
 
     if not context['nextFlag'] and not context['exactMatch']:
         return context['origOid'], tag, context['errorStatus']

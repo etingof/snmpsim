@@ -2,7 +2,7 @@
 Revision 0.4.6, released XX-01-2019
 -----------------------------------
 
-No changes yet
+- Improve error reporting in `notification` variation module
 
 Revision 0.4.5, released 30-12-2018
 -----------------------------------
