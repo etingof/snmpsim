@@ -36,6 +36,7 @@ from snmpsim.record import snmprec
 from snmpsim import confdir, error, log
 
 # Defaults
+PROGRAM_NAME = 'snmprec'
 getBulkFlag = False
 continueOnErrors = 0
 getBulkRepetitions = 25
@@ -61,6 +62,8 @@ defaultMibSources = ['http://mibs.snmplabs.com/asn1/@mib@']
 outputFile = sys.stdout
 if hasattr(outputFile, 'buffer'):
     outputFile = outputFile.buffer
+loggingMethod = ['stderr']
+loggingLevel = None
 variationModuleOptions = ""
 variationModuleName = variationModule = None
 
@@ -92,6 +95,7 @@ Usage: %s [--help]
     [--debug=<%s>]
     [--debug-asn1=<%s>]
     [--logging-method=<%s[:args>]>]
+    [--log-level=<%s>]
     [--protocol-version=<1|2c|3>]
     [--community=<string>]
     [--v3-user=<username>]
@@ -119,7 +123,8 @@ Usage: %s [--help]
     '|'.join([x for x in getattr(pysnmp_debug, 'FLAG_MAP', getattr(pysnmp_debug, 'flagMap', ()))
               if x != 'mibview']),
     '|'.join([x for x in getattr(pyasn1_debug, 'FLAG_MAP', getattr(pyasn1_debug, 'flagMap', ()))]),
-    '|'.join(log.gMap),
+    '|'.join(log.METHODS_MAP),
+    '|'.join(log.LEVELS_MAP),
     '|'.join(sorted([x for x in authProtocols if x != 'NONE'])),
     '|'.join(sorted([x for x in privProtocols if x != 'NONE']))
 )
@@ -127,7 +132,7 @@ Usage: %s [--help]
 try:
     opts, params = getopt.getopt(sys.argv[1:], 'hv', [
         'help', 'version', 'debug=', 'debug-asn1=', 'logging-method=',
-        'quiet',
+        'log-level=', 'quiet',
         'v1', 'v2c', 'v3', 'protocol-version=', 'community=',
         'v3-user=', 'v3-auth-key=', 'v3-priv-key=', 'v3-auth-proto=',
         'v3-priv-proto=',
@@ -144,6 +149,7 @@ try:
         'variation-modules-dir=', 'variation-module=',
         'variation-module-options=', 'continue-on-errors='
     ])
+
 except Exception:
     sys.stderr.write('ERROR: %s\r\n%s\r\n' % (sys.exc_info()[1], helpMessage))
     sys.exit(-1)
@@ -187,11 +193,9 @@ Software documentation and support at http://snmplabs.com/snmpsim
     elif opt[0] == '--debug-asn1':
         pyasn1_debug.setLogger(pyasn1_debug.Debug(*opt[1].split(','), **dict(loggerName='snmprec.pyasn1')))
     elif opt[0] == '--logging-method':
-        try:
-            log.setLogger('snmprec', *opt[1].split(':'), **dict(force=True))
-        except error.SnmpsimError:
-            sys.stderr.write('%s\r\n%s\r\n' % (sys.exc_info()[1], helpMessage))
-            sys.exit(-1)
+        loggingMethod = opt[1].split(':')
+    elif opt[0] == '--log-level':
+        loggingLevel = opt[1]
     elif opt[0] == '--quiet':
         log.setLogger('snmprec', 'null', force=True)
     elif opt[0] == '--v1':
@@ -366,10 +370,18 @@ else:
     v3ContextEngineId = None
     v3ContextName = ''
 
-log.setLogger('snmprec', 'stderr')
+try:
+    log.setLogger(PROGRAM_NAME, *loggingMethod, force=True)
+
+    if loggingLevel:
+        log.setLevel(loggingLevel)
+
+except error.SnmpsimError:
+    sys.stderr.write('%s\r\n%s\r\n' % (sys.exc_info()[1], helpMessage))
+    sys.exit(1)
 
 if getBulkFlag and not snmpVersion:
-    log.msg('WARNING: will be using GETNEXT with SNMPv1!')
+    log.info('will be using GETNEXT with SNMPv1!')
     getBulkFlag = False
 
 # Attempt to reopen std output stream in binary mode
@@ -385,15 +397,15 @@ if outputFile is sys.stderr:
 
 if variationModuleName:
     for variationModulesDir in confdir.variation:
-        log.msg(
+        log.info(
             'Scanning "%s" directory for variation modules...' % variationModulesDir)
         if not os.path.exists(variationModulesDir):
-            log.msg('Directory "%s" does not exist' % variationModulesDir)
+            log.info('Directory "%s" does not exist' % variationModulesDir)
             continue
 
         mod = os.path.join(variationModulesDir, variationModuleName + '.py')
         if not os.path.exists(mod):
-            log.msg('Variation module "%s" not found' % mod)
+            log.info('Variation module "%s" not found' % mod)
             continue
 
         ctx = {'path': mod, 'moduleContext': {}}
@@ -403,15 +415,17 @@ if variationModuleName:
                 exec(compile(open(mod).read(), mod, 'exec'), ctx)
             else:
                 execfile(mod, ctx)
+
         except Exception:
-            log.msg('Variation module "%s" execution failure: %s' % (mod, sys.exc_info()[1]))
+            log.error('Variation module "%s" execution failure: %s' % (mod, sys.exc_info()[1]))
             sys.exit(-1)
+
         else:
             variationModule = ctx
-            log.msg('Variation module "%s" loaded' % variationModuleName)
+            log.info('Variation module "%s" loaded' % variationModuleName)
             break
     else:
-        log.msg('ERROR: variation module "%s" not found' % variationModuleName)
+        log.error('variation module "%s" not found' % variationModuleName)
         sys.exit(-1)
 
 # SNMP configuration
@@ -430,7 +444,9 @@ if snmpVersion == 3:
         authProtocols[v3AuthProto], v3AuthKey,
         privProtocols[v3PrivProto], v3PrivKey
     )
-    log.msg('SNMP version 3, Context EngineID: %s Context name: %s, SecurityName: %s, SecurityLevel: %s, Authentication key/protocol: %s/%s, Encryption (privacy) key/protocol: %s/%s' % (
+    log.info('SNMP version 3, Context EngineID: %s Context name: %s, SecurityName: %s, '
+             'SecurityLevel: %s, Authentication key/protocol: %s/%s, Encryption '
+             '(privacy) key/protocol: %s/%s' % (
             v3ContextEngineId and v3ContextEngineId.prettyPrint() or '<default>',
             v3Context and v3Context.prettyPrint() or '<default>', v3User,
             secLevel, v3AuthKey is None and '<NONE>' or v3AuthKey,
@@ -442,7 +458,7 @@ else:
     config.addV1System(
         snmpEngine, v3User, snmpCommunity
     )
-    log.msg('SNMP version %s, Community name: %s' % (snmpVersion == 0 and '1' or '2c', snmpCommunity))
+    log.info('SNMP version %s, Community name: %s' % (snmpVersion == 0 and '1' or '2c', snmpCommunity))
 
 config.addTargetParams(snmpEngine, 'pms', v3User, secLevel, snmpVersion)
 
@@ -456,7 +472,8 @@ if agentUDPv6Endpoint:
         snmpEngine, 'tgt', udp6.domainName, agentUDPv6Endpoint, 'pms',
         timeout, retryCount
     )
-    log.msg('Querying UDP/IPv6 agent at [%s]:%s' % agentUDPv6Endpoint)
+    log.info('Querying UDP/IPv6 agent at [%s]:%s' % agentUDPv6Endpoint)
+
 elif agentUNIXEndpoint:
     config.addSocketTransport(
         snmpEngine,
@@ -467,7 +484,8 @@ elif agentUNIXEndpoint:
         snmpEngine, 'tgt', unix.domainName, agentUNIXEndpoint, 'pms',
         timeout, retryCount
     )
-    log.msg('Querying UNIX named pipe agent at %s' % agentUNIXEndpoint)
+    log.info('Querying UNIX named pipe agent at %s' % agentUNIXEndpoint)
+
 elif agentUDPv4Endpoint:
     config.addSocketTransport(
         snmpEngine,
@@ -478,9 +496,9 @@ elif agentUDPv4Endpoint:
         snmpEngine, 'tgt', udp.domainName, agentUDPv4Endpoint, 'pms',
         timeout, retryCount
     )
-    log.msg('Querying UDP/IPv4 agent at %s:%s' % agentUDPv4Endpoint)
+    log.info('Querying UDP/IPv4 agent at %s:%s' % agentUDPv4Endpoint)
 
-log.msg('Agent response timeout: %.2f secs, retries: %s' % (timeout / 100, retryCount))
+log.info('Agent response timeout: %.2f secs, retries: %s' % (timeout / 100, retryCount))
 
 if (isinstance(startOID, ObjectIdentity) or
         isinstance(stopOID, ObjectIdentity)):
@@ -497,10 +515,10 @@ if (isinstance(startOID, ObjectIdentity) or
 # Variation module initialization
 
 if variationModule:
-    log.msg('Initializing variation module...')
+    log.info('Initializing variation module...')
     for x in ('init', 'record', 'shutdown'):
         if x not in variationModule:
-            log.msg('ERROR: missing "%s" handler at variation module "%s"' % (x, variationModuleName))
+            log.error('missing "%s" handler at variation module "%s"' % (x, variationModuleName))
             sys.exit(-1)
     try:
         variationModule['init'](snmpEngine=snmpEngine,
@@ -509,9 +527,11 @@ if variationModule:
                                 startOID=startOID,
                                 stopOID=stopOID)
     except Exception:
-        log.msg('Variation module "%s" initialization FAILED: %s' % (variationModuleName, sys.exc_info()[1]))
+        log.error('Variation module "%s" initialization FAILED: %s' % (
+            variationModuleName, sys.exc_info()[1]))
+
     else:
-        log.msg('Variation module "%s" initialization OK' % variationModuleName)
+        log.info('Variation module "%s" initialization OK' % variationModuleName)
 
 
 # Data file builder
@@ -550,35 +570,44 @@ dataFileHandler = SnmprecRecord()
 
 def cbFun(snmpEngine, sendRequestHandle, errorIndication,
           errorStatus, errorIndex, varBindTable, cbCtx):
+
     if errorIndication and not cbCtx['retries']:
         cbCtx['errors'] += 1
-        log.msg('SNMP Engine error: %s' % errorIndication)
+        log.error('SNMP Engine error: %s' % errorIndication)
         return
+
     # SNMPv1 response may contain noSuchName error *and* SNMPv2c exception,
     # so we ignore noSuchName error here
     if errorStatus and errorStatus != 2 or errorIndication:
-        log.msg('Remote SNMP error %s' % (errorIndication or errorStatus.prettyPrint()))
+        log.error('Remote SNMP error %s' % (errorIndication or errorStatus.prettyPrint()))
+
         if cbCtx['retries']:
             try:
                 nextOID = varBindTable[-1][0][0]
+
             except IndexError:
                 nextOID = cbCtx['lastOID']
+
             else:
-                log.msg('Failed OID: %s' % nextOID)
+                log.error('Failed OID: %s' % nextOID)
+
             # fuzzy logic of walking a broken OID
             if len(nextOID) < 4:
                 pass
+
             elif (continueOnErrors - cbCtx['retries']) * 10 / continueOnErrors > 5:
                 nextOID = nextOID[:-2] + (nextOID[-2] + 1,)
+
             elif nextOID[-1]:
                 nextOID = nextOID[:-1] + (nextOID[-1] + 1,)
+
             else:
                 nextOID = nextOID[:-2] + (nextOID[-2] + 1, 0)
 
             cbCtx['retries'] -= 1
             cbCtx['lastOID'] = nextOID
 
-            log.msg('Retrying with OID %s (%s retries left)...' % (nextOID, cbCtx['retries']))
+            log.info('Retrying with OID %s (%s retries left)...' % (nextOID, cbCtx['retries']))
 
             # initiate another SNMP walk iteration
             if getBulkFlag:
@@ -656,7 +685,8 @@ def cbFun(snmpEngine, sendRequestHandle, errorIndication,
 
                 moreDataNotification = sys.exc_info()[1]
                 if 'period' in moreDataNotification:
-                    log.msg('%s OIDs dumped, waiting %.2f sec(s)...' % (cbCtx['total'], moreDataNotification['period']))
+                    log.info('%s OIDs dumped, waiting %.2f sec(s)...' % (
+                        cbCtx['total'], moreDataNotification['period']))
                     time.sleep(moreDataNotification['period'])
 
                 # initiate another SNMP walk iteration
@@ -682,9 +712,11 @@ def cbFun(snmpEngine, sendRequestHandle, errorIndication,
 
             except error.NoDataNotification:
                 pass
+
             except error.SnmpsimError:
-                log.msg('ERROR: %s' % (sys.exc_info()[1],))
+                log.error((sys.exc_info()[1],))
                 continue
+
             else:
                 outputFile.write(line)
 
@@ -692,7 +724,7 @@ def cbFun(snmpEngine, sendRequestHandle, errorIndication,
                 cbCtx['total'] += 1
 
                 if cbCtx['count'] % 100 == 0:
-                    log.msg('OIDs dumped: %s/%s' % (
+                    log.error('OIDs dumped: %s/%s' % (
                         cbCtx['iteration'], cbCtx['count']))
 
     # Next request time
@@ -734,7 +766,8 @@ else:
         cbFun, cbCtx
     )
 
-log.msg('Sending initial %s request for %s (stop at %s)....' % (getBulkFlag and 'GETBULK' or 'GETNEXT', startOID, stopOID or '<end-of-mib>'))
+log.info('Sending initial %s request for %s (stop at %s)....' % (
+    getBulkFlag and 'GETBULK' or 'GETNEXT', startOID, stopOID or '<end-of-mib>'))
 
 t = time.time()
 
@@ -744,22 +777,25 @@ exc_info = None
 
 try:
     snmpEngine.transportDispatcher.runDispatcher()
+
 except KeyboardInterrupt:
-    log.msg('Shutting down process...')
+    log.info('Shutting down process...')
+
 except Exception:
     exc_info = sys.exc_info()
 
 if variationModule:
-    log.msg('Shutting down variation module %s...' % variationModuleName)
+    log.info('Shutting down variation module %s...' % variationModuleName)
     try:
         variationModule['shutdown'](snmpEngine=snmpEngine,
                                     options=variationModuleOptions,
                                     mode='recording')
     except Exception:
-        log.msg('Variation module %s shutdown FAILED: %s' % (
+        log.error('Variation module %s shutdown FAILED: %s' % (
             variationModuleName, sys.exc_info()[1]))
+
     else:
-        log.msg('Variation module %s shutdown OK' % variationModuleName)
+        log.info('Variation module %s shutdown OK' % variationModuleName)
 
 snmpEngine.transportDispatcher.closeDispatcher()
 
@@ -767,11 +803,12 @@ t = time.time() - t
 
 cbCtx['total'] += cbCtx['count']
 
-log.msg('OIDs dumped: %s, elapsed: %.2f sec, rate: %.2f OIDs/sec, errors: %d' % (cbCtx['total'], t, t and cbCtx['count'] // t or 0, cbCtx['errors']))
+log.info('OIDs dumped: %s, elapsed: %.2f sec, rate: %.2f OIDs/sec, errors: %d' % (
+    cbCtx['total'], t, t and cbCtx['count'] // t or 0, cbCtx['errors']))
 
 if exc_info:
     for line in traceback.format_exception(*exc_info):
-        log.msg(line.replace('\n', ';'))
+        log.error(line.replace('\n', ';'))
 
 outputFile.flush()
 outputFile.close()

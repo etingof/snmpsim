@@ -32,6 +32,7 @@ from snmpsim.record import snmprec
 from snmpsim import confdir, error, log
 
 # Defaults
+PROGRAM_NAME = 'pcap2dev'
 verboseFlag = True
 mibSources = []
 defaultMibSources = ['http://mibs.snmplabs.com/asn1/@mib@']
@@ -40,6 +41,8 @@ stopOID = None
 promiscuousMode = False
 outputDir = '.'
 transportIdOffset = 0
+loggingMethod = ['stderr']
+loggingLevel = None
 variationModuleOptions = ""
 variationModuleName = variationModule = None
 listenInterface = captureFile = None
@@ -69,6 +72,7 @@ helpMessage = """Usage: %s [--help]
     [--debug-asn1=<%s>]
     [--quiet]
     [--logging-method=<%s[:args]>]
+    [--log-level=<%s>]
     [--mib-source=<url>]
     [--start-object=<MIB-NAME::[symbol-name]|OID>]
     [--stop-object=<MIB-NAME::[symbol-name]|OID>]
@@ -85,13 +89,14 @@ helpMessage = """Usage: %s [--help]
     '|'.join([x for x in getattr(pysnmp_debug, 'FLAG_MAP', getattr(pysnmp_debug, 'flagMap', ()))
               if x != 'mibview']),
     '|'.join([x for x in getattr(pyasn1_debug, 'FLAG_MAP', getattr(pyasn1_debug, 'flagMap', ()))]),
-    '|'.join(log.gMap)
+    '|'.join(log.METHODS_MAP),
+    '|'.join(log.LEVELS_MAP)
 )
 
 try:
     opts, params = getopt.getopt(sys.argv[1:], 'hv', [
         'help', 'version', 'debug=', 'debug-snmp=', 'debug-asn1=',
-        'quiet', 'logging-method=', 'start-oid=', 'stop-oid=',
+        'quiet', 'logging-method=', 'log-level=', 'start-oid=', 'stop-oid=',
         'start-object=', 'stop-object=', 'mib-source=',
         'output-dir=', 'transport-id-offset=',
         'capture-file=', 'listen-interface=', 'promiscuous-mode',
@@ -99,6 +104,7 @@ try:
         'variation-modules-dir=', 'variation-module=',
         'variation-module-options='
     ])
+
 except Exception:
     sys.stderr.write(
         'ERROR: %s\r\n%s\r\n' % (sys.exc_info()[1], helpMessage))
@@ -145,12 +151,9 @@ Software documentation and support at http://snmplabs.com/snmpsim
         pyasn1_debug.setLogger(pyasn1_debug.Debug(*opt[1].split(','), **dict(
             loggerName='pcap2dev.pyasn1')))
     elif opt[0] == '--logging-method':
-        try:
-            log.setLogger('pcap2dev', *opt[1].split(':'), **dict(force=True))
-        except error.SnmpsimError:
-            sys.stderr.write(
-                '%s\r\n%s\r\n' % (sys.exc_info()[1], helpMessage))
-            sys.exit(-1)
+        loggingMethod = opt[1].split(':')
+    elif opt[0] == '--log-level':
+        loggingLevel = opt[1]
     if opt[0] == '--quiet':
         verboseFlag = False
     # obsolete begin
@@ -199,7 +202,15 @@ if not pcap:
     sys.stderr.write('ERROR: pylibpcap package is missing!\r\nGet it by running `pip install https://downloads.sourceforge.net/project/pylibpcap/pylibpcap/0.6.4/pylibpcap-0.6.4.tar.gz`\r\n%s\r\n' % helpMessage)
     sys.exit(-1)
 
-log.setLogger('pcap2dev', 'stdout')
+try:
+    log.setLogger(PROGRAM_NAME, *loggingMethod, force=True)
+
+    if loggingLevel:
+        log.setLevel(loggingLevel)
+
+except error.SnmpsimError:
+    sys.stderr.write('%s\r\n%s\r\n' % (sys.exc_info()[1], helpMessage))
+    sys.exit(1)
 
 if isinstance(startOID, rfc1902.ObjectIdentity) or \
         isinstance(stopOID, rfc1902.ObjectIdentity):
@@ -219,14 +230,14 @@ if isinstance(startOID, rfc1902.ObjectIdentity) or \
 
 if variationModuleName:
     for variationModulesDir in confdir.variation:
-        log.msg('Scanning "%s" directory for variation modules...' % variationModulesDir)
+        log.info('Scanning "%s" directory for variation modules...' % variationModulesDir)
         if not os.path.exists(variationModulesDir):
-            log.msg('Directory "%s" does not exist' % variationModulesDir)
+            log.info('Directory "%s" does not exist' % variationModulesDir)
             continue
 
         mod = os.path.join(variationModulesDir, variationModuleName + '.py')
         if not os.path.exists(mod):
-            log.msg('Variation module "%s" not found' % mod)
+            log.info('Variation module "%s" not found' % mod)
             continue
 
         ctx = {'path': mod, 'moduleContext': {}}
@@ -238,34 +249,36 @@ if variationModuleName:
                 execfile(mod, ctx)
 
         except Exception:
-            log.msg('Variation module "%s" execution failure: %s' % (mod, sys.exc_info()[1]))
+            log.error('Variation module "%s" execution failure: %s' % (mod, sys.exc_info()[1]))
             sys.exit(-1)
 
         else:
             variationModule = ctx
-            log.msg('Variation module "%s" loaded' % variationModuleName)
+            log.info('Variation module "%s" loaded' % variationModuleName)
             break
     else:
-        log.msg('ERROR: variation module "%s" not found' % variationModuleName)
+        log.error('variation module "%s" not found' % variationModuleName)
         sys.exit(-1)
 
 # Variation module initialization
 
 if variationModule:
-    log.msg('Initializing variation module...')
+    log.info('Initializing variation module...')
     for x in ('init', 'record', 'shutdown'):
         if x not in variationModule:
-            log.msg('ERROR: missing "%s" handler at variation module "%s"' % (x, variationModuleName))
+            log.error('missing "%s" handler at variation module "%s"' % (x, variationModuleName))
             sys.exit(-1)
     try:
         variationModule['init'](options=variationModuleOptions,
                                 mode='recording',
                                 startOID=startOID,
                                 stopOID=stopOID)
+
     except Exception:
-        log.msg('Variation module "%s" initialization FAILED: %s' % (variationModuleName, sys.exc_info()[1]))
+        log.error('Variation module "%s" initialization FAILED: %s' % (variationModuleName, sys.exc_info()[1]))
+
     else:
-        log.msg('Variation module "%s" initialization OK' % variationModuleName)
+        log.info('Variation module "%s" initialization OK' % variationModuleName)
 
 
 # Data file builder
@@ -301,19 +314,19 @@ pcapObj = pcap.pcapObject()
 
 if listenInterface:
     if verboseFlag:
-        log.msg('Listening on interface %s in %spromiscuous mode' % (listenInterface, promiscuousMode is False and 'non-' or ''))
+        log.info('Listening on interface %s in %spromiscuous mode' % (listenInterface, promiscuousMode is False and 'non-' or ''))
     try:
         pcapObj.open_live(listenInterface, 65536, promiscuousMode, 1000)
     except Exception:
-        log.msg('Error opening interface %s for snooping: %s' % (listenInterface, sys.exc_info()[1]))
+        log.error('Error opening interface %s for snooping: %s' % (listenInterface, sys.exc_info()[1]))
         sys.exit(-1)
 elif captureFile:
     if verboseFlag:
-        log.msg('Opening capture file %s' % captureFile)
+        log.info('Opening capture file %s' % captureFile)
     try:
         pcapObj.open_offline(captureFile)
     except Exception:
-        log.msg('Error opening capture file %s for reading: %s' % (captureFile, sys.exc_info()[1]))
+        log.error('Error opening capture file %s for reading: %s' % (captureFile, sys.exc_info()[1]))
         sys.exit(-1)
 else:
     sys.stderr.write('ERROR: no capture file or live interface specified\r\n%s\r\n' % helpMessage)
@@ -321,11 +334,11 @@ else:
 
 if packetFilter:
     if verboseFlag:
-        log.msg('Applying packet filter \"%s\"' % packetFilter)
+        log.info('Applying packet filter \"%s\"' % packetFilter)
     pcapObj.setfilter(packetFilter, 0, 0)
 
 if verboseFlag:
-    log.msg('Processing records from %s till %s' % (startOID or 'the beginning', stopOID or 'the end'))
+    log.info('Processing records from %s till %s' % (startOID or 'the beginning', stopOID or 'the end'))
 
 
 def parsePacket(s):
@@ -435,19 +448,19 @@ exc_info = None
 
 try:
     if listenInterface:
-        log.msg(
+        log.info(
             'Listening on interface "%s", kill me when you are done.' % listenInterface)
         while True:
             pcapObj.dispatch(1, handlePacket)
     elif captureFile:
-        log.msg('Processing capture file "%s"....' % captureFile)
+        log.info('Processing capture file "%s"....' % captureFile)
         args = pcapObj.next()
         while args:
             handlePacket(*args)
             args = pcapObj.next()
 
 except (TypeError, KeyboardInterrupt):
-    log.msg('Shutting down process...')
+    log.info('Shutting down process...')
 
 except Exception:
     exc_info = sys.exc_info()
@@ -458,7 +471,7 @@ for context in contexts:
     filename = os.path.join(outputDir,
                             context + os.path.extsep + SnmprecRecord.ext)
     if verboseFlag:
-        log.msg('Creating simulation context %s at %s' % (context, filename))
+        log.info('Creating simulation context %s at %s' % (context, filename))
     try:
         os.mkdir(os.path.dirname(filename))
     except OSError:
@@ -466,7 +479,7 @@ for context in contexts:
     try:
         outputFile = open(filename, 'wb')
     except IOError:
-        log.msg('ERROR: writing %s: %s' % (filename, sys.exc_info()[1]))
+        log.error('writing %s: %s' % (filename, sys.exc_info()[1]))
         sys.exit(-1)
 
     count = total = iteration = 0
@@ -523,14 +536,14 @@ for context in contexts:
                 moreDataNotification = sys.exc_info()[1]
                 if 'period' in moreDataNotification:
                     timeOffset += moreDataNotification['period']
-                    log.msg(
+                    log.info(
                         '%s OIDs dumped, advancing time window to %.2f sec(s)...' % (total, timeOffset))
                 break
 
             except error.NoDataNotification:
                 pass
             except error.SnmpsimError:
-                log.msg('ERROR: %s' % (sys.exc_info()[1],))
+                log.error((sys.exc_info()[1],))
                 continue
             else:
                 outputFile.write(line)
@@ -545,22 +558,23 @@ for context in contexts:
     outputFile.close()
 
 if variationModule:
-    log.msg('Shutting down variation module "%s"...' % variationModuleName)
+    log.info('Shutting down variation module "%s"...' % variationModuleName)
     try:
         variationModule['shutdown'](options=variationModuleOptions,
                                     mode='recording')
     except Exception:
-        log.msg('Variation module "%s" shutdown FAILED: %s' % (variationModuleName, sys.exc_info()[1]))
-    else:
-        log.msg('Variation module "%s" shutdown OK' % variationModuleName)
+        log.error('Variation module "%s" shutdown FAILED: %s' % (variationModuleName, sys.exc_info()[1]))
 
-log.msg("""PCap statistics:
+    else:
+        log.info('Variation module "%s" shutdown OK' % variationModuleName)
+
+log.info("""PCap statistics:
     packets snooped: %s
     packets dropped: %s
     packets dropped: by interface %s""" % pcapObj.stats())
-log.msg("""SNMP statistics:
+log.info("""SNMP statistics:
     %s""" % '    '.join(['%s: %s\r\n' % kv for kv in stats.items()]))
 
 if exc_info:
     for line in traceback.format_exception(*exc_info):
-        log.msg(line.replace('\n', ';'))
+        log.error(line.replace('\n', ';'))
