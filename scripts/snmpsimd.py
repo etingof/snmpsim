@@ -754,12 +754,6 @@ else:
 
 log.setLogger('snmpsimd', 'stderr')
 
-try:
-    daemon.dropPrivileges(procUser, procGroup)
-except:
-    sys.stderr.write('ERROR: cant drop priveleges: %s\r\n%s\r\n' % (sys.exc_info()[1], helpMessage))
-    sys.exit(-1)
-
 if not foregroundFlag:
     try:
         daemon.daemonize(pidFile)
@@ -1426,6 +1420,14 @@ else:  # v3 mode
         elif opt[0] == '--agent-unix-endpoint':
             agentUnixEndpoints.append(opt[1])
 
+# Drop privileges
+
+try:
+    daemon.dropPrivileges(procUser, procGroup)
+except:
+    sys.stderr.write('ERROR: cant drop priveleges: %s\r\n%s\r\n' % (sys.exc_info()[1], helpMessage))
+    sys.exit(-1)
+
 # Run mainloop
 
 transportDispatcher.jobStarted(1)  # server job would never finish
@@ -1451,6 +1453,7 @@ if variationModules:
             log.msg('Variation module "%s" shutdown FAILED: %s' % (name, sys.exc_info()[1]))
         else:
             log.msg('Variation module "%s" shutdown OK' % name)
+
 
 transportDispatcher.closeDispatcher()
 
