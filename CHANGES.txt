@@ -2,6 +2,12 @@
 Revision 0.4.6, released XX-01-2019
 -----------------------------------
 
+- The `--log-level` option added
+- Default daemon syslog service destination to a local socket
+- Fixed timed log file rotation to respect log file creation time
+  when computing next rotation time
+- Fixed possible file permission issues by initializing pysnmp modules,
+  logger and variation modules subsystems under reduced user privileges
 - Improve error reporting in `notification` variation module
 
 Revision 0.4.5, released 30-12-2018
