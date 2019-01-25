@@ -1,5 +1,5 @@
 
-Revision 0.4.6, released XX-01-2019
+Revision 0.4.6, released 25-01-2019
 -----------------------------------
 
 - The `--log-level` option added
