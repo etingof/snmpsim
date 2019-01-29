@@ -13,8 +13,17 @@ if sys.platform[:3] == 'win':
         raise error.SnmpsimError('Windows is not inhabited with daemons!')
 
 
-    def dropPrivileges(uname, gname):
-        return
+    class PrivilegesOf(object):
+        """Context manager performing nothing on Windows"""
+
+        def __init__(self, *args, **kwargs):
+            pass
+
+        def __enter__(self):
+            pass
+
+        def __exit__(self, *args):
+            pass
 
 else:
     import os
@@ -90,6 +99,7 @@ else:
 
 
     class PrivilegesOf(object):
+        """Context manager executing under reduced privileges"""
 
         def __init__(self, uname, gname, final=False):
             self._uname = uname

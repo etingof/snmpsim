@@ -2,7 +2,7 @@
 Revision 0.4.7, released XX-02-2019
 -----------------------------------
 
-No changes yet
+- Fix to define `PrivilegesOf` on Windows
 
 Revision 0.4.6, released 25-01-2019
 -----------------------------------
