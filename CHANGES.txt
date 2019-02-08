@@ -2,6 +2,8 @@
 Revision 0.4.7, released XX-02-2019
 -----------------------------------
 
+- Added missing SNMP PDU error-status values to the `error`
+  variation module
 - Fix to define `PrivilegesOf` on Windows
 
 Revision 0.4.6, released 25-01-2019
