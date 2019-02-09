@@ -327,6 +327,10 @@ in *.snmprec* value field:
 * *status* - specifies error to be flagged. The following SNMP errors codes are
   supported:
 
+  - *tooBig*
+  - *noSuchName* (only makes sense for SNMP v1)
+  - *badValue*
+  - *readOnly*
   - *genError*
   - *noAccess*
   - *wrongType*
@@ -343,6 +347,11 @@ in *.snmprec* value field:
   - *noSuchInstance*
   - *endOfMib*
 
+.. note::
+
+   When *tooBig* error is flagged, variable-bindings list is automatically
+   reset to empty as per :RFC:`1905#section-4.2.2`.
+
 * *vlist* - a list of triples (comparison:constant:error) to use as an access
   list for SET values.
 
@@ -354,6 +363,10 @@ in *.snmprec* value field:
 
   The following SNMP errors are supported (case-insensitive):
 
+  - *tooBig*
+  - *noSuchName* (only makes sense for SNMP v1)
+  - *badValue*
+  - *readOnly*
   - *genError*
   - *noAccess*
   - *wrongType*

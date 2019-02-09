@@ -10,7 +10,12 @@ from snmpsim import log
 from snmpsim.mltsplit import split
 from pysnmp.smi import error
 
+
 errorTypes = {
+    'toobig': error.TooBigError,
+    'nosuchname': error.NoSuchNameError,
+    'badvalue': error.BadValueError,
+    'readonly': error.ReadOnlyError,
     'generror': error.GenError,
     'noaccess': error.NoAccessError,
     'wrongtype': error.WrongTypeError,
@@ -23,6 +28,7 @@ errorTypes = {
     'authorizationerror': error.AuthorizationError,
     'notwritable': error.NotWritableError,
     'inconsistentname': error.InconsistentNameError,
+    # These only makes sense for SNMP v1
     'nosuchobject': error.NoSuchObjectError,
     'nosuchinstance': error.NoSuchInstanceError,
     'endofmib': error.EndOfMibViewError
