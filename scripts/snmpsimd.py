@@ -1366,6 +1366,11 @@ else:  # v3 mode
                 log.msg.decIdent()
 
             if opt[0] == 'end-of-options':
+                # Load up the rest of MIBs while running privileged
+                (snmpEngine
+                 .msgAndPduDsp
+                 .mibInstrumController
+                 .mibBuilder.loadModules())
                 break
 
             # Prepare for next engine ID configuration

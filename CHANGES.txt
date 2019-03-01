@@ -1,8 +1,9 @@
 
-Revision 0.4.8, released XX-02-2019
+Revision 0.4.8, released XX-03-2019
 -----------------------------------
 
-No changes yet
+- Fixed crash caused by pysnmp failing to load up the rest of its MIBs when
+  switched into non-privileged user
 
 Revision 0.4.7, released 09-02-2019
 -----------------------------------
