@@ -28,6 +28,7 @@ Documentation
 .. toctree::
    :maxdepth: 2
 
+   /command-line-options
    /simulating-agents
    /managing-simulation-data
    /addressing-agents

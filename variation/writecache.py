@@ -5,7 +5,7 @@
 # License: http://snmplabs.com/snmpsim/license.html
 #
 # SNMP Simulator, http://snmplabs.com/snmpsim
-# Managed value variaton module
+# Managed value variation module
 # Simulate a writable Agent
 #
 import shelve
