@@ -2,8 +2,11 @@
 Revision 0.4.8, released XX-03-2019
 -----------------------------------
 
+- Run snmpsimd variation modules initialization under non-privileged user
 - Fixed crash caused by pysnmp failing to load up the rest of its MIBs when
-  switched into non-privileged user
+  snmpsimd is switched into non-privileged user
+- Fixed wrong cache directory and files ownership when switching snmpsimd from
+  privileged into non-privileged user
 
 Revision 0.4.7, released 09-02-2019
 -----------------------------------

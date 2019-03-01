@@ -832,7 +832,8 @@ if variationModulesOptions:
 
 if not os.path.exists(confdir.cache):
     try:
-        os.makedirs(confdir.cache)
+        with daemon.PrivilegesOf(procUser, procGroup):
+            os.makedirs(confdir.cache)
     except OSError:
         log.error('failed to create cache directory "%s": %s' % (confdir.cache, sys.exc_info()[1]))
         sys.exit(-1)
@@ -848,7 +849,8 @@ if variationModules:
                 log.error('missing "%s" handler at variation module "%s"' % (x, name))
                 sys.exit(-1)
         try:
-            body['init'](options=body['args'], mode='variating')
+            with daemon.PrivilegesOf(procUser, procGroup):
+                body['init'](options=body['args'], mode='variating')
 
         except Exception:
             log.error('Variation module "%s" from "%s" load FAILED: %s' % (
@@ -1130,7 +1132,8 @@ if v2cArch:
  
     contexts = {univ.OctetString('index'): dataIndexInstrumController}
 
-    configureManagedObjects(confdir.data, dataIndexInstrumController)
+    with daemon.PrivilegesOf(procUser, procGroup):
+        configureManagedObjects(confdir.data, dataIndexInstrumController)
 
     contexts['index'] = dataIndexInstrumController
     
