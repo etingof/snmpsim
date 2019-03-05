@@ -302,10 +302,17 @@ mibViewController = view.MibViewController(mibBuilder)
 compiler.addMibCompiler(
     mibBuilder, sources=mibSources or defaultMibSources
 )
-if isinstance(startOID, ObjectIdentity):
-    startOID.resolveWithMib(mibViewController)
-if isinstance(stopOID, ObjectIdentity):
-    stopOID.resolveWithMib(mibViewController)
+
+try:
+    if isinstance(startOID, ObjectIdentity):
+        startOID.resolveWithMib(mibViewController)
+
+    if isinstance(stopOID, ObjectIdentity):
+        stopOID.resolveWithMib(mibViewController)
+
+except error.PySnmpError:
+    sys.stderr.write('ERROR: %s\r\n' % sys.exc_info()[1])
+    sys.exit(-1)
 
 output = []
 
@@ -313,7 +320,14 @@ output = []
 for modName in modNames:
     if verboseFlag:
         sys.stderr.write('# MIB module: %s, from %s till %s\r\n' % (modName, startOID or 'the beginning', stopOID or 'the end'))
-    oid = ObjectIdentity(modName).resolveWithMib(mibViewController)
+    try:
+        oid = ObjectIdentity(modName).resolveWithMib(mibViewController)
+
+    except error.PySnmpError:
+        sys.stderr.write('ERROR: failed on MIB %s: '
+                         '%s\r\n' % (modName, sys.exc_info()[1]))
+        sys.exit(-1)
+
     hint = rowHint = ''
     rowOID = None
     suffix = ()

@@ -28,8 +28,9 @@ try:
 except ImportError:
     unix = None
 from pysnmp.entity.rfc3413 import cmdgen
-from pysnmp.smi.rfc1902 import ObjectIdentity, ObjectType
+from pysnmp.smi.rfc1902 import ObjectIdentity
 from pysnmp.smi import view, compiler
+from pysnmp.error import PySnmpError
 from pyasn1 import debug as pyasn1_debug
 from pysnmp import debug as pysnmp_debug
 from snmpsim.record import snmprec
@@ -507,10 +508,16 @@ if (isinstance(startOID, ObjectIdentity) or
         sources=mibSources or defaultMibSources
     )
     mibViewController = view.MibViewController(snmpEngine.getMibBuilder())
-    if isinstance(startOID, ObjectIdentity):
-        startOID.resolveWithMib(mibViewController)
-    if isinstance(stopOID, ObjectIdentity):
-        stopOID.resolveWithMib(mibViewController)
+
+    try:
+        if isinstance(startOID, ObjectIdentity):
+            startOID.resolveWithMib(mibViewController)
+        if isinstance(stopOID, ObjectIdentity):
+            stopOID.resolveWithMib(mibViewController)
+
+    except PySnmpError:
+        sys.stderr.write('ERROR: %s\r\n' % sys.exc_info()[1])
+        sys.exit(-1)
 
 # Variation module initialization
 

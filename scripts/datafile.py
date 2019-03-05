@@ -11,6 +11,7 @@ import getopt
 import sys
 from pyasn1.type import univ
 from pysnmp.smi import builder, rfc1902, view, compiler
+from pysnmp.error import PySnmpError
 from snmpsim.record.search.file import getRecord
 from snmpsim.record import snmprec, dump, mvc, sap, walk
 from snmpsim import error
@@ -177,10 +178,15 @@ if isinstance(startOID, rfc1902.ObjectIdentity) or \
     compiler.addMibCompiler(
         mibBuilder, sources=mibSources or defaultMibSources
     )
-    if isinstance(startOID, rfc1902.ObjectIdentity):
-        startOID.resolveWithMib(mibViewController)
-    if isinstance(stopOID, rfc1902.ObjectIdentity):
-        stopOID.resolveWithMib(mibViewController)
+    try:
+        if isinstance(startOID, rfc1902.ObjectIdentity):
+            startOID.resolveWithMib(mibViewController)
+        if isinstance(stopOID, rfc1902.ObjectIdentity):
+            stopOID.resolveWithMib(mibViewController)
+
+    except PySnmpError:
+        sys.stderr.write('ERROR: %s\r\n' % sys.exc_info()[1])
+        sys.exit(-1)
 
 recordsList = []
 
