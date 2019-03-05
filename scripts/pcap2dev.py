@@ -25,6 +25,7 @@ from pyasn1.codec.ber import decoder
 from pyasn1.error import PyAsn1Error
 from pysnmp.proto import api, rfc1905
 from pysnmp.smi import builder, rfc1902, view, compiler
+from pysnmp.error import PySnmpError
 from pysnmp.carrier.asynsock.dgram import udp
 from pyasn1 import debug as pyasn1_debug
 from pysnmp import debug as pysnmp_debug
@@ -221,10 +222,16 @@ if isinstance(startOID, rfc1902.ObjectIdentity) or \
     compiler.addMibCompiler(
         mibBuilder, sources=mibSources or defaultMibSources
     )
-    if isinstance(startOID, rfc1902.ObjectIdentity):
-        startOID.resolveWithMib(mibViewController)
-    if isinstance(stopOID, rfc1902.ObjectIdentity):
-        stopOID.resolveWithMib(mibViewController)
+
+    try:
+        if isinstance(startOID, rfc1902.ObjectIdentity):
+            startOID.resolveWithMib(mibViewController)
+        if isinstance(stopOID, rfc1902.ObjectIdentity):
+            stopOID.resolveWithMib(mibViewController)
+
+    except PySnmpError:
+        sys.stderr.write('ERROR: %s\r\n' % sys.exc_info()[1])
+        sys.exit(-1)
 
 # Load variation module
 
