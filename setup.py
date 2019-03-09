@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 #
 # This file is part of snmpsim software.
 #
@@ -12,9 +11,9 @@
    Simulator builds and uses a database of physical devices' SNMP footprints 
    to respond like their original counterparts do.
 """
-import sys
-import os
 import glob
+import os
+import sys
 
 classifiers = """\
 Development Status :: 5 - Production/Stable
@@ -69,11 +68,13 @@ try:
         'install_requires': ['pysnmp>=4.4.3,<5.0.0'],
         'zip_safe': False  # this is due to data and variation dirs
     }
+
 except ImportError:
     for arg in sys.argv:
         if 'egg' in arg:
             howto_install_setuptools()
             sys.exit(1)
+
     from distutils.core import setup
 
     params = {}
@@ -105,23 +106,25 @@ params.update(
 
 # install stock variation modules as data_files
 params['data_files'] = [
-    ('snmpsim/' + 'variation', glob.glob(os.path.join('variation', '*.py')))
+    (os.path.join('snmpsim', 'variation'),
+     glob.glob(os.path.join('variation', '*.py')))
 ]
 
 # install sample .snmprec files as data_files
 for x in os.walk('data'):
+    files = []
+    files.extend(glob.glob(os.path.join(x[0], '*.snmprec')))
+    files.extend(glob.glob(os.path.join(x[0], '*.snmpwalk')))
+    files.extend(glob.glob(os.path.join(x[0], '*.sapwalk')))
+
     params['data_files'].append(
-        ('snmpsim/' + '/'.join(os.path.split(x[0])),
-         glob.glob(os.path.join(x[0], '*.snmprec')) + \
-         glob.glob(os.path.join(x[0], '*.snmpwalk')) + \
-         glob.glob(os.path.join(x[0], '*.sapwalk')))
-    )
+        (os.path.join('snmpsim', *os.path.split(x[0])), files))
 
 if 'py2exe' in sys.argv:
-    import py2exe
 
     # fix executables
     params['console'] = params['scripts']
+
     del params['scripts']
     # pysnmp used by snmpsim dynamically loads some of its *.py files
     params['options'] = {
@@ -146,8 +149,10 @@ if 'py2exe' in sys.argv:
               'sqlite3', 'subprocess', 'redis'):
         try:
             __import__(m)
+
         except ImportError:
             continue
+
         else:
             params['options']['py2exe']['includes'].append(m)
 

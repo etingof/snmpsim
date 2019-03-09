@@ -4,13 +4,14 @@
 # Copyright (c) 2010-2019, Ilya Etingof <etingof@gmail.com>
 # License: http://snmplabs.com/snmpsim/license.html
 #
-import os
-import sys
 import logging
+import os
 import socket
 import stat
+import sys
 import time
 from logging import handlers
+
 from snmpsim.error import SnmpsimError
 
 LOG_DEBUG = 0
@@ -52,8 +53,10 @@ class SyslogLogger(AbstractLogger):
             raise SnmpsimError(
                 'Bad syslog params, need at least facility, also accept '
                 'host, port, socktype (tcp|udp)')
+
         if len(priv) < 2:
             priv = [priv[0], 'debug']
+
         if len(priv) < 3:
             # search for syslog local socket
 
@@ -61,27 +64,33 @@ class SyslogLogger(AbstractLogger):
                 if os.path.exists(dev):
                     priv = [priv[0], priv[1], dev]
                     break
+
             else:
                 priv = [priv[0], priv[1], 'localhost', 514, 'udp']
 
         if not priv[2].startswith('/'):
             if len(priv) < 4:
                 priv = [priv[0], priv[1], priv[2], 514, 'udp']
+
             if len(priv) < 5:
                 priv = [priv[0], priv[1], priv[2], 514, 'udp']
+
             priv = [priv[0], priv[1], priv[2], int(priv[3]), priv[4]]
 
         try:
             handler = handlers.SysLogHandler(
-                address=priv[2].startswith('/') and priv[2] or (priv[2], int(priv[3])),
+                address=(priv[2].startswith('/') and priv[2]
+                         or (priv[2], int(priv[3]))),
                 facility=priv[0].lower(),
-                socktype=len(priv) > 4 and priv[4] == 'tcp' and socket.SOCK_STREAM or socket.SOCK_DGRAM
-            )
+                socktype=(len(priv) > 4 and priv[4] == 'tcp' and
+                          socket.SOCK_STREAM or socket.SOCK_DGRAM))
 
         except Exception:
-            raise SnmpsimError('Bad syslog option(s): %s' % sys.exc_info()[1])
+            raise SnmpsimError(
+                'Bad syslog option(s): %s' % sys.exc_info()[1])
 
-        handler.setFormatter(logging.Formatter('%(asctime)s %(name)s: %(message)s'))
+        handler.setFormatter(
+            logging.Formatter('%(asctime)s %(name)s: %(message)s'))
 
         self._logger.addHandler(handler)
 
@@ -94,10 +103,10 @@ class FileLogger(AbstractLogger):
         def __init__(self, *args, **kwargs):
             handlers.TimedRotatingFileHandler.__init__(self, *args, **kwargs)
 
-            self.__failure = False
+            self._failure = False
 
             try:
-                timestamp = os.stat(self.__filename)[stat.ST_MTIME]
+                timestamp = os.stat(self._filename)[stat.ST_MTIME]
 
             except IOError:
                 return
@@ -110,37 +119,37 @@ class FileLogger(AbstractLogger):
             self.rolloverAt = self.computeRollover(timestamp)
 
         @property
-        def __filename(self):
+        def _filename(self):
             return os.path.join(
                 os.path.dirname(self.baseFilename),
-                '.' + os.path.basename(self.baseFilename) + '-timestamp'
-            )
+                '.' + os.path.basename(self.baseFilename) + '-timestamp')
 
         def doRollover(self):
             try:
                 handlers.TimedRotatingFileHandler.doRollover(self)
 
                 # note log file creation time
-                if os.path.exists(self.__filename):
-                    os.unlink(self.__filename)
+                if os.path.exists(self._filename):
+                    os.unlink(self._filename)
 
-                open(self.__filename, 'w').close()
+                open(self._filename, 'w').close()
 
-                self.__failure = False
+                self._failure = False
 
             except IOError:
                 # File rotation seems to fail, postpone the next run
                 timestamp = time.time()
                 self.rolloverAt = self.computeRollover(timestamp)
 
-                if not self.__failure:
-                    self.__failure = True
+                if not self._failure:
+                    self._failure = True
                     error('Failed to rotate log/timestamp file '
-                          '%s: %s' % (self.__filename, sys.exc_info()[1]))
+                          '%s: %s' % (self._filename, sys.exc_info()[1]))
 
     def init(self, *priv):
         if not priv:
             raise SnmpsimError('Bad log file params, need filename')
+
         if sys.platform[:3] == 'win':
             # fix possibly corrupted absolute windows path
             if len(priv[0]) == 1 and priv[0].isalpha() and len(priv) > 1:
@@ -148,54 +157,69 @@ class FileLogger(AbstractLogger):
 
         maxsize = 0
         maxage = None
+
         if len(priv) > 1 and priv[1]:
             try:
                 if priv[1][-1] == 'k':
                     maxsize = int(priv[1][:-1]) * 1024
+
                 elif priv[1][-1] == 'm':
                     maxsize = int(priv[1][:-1]) * 1024 * 1024
+
                 elif priv[1][-1] == 'g':
                     maxsize = int(priv[1][:-1]) * 1024 * 1024 * 1024
+
                 elif priv[1][-1] == 'S':
                     maxage = ('S', int(priv[1][:-1]))
+
                 elif priv[1][-1] == 'M':
                     maxage = ('M', int(priv[1][:-1]))
+
                 elif priv[1][-1] == 'H':
                     maxage = ('H', int(priv[1][:-1]))
+
                 elif priv[1][-1] == 'D':
                     maxage = ('D', int(priv[1][:-1]))
+
                 else:
-                    raise ValueError('Unknown log rotation criterion: %s' % priv[1][-1])
+                    raise ValueError(
+                        'Unknown log rotation criterion: %s' % priv[1][-1])
 
             except ValueError:
                 raise SnmpsimError(
-                    'Error in timed log rotation specification. Use <NNN>k,m,g '
-                    'for size or <NNN>S,M,H,D for time limits'
-                )
+                    'Error in timed log rotation specification. Use '
+                    '<NNN>k,m,g for size or <NNN>S,M,H,D for time limits')
 
         try:
             if maxsize:
-                handler = handlers.RotatingFileHandler(priv[0], backupCount=30, maxBytes=maxsize)
+                handler = handlers.RotatingFileHandler(
+                    priv[0], backupCount=30, maxBytes=maxsize)
+
             elif maxage:
-                handler = self.TimedRotatingFileHandler(priv[0], backupCount=30, when=maxage[0], interval=maxage[1])
+                handler = self.TimedRotatingFileHandler(
+                    priv[0], backupCount=30, when=maxage[0], interval=maxage[1])
+
             else:
                 handler = handlers.WatchedFileHandler(priv[0])
 
         except Exception:
             raise SnmpsimError(
-                'Failure configure logging: %s' % sys.exc_info()[1]
-            )
+                'Failure configure logging: %s' % sys.exc_info()[1])
 
         handler.setFormatter(logging.Formatter('%(message)s'))
 
         self._logger.addHandler(handler)
 
-        self('Log file %s, rotation rules: %s' % (priv[0], maxsize and '> %sKB' % (maxsize/1024) or maxage and '%s%s' % (maxage[1], maxage[0]) or '<none>'))
+        self('Log file %s, rotation rules: '
+             '%s' % (priv[0], maxsize and '> %sKB' % (maxsize/1024)
+                     or maxage and '%s%s' % (maxage[1], maxage[0]) or '<none>'))
 
     def __call__(self, s):
         now = time.time()
         timestamp = time.strftime('%Y-%m-%dT%H:%M:%S', time.localtime(now))
-        AbstractLogger.__call__(self, '%s.%02d %s: %s' % (timestamp, now % 1 * 100, self._progId, s))
+        AbstractLogger.__call__(
+            self, '%s.%02d %s: %s' % (
+                timestamp, now % 1 * 100, self._progId, s))
 
 
 class StreamLogger(AbstractLogger):
@@ -206,9 +230,7 @@ class StreamLogger(AbstractLogger):
             handler = logging.StreamHandler(self.stream)
 
         except AttributeError:
-            raise SnmpsimError(
-                'Stream logger failure: %s' % sys.exc_info()[1]
-            )
+            raise SnmpsimError('Stream logger failure: %s' % sys.exc_info()[1])
 
         handler.setFormatter(logging.Formatter('%(message)s'))
 
@@ -273,15 +295,20 @@ def setLevel(level):
         logLevel = LEVELS_MAP[level]
 
     except KeyError:
-        raise SnmpsimError('Unknown log level "%s", known levels are: %s' % (level, ', '.join(LEVELS_MAP)))
+        raise SnmpsimError(
+            'Unknown log level "%s", known levels are: '
+            '%s' % (level, ', '.join(LEVELS_MAP)))
 
 
 def setLogger(progId, *priv, **options):
     global msg
 
     try:
-        if not isinstance(msg, AbstractLogger) or options.get('force'):
+        if (not isinstance(msg, AbstractLogger)
+                or options.get('force')):
             msg = METHODS_MAP[priv[0]](progId, *priv[1:])
 
     except KeyError:
-        raise SnmpsimError('Unknown logging method "%s", known methods are: %s' % (priv[0], ', '.join(METHODS_MAP)))
+        raise SnmpsimError(
+            'Unknown logging method "%s", known methods are: '
+            '%s' % (priv[0], ', '.join(METHODS_MAP)))

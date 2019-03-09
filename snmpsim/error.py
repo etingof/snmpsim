@@ -4,10 +4,14 @@
 # Copyright (c) 2010-2019, Ilya Etingof <etingof@gmail.com>
 # License: http://snmplabs.com/snmpsim/license.html
 #
-class SnmpsimError(Exception): pass
 
 
-class NoDataNotification(SnmpsimError): pass
+class SnmpsimError(Exception):
+    pass
+
+
+class NoDataNotification(SnmpsimError):
+    pass
 
 
 class MoreDataNotification(SnmpsimError):
