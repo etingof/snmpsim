@@ -2,7 +2,14 @@
 Revision 1.0.0, released XX-04-2019
 -----------------------------------
 
-No changes yet
+- Command-line tools refactored into entry-points and renamed for better
+  clarity and namespacing for the upcoming tools:
+
+  * snmpsimd.py -> snmpsim-command-responder
+  * snmprec.py -> snmpsim-record-commands
+  * mib2dev.py -> snmpsim-record-mibs
+  * pcap2dev.py -> snmpsim-record-traffic
+  * datafile.py -> snmpsim-manage-records
 
 Revision 0.4.8, released XX-03-2019
 -----------------------------------

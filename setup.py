@@ -92,16 +92,20 @@ params.update(
      'author': 'Ilya Etingof',
      'author_email': 'etingof@gmail.com',
      'url': 'https://github.com/etingof/snmpsim',
-     'license': 'BSD',
      'platforms': ['any'],
      'classifiers': [x for x in classifiers.split('\n') if x],
-     'scripts': ['scripts/snmpsimd.py',
-                 'scripts/snmprec.py',
-                 'scripts/datafile.py',
-                 'scripts/pcap2dev.py',
-                 'scripts/mib2dev.py'],
      'packages': ['snmpsim', 'snmpsim.grammar', 'snmpsim.record',
-                  'snmpsim.record.search']}
+                  'snmpsim.record.search', 'snmpsim.commands'],
+     'entry_points': {
+         'console_scripts': [
+             'snmpsim-manage-records = snmpsim.commands.rec2rec:main',
+             'snmpsim-record-mibs = snmpsim.commands.mib2rec:main',
+             'snmpsim-record-traffic = snmpsim.commands.pcap2rec:main',
+             'snmpsim-record-commands = snmpsim.commands.cmd2rec:main',
+             'snmpsim-command-responder = snmpsim.commands.responder:main',
+         ]
+     },
+     'license': 'BSD'}
 )
 
 # install stock variation modules as data_files
