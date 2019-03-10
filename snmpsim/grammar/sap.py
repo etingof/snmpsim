@@ -4,15 +4,17 @@
 # Copyright (c) 2010-2019, Ilya Etingof <etingof@gmail.com>
 # License: http://snmplabs.com/snmpsim/license.html
 #
-from pysnmp.proto import rfc1902
-from pyasn1.type import univ
 from pyasn1.compat.octets import octs2str
-from snmpsim.grammar import abstract
+from pyasn1.type import univ
+from pysnmp.proto import rfc1902
+
 from snmpsim import error
+from snmpsim.grammar import abstract
 
 
 class SapGrammar(abstract.AbstractGrammar):
-    tagMap = {
+
+    TAG_MAP = {
         'Counter': rfc1902.Counter32,
         'Gauge': rfc1902.Gauge32,
         'Integer': rfc1902.Integer32,
@@ -24,21 +26,29 @@ class SapGrammar(abstract.AbstractGrammar):
         'Counter64': rfc1902.Counter64
     }
 
-    def __stringFilter(value):
+    @staticmethod
+    def _stringFilter(value):
         if value[:2] == '0x':
-            value = [int(value[x:x + 2], 16) for x in range(2, len(value[2:]) + 2, 2)]
+            value = [int(value[x:x + 2], 16)
+                     for x in range(2, len(value[2:]) + 2, 2)]
+
         return value
 
-    filterMap = {
-        'OctetString': __stringFilter
-    }
-
     def parse(self, line):
+
+        filters = {
+            'OctetString': self._stringFilter
+        }
+
         try:
             oid, tag, value = [x.strip() for x in octs2str(line).split(',', 2)]
-        except:
+
+        except Exception:
             raise error.SnmpsimError('broken record <%s>' % line)
+
         else:
             if oid and tag:
-                return oid, tag, self.filterMap.get(tag, lambda x: x)(value.strip())
+                handler = filters.get(tag, lambda x: x)
+                return oid, tag, handler(value.strip())
+
             raise error.SnmpsimError('broken record <%s>' % line)

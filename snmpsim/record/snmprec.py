@@ -4,9 +4,9 @@
 # Copyright (c) 2010-2019, Ilya Etingof <etingof@gmail.com>
 # License: http://snmplabs.com/snmpsim/license.html
 #
-from snmpsim.record import dump
-from snmpsim.grammar import snmprec
 from snmpsim import error
+from snmpsim.grammar import snmprec
+from snmpsim.record import dump
 
 
 class SnmprecRecord(dump.DumpRecord):
@@ -83,15 +83,15 @@ class SnmprecRecord(dump.DumpRecord):
 
                 value = self.evaluateRawString(value)
 
-                return oid, tag, self.grammar.tagMap[tag](value)
+                return oid, tag, self.grammar.TAG_MAP[tag](value)
 
             elif encodingId == 'x':
-                return oid, tag, self.grammar.tagMap[tag](hexValue=value)
+                return oid, tag, self.grammar.TAG_MAP[tag](hexValue=value)
 
             else:
-                return oid, tag, self.grammar.tagMap[tag](value)
+                return oid, tag, self.grammar.TAG_MAP[tag](value)
 
-        except:
+        except Exception:
             raise error.SnmpsimError('value evaluation error for tag %r, value %r' % (tag, value))
 
     def formatValue(self, oid, value, **context):

@@ -5,10 +5,11 @@
 # License: http://snmplabs.com/snmpsim/license.html
 #
 import sys
+
 from snmpsim import error
 
-
 if sys.platform[:3] == 'win':
+
     def daemonize(pidfile):
         raise error.SnmpsimError('Windows is not inhabited with daemons!')
 
@@ -26,6 +27,7 @@ if sys.platform[:3] == 'win':
             pass
 
 else:
+
     import os
     import pwd
     import grp
@@ -40,6 +42,7 @@ else:
             if pid > 0:
                 # exit first parent
                 os._exit(0)
+
         except OSError:
             raise error.SnmpsimError('ERROR: fork #1 failed: %s' % sys.exc_info()[1])
 
@@ -47,8 +50,10 @@ else:
         try:
             os.chdir('/')
             os.setsid()
+
         except OSError:
             pass
+
         os.umask(0)
 
         # do second fork
@@ -57,6 +62,7 @@ else:
             if pid > 0:
                 # exit from second parent
                 os._exit(0)
+
         except OSError:
             raise error.SnmpsimError('ERROR: fork #2 failed: %s' % sys.exc_info()[1])
 
@@ -71,6 +77,7 @@ else:
             try:
                 if pidfile:
                     os.remove(pidfile)
+
             except OSError:
                 pass
 
@@ -82,6 +89,7 @@ else:
                 os.write(fd, ('%d\n' % os.getpid()).encode('utf-8'))
                 os.close(fd)
                 os.rename(nm, pidfile)
+
         except Exception:
             raise error.SnmpsimError(
                 'Failed to create PID file %s: %s' % (pidfile, sys.exc_info()[1]))
@@ -109,14 +117,20 @@ else:
 
         def __enter__(self):
             if os.getuid() != 0:
-                if (self._uname and self._uname != pwd.getpwnam(self._uname).pw_name or
-                        self._gname and self._gname != grp.getgrnam(self._gname).gr_name):
-                    raise error.SnmpsimError('Process is running under different UID/GID')
+                if self._uname or self._gname:
+                    pw_name = pwd.getpwnam(self._uname).pw_name
+                    gr_name = grp.getgrnam(self._gname).gr_name
+
+                    if self._uname != pw_name or  self._gname != gr_name:
+                        raise error.SnmpsimError(
+                            'Process is running under different UID/GID')
                 else:
                     return
+
             else:
                 if not self._uname or not self._gname:
-                    raise error.SnmpsimError('Must drop privileges to a non-privileged user&group')
+                    raise error.SnmpsimError(
+                        'Must drop privileges to a non-privileged user&group')
 
             try:
                 runningUid = pwd.getpwnam(self._uname).pw_uid
@@ -131,7 +145,8 @@ else:
                 os.setgroups([])
 
             except Exception:
-                raise error.SnmpsimError('setgroups() failed: %s' % sys.exc_info()[1])
+                raise error.SnmpsimError(
+                    'setgroups() failed: %s' % sys.exc_info()[1])
 
             try:
                 if self._final:
