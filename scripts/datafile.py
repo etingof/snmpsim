@@ -2,18 +2,28 @@
 #
 # This file is part of snmpsim software.
 #
-# Copyright (c) 2010-2018, Ilya Etingof <etingof@gmail.com>
+# Copyright (c) 2010-2019, Ilya Etingof <etingof@gmail.com>
 # License: http://snmplabs.com/snmpsim/license.html
 #
 # SNMP Simulator data file management tool
 #
 import getopt
 import sys
+
 from pyasn1.type import univ
-from pysnmp.smi import builder, rfc1902, view, compiler
-from snmpsim.record.search.file import getRecord
-from snmpsim.record import snmprec, dump, mvc, sap, walk
+from pysnmp.error import PySnmpError
+from pysnmp.smi import builder
+from pysnmp.smi import compiler
+from pysnmp.smi import rfc1902
+from pysnmp.smi import view
+
 from snmpsim import error
+from snmpsim.record import dump
+from snmpsim.record import mvc
+from snmpsim.record import sap
+from snmpsim.record import snmprec
+from snmpsim.record import walk
+from snmpsim.record.search.file import getRecord
 
 # Defaults
 verboseFlag = True
@@ -33,17 +43,20 @@ writtenCount = skippedCount = duplicateCount = brokenCount = variationCount = 0
 
 
 class SnmprecRecord(snmprec.SnmprecRecord):
+
     def evaluateValue(self, oid, tag, value, **context):
         # Variation module reference
         if ':' in tag:
             context['backdoor']['textTag'] = tag
             return oid, '', value
+
         else:
             return snmprec.SnmprecRecord.evaluateValue(self, oid, tag, value)
 
     def formatValue(self, oid, value, **context):
         if 'textTag' in context['backdoor']:
             return self.formatOid(oid), context['backdoor']['textTag'], value
+
         else:
             return snmprec.SnmprecRecord.formatValue(self, oid, value, **context)
 
@@ -71,30 +84,34 @@ Usage: %s [--help]
     [--source-record-type=<%s>]
     [--destination-record-type=<%s>]
     [--input-file=<filename>]
-    [--output-file=<filename>]""" % (sys.argv[0],
-                                     '|'.join(recordsSet.keys()),
-                                     '|'.join(recordsSet.keys()))
+    [--output-file=<filename>]\
+""" % (sys.argv[0],
+       '|'.join(recordsSet),
+       '|'.join(recordsSet))
 
 try:
-    opts, params = getopt.getopt(sys.argv[1:], 'hv',
-                                 ['help', 'version', 'quiet', 'sort-records',
-                                  'ignore-broken-records',
-                                  'deduplicate-records',
-                                  'escaped-strings',
-                                  'start-oid=', 'stop-oid=', 'start-object=',
-                                  'stop-object=',
-                                  'mib-source=', 'source-record-type=',
-                                  'destination-record-type=',
-                                  'input-file=', 'output-file=']
-                                 )
+    opts, params = getopt.getopt(
+        sys.argv[1:], 'hv',
+        ['help', 'version', 'quiet', 'sort-records',
+         'ignore-broken-records',
+         'deduplicate-records',
+         'escaped-strings',
+         'start-oid=', 'stop-oid=', 'start-object=',
+         'stop-object=',
+         'mib-source=', 'source-record-type=',
+         'destination-record-type=',
+         'input-file=', 'output-file='])
+
 except Exception:
     if verboseFlag:
         sys.stderr.write('ERROR: %s\r\n%s\r\n' % (sys.exc_info()[1], helpMessage))
+
     sys.exit(-1)
 
 if params:
     if verboseFlag:
-        sys.stderr.write('ERROR: extra arguments supplied %s\r\n%s\r\n' % (params, helpMessage))
+        sys.stderr.write('ERROR: extra arguments supplied %s\r\n'
+                         '%s\r\n' % (params, helpMessage))
     sys.exit(-1)
 
 for opt in opts:
@@ -120,95 +137,145 @@ Python interpreter: %s
 Software documentation and support at http://snmplabs.com/snmpsim
 %s
 """ % (snmpsim.__version__,
-       hasattr(pysmi, '__version__') and pysmi.__version__ or 'unknown',
-       hasattr(pysnmp, '__version__') and pysnmp.__version__ or 'unknown',
-       hasattr(pyasn1, '__version__') and pyasn1.__version__ or 'unknown',
+       getattr(pysmi, '__version__', 'unknown'),
+       getattr(pysnmp, '__version__', 'unknown'),
+       getattr(pyasn1, '__version__', 'unknown'),
        sys.version, helpMessage))
         sys.exit(-1)
+
     if opt[0] == '--quiet':
         verboseFlag = False
+
     if opt[0] == '--sort-records':
         sortRecords = True
+
     if opt[0] == '--ignore-broken-records':
         ignoreBrokenRecords = True
+
     if opt[0] == '--deduplicate-records':
         deduplicateRecords = True
+
     if opt[0] == '--escaped-strings':
         escapedStrings = True
+
     # obsolete begin
     if opt[0] == '--start-oid':
         startOID = univ.ObjectIdentifier(opt[1])
+
     if opt[0] == '--stop-oid':
         stopOID = univ.ObjectIdentifier(opt[1])
     # obsolete end
+
     if opt[0] == '--mib-source':
         mibSources.append(opt[1])
+
     if opt[0] == '--start-object':
         startOID = rfc1902.ObjectIdentity(*opt[1].split('::', 1))
+
     if opt[0] == '--stop-object':
         stopOID = rfc1902.ObjectIdentity(*opt[1].split('::', 1),
                                          **dict(last=True))
     if opt[0] == '--source-record-type':
         if opt[1] not in recordsSet:
             if verboseFlag:
-                sys.stderr.write('ERROR: unknown record type <%s> (known types are %s)\r\n%s\r\n' % (opt[1], ', '.join(recordsSet.keys()), helpMessage))
+                sys.stderr.write(
+                    'ERROR: unknown record type <%s> (known types are %s)\r\n'
+                    '%s\r\n' % (opt[1], ', '.join(recordsSet),
+                                helpMessage))
             sys.exit(-1)
+
         srcRecordType = opt[1]
+
     if opt[0] == '--destination-record-type':
         if opt[1] not in recordsSet:
             if verboseFlag:
-                sys.stderr.write('ERROR: unknown record type <%s> (known types are %s)\r\n%s\r\n' % (opt[1], ', '.join(recordsSet.keys()), helpMessage))
+                sys.stderr.write(
+                    'ERROR: unknown record type <%s> (known types are %s)\r\n%s'
+                    '\r\n' % (opt[1], ', '.join(recordsSet),
+                              helpMessage))
             sys.exit(-1)
+
         dstRecordType = opt[1]
+
     if opt[0] == '--input-file':
         inputFiles.append(open(opt[1], 'rb'))
+
     if opt[0] == '--output-file':
         outputFile = open(opt[1], 'wb')
 
 if not inputFiles:
     inputFiles.append(sys.stdin)
 
-if isinstance(startOID, rfc1902.ObjectIdentity) or \
-        isinstance(stopOID, rfc1902.ObjectIdentity):
+if (isinstance(startOID, rfc1902.ObjectIdentity) or
+        isinstance(stopOID, rfc1902.ObjectIdentity)):
+
     mibBuilder = builder.MibBuilder()
 
     mibViewController = view.MibViewController(mibBuilder)
 
     compiler.addMibCompiler(
-        mibBuilder, sources=mibSources or defaultMibSources
-    )
-    if isinstance(startOID, rfc1902.ObjectIdentity):
-        startOID.resolveWithMib(mibViewController)
-    if isinstance(stopOID, rfc1902.ObjectIdentity):
-        stopOID.resolveWithMib(mibViewController)
+        mibBuilder, sources=mibSources or defaultMibSources)
+
+    try:
+        if isinstance(startOID, rfc1902.ObjectIdentity):
+            startOID.resolveWithMib(mibViewController)
+
+        if isinstance(stopOID, rfc1902.ObjectIdentity):
+            stopOID.resolveWithMib(mibViewController)
+
+    except PySnmpError:
+        sys.stderr.write('ERROR: %s\r\n' % sys.exc_info()[1])
+        sys.exit(-1)
 
 recordsList = []
 
 for inputFile in inputFiles:
+
     if verboseFlag:
-        sys.stderr.write('# Input file #%s, processing records from %s till %s\r\n' % (inputFiles.index(inputFile), startOID or 'the beginning', stopOID or 'the end'))
+        sys.stderr.write(
+            '# Input file #%s, processing records from %s till '
+            '%s\r\n' % (inputFiles.index(inputFile),
+                        startOID or 'the beginning', stopOID or 'the end'))
+
     lineNo = 0
+
     while True:
         line, recLineNo, _ = getRecord(inputFile, lineNo)
+
         if not line:
             break
+
         if recLineNo != lineNo + 1:
             if verboseFlag:
-                sys.stderr.write('# Losing comment at lines %s..%s (input file #%s)\r\n' % (lineNo + 1, recLineNo - 1, inputFiles.index(inputFile)))
+                sys.stderr.write(
+                    '# Losing comment at lines %s..%s (input file #'
+                    '%s)\r\n' % (lineNo + 1, recLineNo - 1,
+                                 inputFiles.index(inputFile)))
+
             lineNo = recLineNo
+
             lostComments += 1
+
         backdoor = {}
+
         try:
             oid, value = recordsSet[srcRecordType].evaluate(line, backdoor=backdoor)
+
         except error.SnmpsimError:
             if ignoreBrokenRecords:
                 if verboseFlag:
-                    sys.stderr.write('# Skipping broken record <%s>: %s\r\n' % (line, sys.exc_info()[1]))
+                    sys.stderr.write(
+                        '# Skipping broken record <%s>: '
+                        '%s\r\n' % (line, sys.exc_info()[1]))
                 brokenCount += 1
                 continue
+
             else:
                 if verboseFlag:
-                    sys.stderr.write('ERROR: broken record <%s>: %s\r\n' % (line, sys.exc_info()[1]))
+                    sys.stderr.write(
+                        'ERROR: broken record <%s>: '
+                        '%s\r\n' % (line, sys.exc_info()[1]))
+
                 sys.exit(-1)
 
         if (startOID and startOID > oid or
@@ -227,18 +294,24 @@ for record in recordsList:
     if deduplicateRecords:
         if record[0] in uniqueIndices:
             if verboseFlag:
-                sys.stderr.write('# Skipping duplicate record <%s>\r\n' % record[0])
+                sys.stderr.write('# Skipping duplicate record '
+                                 '<%s>\r\n' % record[0])
+
             duplicateCount += 1
+
             continue
+
         else:
             uniqueIndices.add(record[0])
+
     try:
         outputFile.write(
             recordsSet[dstRecordType].format(
                 record[0], record[1], backdoor=record[2], nohex=escapedStrings
             )
         )
-    except:
+
+    except Exception:
         sys.stderr.write('ERROR: record not written: %s\r\n' % sys.exc_info()[1])
         break
 
@@ -247,7 +320,11 @@ for record in recordsList:
         variationCount += 1
 
 if verboseFlag:
-    sys.stderr.write('# Records: written %s, filtered out %s, deduped %s, ignored %s, broken %s, variated %s\r\n' % (writtenCount, skippedCount, duplicateCount, lostComments, brokenCount, variationCount))
+    sys.stderr.write(
+        '# Records: written %s, filtered out %s, de-duplicated %s, ignored '
+        '%s, broken %s, variated %s\r\n' % (
+            writtenCount, skippedCount, duplicateCount, lostComments,
+            brokenCount, variationCount))
 
 outputFile.flush()
 outputFile.close()

@@ -1,13 +1,45 @@
 
-Revision 0.4.5, released XX-07-2018
+Revision 0.4.8, released XX-03-2019
 -----------------------------------
 
+- Code base PEP8'ed
+- Run snmpsimd variation modules initialization under non-privileged user
+- MIB resolution failure handling improved in `mib2dev`
+- Fixed crash caused by pysnmp failing to load up the rest of its MIBs when
+  snmpsimd is switched into non-privileged user
+- Fixed wrong cache directory and files ownership when switching snmpsimd from
+  privileged into non-privileged user
+
+Revision 0.4.7, released 09-02-2019
+-----------------------------------
+
+- Added missing SNMP PDU error-status values to the `error`
+  variation module
+- Fix to define `PrivilegesOf` on Windows
+
+Revision 0.4.6, released 25-01-2019
+-----------------------------------
+
+- The `--log-level` option added
+- Default daemon syslog service destination to a local socket
+- Fixed timed log file rotation to respect log file creation time
+  when computing next rotation time
+- Fixed possible file permission issues by initializing pysnmp modules,
+  logger and variation modules subsystems under reduced user privileges
+- Improve error reporting in `notification` variation module
+
+Revision 0.4.5, released 30-12-2018
+-----------------------------------
+
+- Copyright notice bumped up to year 2019
 - Bumped upper Python version to 3.7
 - Use absolute paths of Simulator data files and variation modules
   and reflect that in the log -- that should ease troubleshooting
 - Optional .snmprec tag modifier is ignored by the *error*,
   *delay*, *writecache* and *notification* variation modules
 - Fixed DBM file index detection code to operate correctly
+- Fixed pysnmp/pyasn1 debugging flags print out in `--help` to work
+  with newer pyasn1/pysnmp
 
 Revision 0.4.4, released 20-02-2018
 -----------------------------------
