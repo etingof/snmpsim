@@ -47,7 +47,7 @@ master_doc = 'contents'
 
 # General information about the project.
 project = 'SNMP Simulator'
-copyright = '2010-2018, Ilya Etingof'
+copyright = '2010-2019, Ilya Etingof'
 author = 'Ilya Etingof'
 
 # The version info for the project you're documenting, acts as replacement for

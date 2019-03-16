@@ -1,7 +1,7 @@
 #
 # This file is part of snmpsim software.
 #
-# Copyright (c) 2010-2018, Ilya Etingof <etingof@gmail.com>
+# Copyright (c) 2010-2019, Ilya Etingof <etingof@gmail.com>
 # License: http://snmplabs.com/snmpsim/license.html
 #
 import os
@@ -21,6 +21,7 @@ if sys.platform[:3] == 'win':
         os.path.join(os.environ['PROGRAMFILES'], 'SNMP Simulator', 'Data'),
         os.path.join(os.path.split(__file__)[0], 'data')
     ]
+
 elif sys.platform == 'darwin':
     variation = [
         os.path.join(os.environ['HOME'], '.snmpsim', 'variation'),
@@ -36,6 +37,7 @@ elif sys.platform == 'darwin':
         os.path.join(sys.prefix, 'share', 'snmpsim', 'data'),
         os.path.join(os.path.split(__file__)[0], 'data')
     ]
+
 else:
     variation = [
         os.path.join(os.environ['HOME'], '.snmpsim', 'variation'),

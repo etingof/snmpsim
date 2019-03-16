@@ -17,8 +17,8 @@ The easiest way to deploy SNMP Simulator is by downloading it from PyPI:
    $ source venv/bin/activate
    $ pip install snmpsim
 
-Run the simulator
------------------
+Run SNMP simulation
+-------------------
 
 Once installed, invoke *snmpsimd.py* daemon and point it to a directory containing
 simulation data:
