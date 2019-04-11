@@ -14,6 +14,7 @@ Revision 0.4.8, released XX-03-2019
   snmpsimd is switched into non-privileged user
 - Fixed wrong cache directory and files ownership when switching snmpsimd from
   privileged into non-privileged user
+- Fixed .snmpwalk hex string parser
 
 Revision 0.4.7, released 09-02-2019
 -----------------------------------
