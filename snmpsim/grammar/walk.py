@@ -43,13 +43,13 @@ class WalkGrammar(abstract.AbstractGrammar):
             # .1.3.6.1.2.1.2.2.1.3.1 = INTEGER: ethernetCsmacd(6)
             match = re.match(r'.*?\((\-?[0-9]+)\)', value)
             if match:
-                return match.groups()[0]
+                return match.group(1)
 
             # Clean values with UNIT suffix
             # .1.3.6.1.2.1.4.13.0 = INTEGER: 60 seconds
             match = re.match(r'(\-?[0-9]+)\s.+', value)
             if match:
-                return match.groups()[0]
+                return match.group(1)
 
             return value
 
@@ -62,12 +62,8 @@ class WalkGrammar(abstract.AbstractGrammar):
         elif value[0] == value[-1] == '"':
             return value[1:-1]
 
-        elif value.find(':') > 0:
-            for x in value.split(':'):
-                for y in x:
-                    if y not in '0123456789ABCDEFabcdef':
-                        return value
-
+        # .1.3.6.1.2.1.2.2.1.6.201752832 = STRING: 60:9c:9f:ec:a3:38
+        elif re.match(r'^[0-9a-fA-F]{1,2}(\:[0-9a-fA-F]{1,2})+$', value):
             return [int(x, 16) for x in value.split(':')]
 
         else:
@@ -84,6 +80,12 @@ class WalkGrammar(abstract.AbstractGrammar):
     @staticmethod
     def _bitsFilter(value):
         # rfc1902.Bits does not really initialize from sequences
+        # Clean bits values
+        # .1.3.6.1.2.1.17.6.1.1.1.0 = BITS: 5B 00 00 00   [[...]1 3 4 6 7
+        match = re.match('^([0-9a-fA-F]{2}(\s+[0-9a-fA-F]{2})*)\s+\[', value)
+        if match:
+            return ints2octs([int(y, 16) for y in match.group(1).split(' ')])
+
         return ints2octs([int(y, 16) for y in value.split(' ')])
 
     @staticmethod
@@ -101,7 +103,7 @@ class WalkGrammar(abstract.AbstractGrammar):
             # .1.3.6.1.2.1.4.31.1.1.47.1 = Gauge32: 10000 milli-seconds
             match = re.match(r'(\-?[0-9]+)\s.+', value)
             if match:
-                return match.groups()[0]
+                return match.group(1)
 
             return value
 
@@ -113,7 +115,7 @@ class WalkGrammar(abstract.AbstractGrammar):
     def _timeTicksFilter(value):
         match = re.match(r'.*?\(([0-9]+)\)', value)
         if match:
-            return match.groups()[0]
+            return match.group(1)
 
         return value
 
