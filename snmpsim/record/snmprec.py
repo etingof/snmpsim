@@ -4,9 +4,13 @@
 # Copyright (c) 2010-2019, Ilya Etingof <etingof@gmail.com>
 # License: http://snmplabs.com/snmpsim/license.html
 #
+import sys
+
 from snmpsim import error
 from snmpsim.grammar import snmprec
 from snmpsim.record import dump
+
+from pyasn1.compat import octets
 
 
 class SnmprecRecord(dump.DumpRecord):
@@ -86,13 +90,18 @@ class SnmprecRecord(dump.DumpRecord):
                 return oid, tag, self.grammar.TAG_MAP[tag](value)
 
             elif encodingId == 'x':
+                if octets.isOctetsType(value):
+                    value = octets.octs2str(value)
+
                 return oid, tag, self.grammar.TAG_MAP[tag](hexValue=value)
 
             else:
                 return oid, tag, self.grammar.TAG_MAP[tag](value)
 
         except Exception:
-            raise error.SnmpsimError('value evaluation error for tag %r, value %r' % (tag, value))
+            raise error.SnmpsimError(
+                'value evaluation error for tag %r, value '
+                '%r: %s' % (tag, value, sys.exc_info()[1]))
 
     def formatValue(self, oid, value, **context):
         if 'nohex' in context and context['nohex']:
