@@ -1,4 +1,9 @@
 
+Revision 1.0.0, released XX-04-2019
+-----------------------------------
+
+No changes yet
+
 Revision 0.4.8, released XX-03-2019
 -----------------------------------
 
@@ -9,6 +14,9 @@ Revision 0.4.8, released XX-03-2019
   snmpsimd is switched into non-privileged user
 - Fixed wrong cache directory and files ownership when switching snmpsimd from
   privileged into non-privileged user
+- Fixed .snmpwalk hex string parser
+- Fixed hex value evaluation error on Python 3 when produced in bytes
+  by a variation modules
 
 Revision 0.4.7, released 09-02-2019
 -----------------------------------
