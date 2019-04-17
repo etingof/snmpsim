@@ -82,7 +82,7 @@ class WalkGrammar(abstract.AbstractGrammar):
         # rfc1902.Bits does not really initialize from sequences
         # Clean bits values
         # .1.3.6.1.2.1.17.6.1.1.1.0 = BITS: 5B 00 00 00   [[...]1 3 4 6 7
-        match = re.match('^([0-9a-fA-F]{2}(\s+[0-9a-fA-F]{2})*)\s+\[', value)
+        match = re.match(r'^([0-9a-fA-F]{2}(\s+[0-9a-fA-F]{2})*)\s+\[', value)
         if match:
             return ints2octs([int(y, 16) for y in match.group(1).split(' ')])
 
@@ -90,6 +90,11 @@ class WalkGrammar(abstract.AbstractGrammar):
 
     @staticmethod
     def _hexStringFilter(value):
+        # .1.3.6.1.2.1.3.1.1.2.2.1.172.30.1.30 = Hex-STRING: 00 C0 FF 43 CE 45   [...C.E]
+        match = re.match(r'^([0-9a-fA-F]{2}(\s+[0-9a-fA-F]{2})*)\s+\[', value)
+        if match:
+            return [int(y, 16) for y in match.group(1).split(' ')]
+        
         return [int(y, 16) for y in value.split(' ')]
 
     @staticmethod
