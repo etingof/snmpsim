@@ -71,7 +71,7 @@ class SnmprecRecord(dump.DumpRecord):
 
                     raise ValueError('Unknown escape character %c' % char)
 
-            if number == 92:  # '\'
+            elif number == 92:  # '\'
                 escape = True
                 continue
 
