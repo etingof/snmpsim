@@ -133,7 +133,7 @@ class WalkGrammar(abstract.AbstractGrammar):
             'BITS:': self._bitsFilter,
             'HEX-STRING:': self._hexStringFilter,
             'GAUGE32:': self._gaugeFilter,
-            'Network Address:': self._netAddressFilter,
+            'NETWORK ADDRESS:': self._netAddressFilter,
             'TIMETICKS:': self._timeTicksFilter
         }
 
@@ -155,20 +155,26 @@ class WalkGrammar(abstract.AbstractGrammar):
         if value.startswith('No more variables left in this MIB View'):
             value = 'STRING: '
 
-        try:
-            tag, value = value.split(' ', 1)
+        match = re.match(r'^(\w+(?:[\-\ ]\w+)?:)\ ?(.*)', value)
+        if match:
+            tag = match.group(1)
+            value = match.group(2)
 
-        except ValueError:
-            # this is implicit snmpwalk's fuzziness
-            if value == '""' or value == 'STRING:':
-                tag = 'STRING:'
-                value = ''
+        # this is implicit snmpwalk's fuzziness
+        elif value == '""' or value == 'STRING:':
+            tag = 'STRING:'
+            value = ''
 
-            else:
-                tag = 'TimeTicks:'
+        else:
+            tag = 'TimeTicks:'
 
         if oid and tag:
             handler = filters.get(tag.upper(), lambda x: x)
+
+            # Need rewrite tag for Network Address after filters
+            if tag == 'Network Address:':
+                tag = 'IpAddress:'
+
             return oid, tag.upper(), handler(value.strip())
 
         raise error.SnmpsimError('broken record <%s>' % line)
