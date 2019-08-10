@@ -2,9 +2,6 @@
 SNMP Agent Simulator
 ====================
 
-.. toctree::
-   :maxdepth: 2
-
 SNMP Simulator tool can simulate many thousands of different
 SNMP speaking devices on a network. It is primarily used for testing
 and development purposes.
@@ -22,20 +19,16 @@ Try the fast lane if you are fluent with network management matters.
 
    /quickstart
 
-Documentation
--------------
+SNMP Simulator suite
+--------------------
+
+Detailed documentation explaining the entire work flow and SNMP simulator
+tool set.
 
 .. toctree::
    :maxdepth: 2
 
-   /command-line-options
-   /simulating-agents
-   /managing-simulation-data
-   /addressing-agents
-   /simulation-with-variation-modules
-   /building-simulation-data
-   /recording-with-variation-modules
-   /tips-and-tricks
+   /documentation/contents.rst
 
 Source code & Changelog
 -----------------------
@@ -43,7 +36,12 @@ Source code & Changelog
 Project source code is hosted at `GitHub <https://github.com/etingof/snmpsim>`_.
 Everyone is welcome to fork and contribute back!
 
-We maintain detailed :doc:`log of changes </changelog>` to our software.
+We maintain a detailed log of changes:
+
+.. toctree::
+   :maxdepth: 1
+
+   /changelog
 
 Download
 --------
@@ -63,26 +61,23 @@ the latest release from GitHub or `PyPI <https://pypi.org/project/snmpsim/>`_.
 License
 -------
 
-The SNMP Simulator software is distributed under 2-clause :doc:`BSD license </license>`.
+The SNMP Simulator software is distributed under 2-clause BSD license
+
+.. toctree::
+   :maxdepth: 1
+
+   /license
 
 Development
 -----------
 
 Our development plans and new features we consider for eventual implementation
-are tracked on the :doc:`future features </development>` page.
+are tracked on the future features page.
 
-Free simulation service
------------------------
+.. toctree::
+   :maxdepth: 2
 
-We setup :doc:`publicly available SNMP Simulator </public-snmp-agent-simulator>`
-instance at `Digital Ocean <https://cloud.digitalocean.com/>`_ cloud to serve
-SNMP simulation services to you - our fellow SNMP developers
-and testers. The service is hosted in the U.S. (west coast) and should
-be available to everyone free of charge.
-
-If you are considering signing up with Digital Ocean for their
-hosting services, `the voucher <https://m.do.co/c/debefe816df4>`_
-will get you $10 credit and that would benefit our service hosting as well. ;-)
+   /development
 
 Contact
 -------

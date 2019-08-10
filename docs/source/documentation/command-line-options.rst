@@ -2,6 +2,9 @@
 Command-line options
 ====================
 
+.. toctree::
+   :maxdepth: 2
+
 The SNMP Simulator suite consists of a handful of command-line tools that
 take command-line options.
 
