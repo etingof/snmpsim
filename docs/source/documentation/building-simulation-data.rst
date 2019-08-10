@@ -58,7 +58,8 @@ mind that at simulation time, *snmpsimd.py* treats *.snmprec* file path as SNMPv
 community name or SNMPv3 context name.
 
 If you don't readily have some SNMP agent to play with, you're welcome to
-use our publicly available :ref:`SNMP Simulator instance <snmp-simulation-service>`.
+use our publicly available
+`SNMP Simulator instance <http://snmplabs.com/snmp-simulation-service.html>`_.
 
 .. code-block:: bash
 
