@@ -9,10 +9,10 @@
 #
 # Module initialization parameters are:
 #
-# host:<redis-host>,port:<redis-port>,db:<redis-db> 
+# host:<redis-host>,port:<redis-port>,db:<redis-db>
 #
 # Uses the following data layout:
-# Redis LIST type containing sorted OIDs. This is used for answering 
+# Redis LIST type containing sorted OIDs. This is used for answering
 # GETNEXT/GETBULK type queries
 # Redis HASH type containing OID-value pairs
 # For successful operation each managed OID must be present in both
@@ -27,6 +27,7 @@ except ImportError:
     StrictRedis = None
 
 from pysnmp.smi.error import WrongValueError
+from pyasn1.compat import octets
 
 from snmpsim import error, log
 from snmpsim.grammar.snmprec import SnmprecGrammar
@@ -92,6 +93,35 @@ def init(**context):
 unpackTag = SnmprecRecord().unpackTag
 
 
+
+# It turned out, that `py-redis` package emits bytes when running
+# on Py3 and `str` on Py2. So let's add simple wrappers to all
+# Redis calls that return non-ints to overcome this hassle.
+
+def lindex(dbConn, *args):
+    ret = dbConn.lindex(*args)
+    if ret is not None:
+        ret = octets.octs2str(ret)
+
+    return ret
+
+
+def get(dbConn, *args):
+    ret = dbConn.get(*args)
+    if ret is not None:
+        ret = octets.octs2str(ret)
+
+    return ret
+
+
+def evalsha(dbConn, *args):
+    ret = dbConn.evalsha(*args)
+    if ret is not None:
+        ret = octets.octs2str(ret)
+
+    return ret
+
+
 def variate(oid, tag, value, **context):
     if 'dbConn' in moduleContext:
         dbConn = moduleContext['dbConn']
@@ -124,21 +154,20 @@ def variate(oid, tag, value, **context):
 
     keySpacesId = recordContext['settings']['key-spaces-id']
 
-    if recordContext['settings']['period']:
+    if recordContext['settings']['period'] and dbConn.llen(keySpacesId):
         booted = time.time() - moduleContext['booted']
-        slot = int(dbConn.llen(keySpacesId)) // recordContext['settings']['period']
-        keySpaceIdx = int(booted) % (recordContext['settings']['period'] * slot)
+        keySpaceIdx = int(booted) % dbConn.llen(keySpacesId)
 
     else:
         keySpaceIdx = 0
 
-    keySpace = dbConn.lindex(keySpacesId, keySpaceIdx)
+    keySpace = lindex(dbConn, keySpacesId, keySpaceIdx)
 
     if ('current-keyspace' not in recordContext or
             recordContext['current-keyspace'] != keySpace):
         log.msg('redis: now using keyspace %s (cycling period'
                 ' %s)' % (
-            keySpace, recordCoentext['settings']['period'] or '<disabled>'))
+            keySpace, recordContext['settings']['period'] or '<disabled>'))
 
         recordContext['current-keyspace'] = keySpace
 
@@ -158,10 +187,10 @@ def variate(oid, tag, value, **context):
             textValue = str(context['origValue'])
 
         if redisScript:
-            prevTagAndValue = dbConn.evalsha(redisScript, 1, keySpace + '-' + dbOid)
+            prevTagAndValue = evalsha(dbConn, redisScript, 1, keySpace + '-' + dbOid)
 
         else:
-            prevTagAndValue = dbConn.get(keySpace + '-' + dbOid)
+            prevTagAndValue = get(dbConn, keySpace + '-' + dbOid)
 
         if prevTagAndValue:
             prevTag, prevValue = prevTagAndValue.split('|')
@@ -176,7 +205,7 @@ def variate(oid, tag, value, **context):
                 getNextOid(dbConn, keySpace, dbOid), dbOid)
 
         if redisScript:
-            dbConn.evalsha(redisScript, 1, keySpace + '-' + dbOid,
+            evalsha(dbConn, redisScript, 1, keySpace + '-' + dbOid,
                            textTag + '|' + textValue)
 
         else:
@@ -186,18 +215,18 @@ def variate(oid, tag, value, **context):
 
     else:
         if context['nextFlag']:
-            textOid = dbConn.lindex(
-                keySpace + '-oids_ordering',
+            textOid = lindex(
+                dbConn, keySpace + '-oids_ordering',
                 getNextOid(dbConn, keySpace, dbOid, index=True))
 
         else:
             textOid = keySpace + '-' + dbOid
 
         if redisScript:
-            tagAndValue = dbConn.evalsha(redisScript, 1, textOid)
+            tagAndValue = evalsha(dbConn, redisScript, 1, textOid)
 
         else:
-            tagAndValue = dbConn.get(textOid)
+            tagAndValue = get(dbConn, textOid)
 
         if not tagAndValue:
             return origOid, tag, context['errorStatus']
@@ -221,7 +250,8 @@ def getNextOid(dbConn, keySpace, dbOid, index=False):
 
         idx = minlen + (maxlen - minlen) // 2
 
-        nextOid = dbConn.lindex(listKey, idx)
+        nextOid = lindex(dbConn, listKey, idx)
+
         if nextOid < oidKey:
             minlen = idx + 1
 
@@ -235,7 +265,7 @@ def getNextOid(dbConn, keySpace, dbOid, index=False):
     if not listsize:
         raise error.SnmpsimError('empty/unsorted %s' % listKey)
 
-    return not index and dbConn.lindex(listKey, idx) or idx
+    return not index and lindex(dbConn, listKey, idx) or idx
 
 
 def record(oid, tag, value, **context):
@@ -293,7 +323,7 @@ def record(oid, tag, value, **context):
     dbConn.lpush(keySpace + '-temp_oids_ordering', keySpace + '-' + dbOid)
 
     if redisScript:
-        dbConn.evalsha(
+        evalsha(dbConn, 
             redisScript, 1, keySpace + '-' + dbOid, textTag + '|' + textValue)
 
     else:
