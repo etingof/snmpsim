@@ -62,6 +62,12 @@ class RecordIndex(object):
 
         return self.__text, self._db
 
+    @property
+    def _dbFiles(self):
+        return (self._dbFile + os.path.extsep + 'db',
+                self._dbFile + os.path.extsep + 'dat',
+                self._dbFile)
+
     def create(self, forceIndexBuild=False, validateData=False):
         textFileTime = os.stat(self._textFile)[8]
 
@@ -69,10 +75,7 @@ class RecordIndex(object):
 
         indexNeeded = forceIndexBuild
 
-        for dbFile in (
-                self._dbFile + os.path.extsep + 'db',
-                self._dbFile + os.path.extsep + 'dat',
-                self._dbFile):
+        for dbFile in self._dbFiles:
 
             if os.path.exists(dbFile):
                 if textFileTime < os.stat(dbFile)[8]:
@@ -147,11 +150,12 @@ class RecordIndex(object):
                     db.close()
                     exc = sys.exc_info()[1]
 
-                    try:
-                        os.remove(self._dbFile)
+                    for dbFile in self._dbFiles:
+                        try:
+                            os.remove(dbFile)
 
-                    except OSError:
-                        pass
+                        except OSError:
+                            pass
 
                     raise error.SnmpsimError(
                         'Data error at %s:%d:'
@@ -165,11 +169,12 @@ class RecordIndex(object):
                         db.close()
                         exc = sys.exc_info()[1]
 
-                        try:
-                            os.remove(self._dbFile)
+                        for dbFile in self._dbFiles:
+                            try:
+                                os.remove(dbFile)
 
-                        except OSError:
-                            pass
+                            except OSError:
+                                pass
 
                         raise error.SnmpsimError(
                             'OID error at %s:%d: %s' % (self._textFile, lineNo, exc))
