@@ -4,6 +4,7 @@
 # Copyright (c) 2010-2019, Ilya Etingof <etingof@gmail.com>
 # License: http://snmplabs.com/snmpsim/license.html
 #
+import bz2
 import sys
 
 from snmpsim import error
@@ -131,3 +132,11 @@ class SnmprecRecord(dump.DumpRecord):
                 textValue = str(value)
 
         return self.formatOid(oid), textTag, textValue
+
+
+class CompressedSnmprecRecord(SnmprecRecord):
+    ext = 'snmprec.bz2'
+
+    @staticmethod
+    def open(path, flags='rb'):
+        return bz2.BZ2File(path, flags)

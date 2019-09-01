@@ -42,7 +42,11 @@ from pysnmp.smi.rfc1902 import ObjectIdentity
 from snmpsim import confdir
 from snmpsim import error
 from snmpsim import log
+from snmpsim.record import dump
+from snmpsim.record import mvc
+from snmpsim.record import sap
 from snmpsim.record import snmprec
+from snmpsim.record import walk
 
 AUTH_PROTOCOLS = {
     'MD5': config.usmHMACMD5AuthProtocol,
@@ -90,13 +94,22 @@ startOID = univ.ObjectIdentifier('1.3.6')
 stopOID = None
 mibSources = []
 defaultMibSources = ['http://mibs.snmplabs.com/asn1/@mib@']
-outputFile = sys.stdout
-if hasattr(outputFile, 'buffer'):
-    outputFile = outputFile.buffer
+dstRecordType = 'snmprec'
+outputFile = None
 loggingMethod = ['stderr']
 loggingLevel = None
 variationModuleOptions = ""
 variationModuleName = variationModule = None
+
+# data file types and parsers
+RECORD_TYPES = {
+    dump.DumpRecord.ext: dump.DumpRecord(),
+    mvc.MvcRecord.ext: mvc.MvcRecord(),
+    sap.SapRecord.ext: sap.SapRecord(),
+    walk.WalkRecord.ext: walk.WalkRecord(),
+    snmprec.SnmprecRecord.ext: snmprec.SnmprecRecord(),
+    snmprec.CompressedSnmprecRecord.ext: snmprec.CompressedSnmprecRecord()
+}
 
 helpMessage = """\
 Usage: %s [--help]
@@ -123,6 +136,7 @@ Usage: %s [--help]
     [--mib-source=<url>]
     [--start-object=<MIB-NAME::[symbol-name]|OID>]
     [--stop-object=<MIB-NAME::[symbol-name]|OID>]
+    [--destination-record-type=<%s>]
     [--output-file=<filename>]
     [--variation-modules-dir=<dir>]
     [--variation-module=<module>]
@@ -137,7 +151,8 @@ Usage: %s [--help]
     '|'.join(log.METHODS_MAP),
     '|'.join(log.LEVELS_MAP),
     '|'.join(sorted([x for x in AUTH_PROTOCOLS if x != 'NONE'])),
-    '|'.join(sorted([x for x in PRIV_PROTOCOLS if x != 'NONE']))
+    '|'.join(sorted([x for x in PRIV_PROTOCOLS if x != 'NONE'])),
+    '|'.join(RECORD_TYPES)
 )
 
 try:
@@ -157,6 +172,7 @@ try:
          'start-oid=', 'stop-oid=',
          'mib-source=',
          'start-object=', 'stop-object=',
+         'destination-record-type=',
          'output-file=',
          'variation-modules-dir=', 'variation-module=',
          'variation-module-options=', 'continue-on-errors='])
@@ -409,8 +425,18 @@ Software documentation and support at http://snmplabs.com/snmpsim
     elif opt[0] == '--stop-object':
         stopOID = ObjectIdentity(*opt[1].split('::', 1), **dict(last=True))
 
+    if opt[0] == '--destination-record-type':
+        if opt[1] not in RECORD_TYPES:
+            sys.stderr.write(
+                'ERROR: unknown record type <%s> (known types are %s)\r\n%s'
+                '\r\n' % (opt[1], ', '.join(RECORD_TYPES),
+                          helpMessage))
+            sys.exit(-1)
+
+        dstRecordType = opt[1]
+
     elif opt[0] == '--output-file':
-        outputFile = open(opt[1], 'wb')
+        outputFile = opt[1]
 
     elif opt[0] == '--variation-modules-dir':
         confdir.variation.insert(0, opt[1])
@@ -430,6 +456,26 @@ Software documentation and support at http://snmplabs.com/snmpsim
                 'ERROR: improper --continue-on-errors retries count %s\r\n'
                 '%s\r\n' % (opt[1], helpMessage))
             sys.exit(-1)
+
+if outputFile:
+    ext = os.path.extsep + RECORD_TYPES[dstRecordType].ext
+
+    if not outputFile.endswith(ext):
+        outputFile += ext
+
+    outputFile = RECORD_TYPES[dstRecordType].open(outputFile, 'wb')
+
+else:
+    outputFile = sys.stdout
+
+    if sys.version_info >= (3, 0, 0):
+        # binary mode write
+        outputFile = sys.stdout.buffer
+
+    elif sys.platform == "win32":
+        import msvcrt
+
+        msvcrt.setmode(sys.stdout.fileno(), os.O_BINARY)
 
 # Catch missing params
 
@@ -496,16 +542,6 @@ except error.SnmpsimError:
 if getBulkFlag and not snmpVersion:
     log.info('will be using GETNEXT with SNMPv1!')
     getBulkFlag = False
-
-# Attempt to reopen std output stream in binary mode
-if outputFile is sys.stderr:
-    if sys.version_info[0] > 2:
-        outputFile = outputFile.buffer
-
-    elif sys.platform == "win32":
-        import msvcrt
-
-        msvcrt.setmode(outputFile.fileno(), os.O_BINARY)
 
 # Load variation module
 
@@ -678,7 +714,7 @@ if variationModule:
 
 # Data file builder
 
-class SnmprecRecord(snmprec.SnmprecRecord):
+class SnmprecRecordMixIn(object):
 
     def formatValue(self, oid, value, **context):
         textOid, textTag, textValue = snmprec.SnmprecRecord.formatValue(
@@ -707,7 +743,22 @@ class SnmprecRecord(snmprec.SnmprecRecord):
         return textOid, textTag, textValue
 
 
-dataFileHandler = SnmprecRecord()
+class SnmprecRecord(SnmprecRecordMixIn, snmprec.SnmprecRecord):
+    pass
+
+
+RECORD_TYPES[SnmprecRecord.ext] = SnmprecRecord()
+
+
+class CompressedSnmprecRecord(SnmprecRecordMixIn,
+                              snmprec.CompressedSnmprecRecord):
+    pass
+
+
+RECORD_TYPES[CompressedSnmprecRecord.ext] = CompressedSnmprecRecord()
+
+
+dataFileHandler = RECORD_TYPES[dstRecordType]
 
 
 # SNMP worker

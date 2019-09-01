@@ -84,7 +84,6 @@ PRIV_PROTOCOLS = {
   'NONE': config.usmNoPrivProtocol
 }
 
-
 RECORD_TYPES = {
     dump.DumpRecord.ext: dump.DumpRecord(),
     mvc.MvcRecord.ext: mvc.MvcRecord(),
@@ -176,7 +175,7 @@ class UnixTransportEndpoints(TransportEndpointsBase):
 
 # Extended snmprec record handler
 
-class SnmprecRecord(snmprec.SnmprecRecord):
+class SnmprecRecordMixIn(object):
 
     def evaluateValue(self, oid, tag, value, **context):
         # Variation module reference
@@ -275,7 +274,19 @@ class SnmprecRecord(snmprec.SnmprecRecord):
         return oid, value
 
 
+class SnmprecRecord(SnmprecRecordMixIn, snmprec.SnmprecRecord):
+    pass
+
+
 RECORD_TYPES[SnmprecRecord.ext] = SnmprecRecord()
+
+
+class CompressedSnmprecRecord(SnmprecRecordMixIn,
+                              snmprec.CompressedSnmprecRecord):
+    pass
+
+
+RECORD_TYPES[CompressedSnmprecRecord.ext] = CompressedSnmprecRecord()
 
 
 class AbstractLayout:
@@ -508,15 +519,22 @@ def getDataFiles(tgtDir, topLen=None):
         if not stat.S_ISREG(inode.st_mode):
             continue
 
-        dExt = os.path.splitext(dFile)[1][1:]
-        if dExt not in RECORD_TYPES:
+        for dExt in RECORD_TYPES:
+            if dFile.endswith(dExt):
+                break
+
+        else:
             continue
+
+        # just the file name would serve for agent identification
+        ident = os.path.join(*relPath)
+        ident = ident[:-len(dExt) - 1]
+        ident = ident.replace(os.path.sep, '/')
 
         dirContent.append(
             (fullPath,
              RECORD_TYPES[dExt],
-             os.path.splitext(
-                 os.path.join(*relPath))[0].replace(os.path.sep, '/'))
+             ident)
         )
 
     return dirContent

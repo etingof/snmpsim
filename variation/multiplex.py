@@ -21,7 +21,21 @@ from snmpsim.mltsplit import split
 from snmpsim.record.search.database import RecordIndex
 from snmpsim.record.search.file import getRecord
 from snmpsim.record.search.file import searchRecordByOid
-from snmpsim.record.snmprec import SnmprecRecord
+from snmpsim.record import dump
+from snmpsim.record import mvc
+from snmpsim.record import sap
+from snmpsim.record import snmprec
+from snmpsim.record import walk
+
+# data file types and parsers
+RECORD_SET = {
+    dump.DumpRecord.ext: dump.DumpRecord(),
+    mvc.MvcRecord.ext: mvc.MvcRecord(),
+    sap.SapRecord.ext: sap.SapRecord(),
+    walk.WalkRecord.ext: walk.WalkRecord(),
+    snmprec.SnmprecRecord.ext: snmprec.SnmprecRecord(),
+    snmprec.CompressedSnmprecRecord.ext: snmprec.CompressedSnmprecRecord()
+}
 
 
 def init(**context):
@@ -93,12 +107,17 @@ def variate(oid, tag, value, **context):
         else:
             d = recordContext['settings']['dir']
 
-        recordContext['dirmap'] = dict(
-            [(int(os.path.basename(x).split(os.path.extsep)[0]),
-              os.path.join(d, x))
-             for x in os.listdir(d)
-             if x[-7:] == 'snmprec']
-        )
+        recordContext['dirmap'] = {}
+        recordContext['parsermap'] = {}
+
+        for fl in os.listdir(d):
+            for ext in RECORD_SET:
+                if not fl.endswith(ext):
+                    continue
+                ident = int(os.path.basename(fl)[:-len(ext) - 1])
+                datafile = os.path.join(d, fl)
+                recordContext['dirmap'][ident] = datafile
+                recordContext['parsermap'][datafile] = RECORD_SET[ext]
 
         recordContext['keys'] = list(recordContext['dirmap'])
 
@@ -189,13 +208,15 @@ def variate(oid, tag, value, **context):
     datafile = recordContext['dirmap'][
         recordContext['keys'][moduleContext[oid]['fileno']]]
 
+    parser = recordContext['parsermap'][datafile]
+
     if ('datafile' not in moduleContext[oid] or
             moduleContext[oid]['datafile'] != datafile):
 
         if 'datafileobj' in moduleContext[oid]:
             moduleContext[oid]['datafileobj'].close()
 
-        recordIndex = RecordIndex(datafile, SnmprecRecord()).create()
+        recordIndex = RecordIndex(datafile, parser).create()
 
         moduleContext[oid]['datafileobj'] = recordIndex
 
@@ -214,7 +235,7 @@ def variate(oid, tag, value, **context):
         line = moduleContext[oid]['datafileobj'].lookup(textOid)
 
     except KeyError:
-        offset = searchRecordByOid(context['origOid'], text, SnmprecRecord())
+        offset = searchRecordByOid(context['origOid'], text, parser)
         exactMatch = False
 
     else:
@@ -237,7 +258,7 @@ def variate(oid, tag, value, **context):
         return context['origOid'], tag, context['errorStatus']
 
     try:
-        oid, value = SnmprecRecord().evaluate(line)
+        oid, value = parser.evaluate(line)
 
     except error.SnmpsimError:
         oid, value = context['origOid'], context['errorStatus']
@@ -279,17 +300,24 @@ def record(oid, tag, value, **context):
         if 'filenum' not in moduleContext:
             moduleContext['filenum'] = 0
 
-        snmprecFile = '%.5d%ssnmprec' % (
-            moduleContext['filenum'], os.path.extsep)
+        dstRecordType = moduleContext.get('recordtype', 'snmprec')
+
+        ext = os.path.extsep + RECORD_SET[dstRecordType].ext
+
+        snmprecFile = '%.5d%s%s' % (
+            moduleContext['filenum'], os.path.extsep, ext)
 
         snmprecfile = os.path.join(moduleContext['dir'], snmprecFile)
 
-        moduleContext['file'] = open(snmprecfile, 'wb')
+        moduleContext['parser'] = RECORD_SET[dstRecordType]
+        moduleContext['file'] = moduleContext['parser'].open(snmprecfile, 'wb')
 
         log.msg('multiplex: writing into %s file...' % snmprecfile)
 
-    moduleContext['file'].write(
-        SnmprecRecord().format(context['origOid'], context['origValue']))
+    record = moduleContext['parser'].format(
+        context['origOid'], context['origValue'])
+
+    moduleContext['file'].write(record)
 
     if not context['total']:
         settings = {

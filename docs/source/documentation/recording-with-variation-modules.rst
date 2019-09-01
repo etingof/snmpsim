@@ -150,6 +150,8 @@ The multiplex module supports the following comma-separated *key:value*
 options whilst running in recording mode:
 
 * *dir* - directory for produced *.snmprec* files
+* *recordtype* - simulation data file type to produce (e.g. *snmprec*,
+  *snmprec.bz2*). Default is *snmprec*.
 * *iterations* - number of recording cycles to run over the same
   portion of SNMP agent MIB. There's no point in values
   beyond 2 for purposes of modelling approximation function.
