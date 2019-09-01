@@ -28,16 +28,16 @@ def init(**context):
 
     if context['options']:
         for x in split(context['options'], ','):
-            for k, v in split(x, ':'):
-                if k == 'addon':
-                    if k in moduleContext:
-                        moduleContext[k].append(v)
-
-                    else:
-                        moduleContext[k] = [v]
+            k, v = split(x, ':')
+            if k == 'addon':
+                if k in moduleContext:
+                    moduleContext[k].append(v)
 
                 else:
-                    moduleContext[k] = v
+                    moduleContext[k] = [v]
+
+            else:
+                moduleContext[k] = v
 
     if context['mode'] == 'variating':
         moduleContext['booted'] = time.time()
