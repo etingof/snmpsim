@@ -9,6 +9,7 @@
 #
 import getopt
 import sys
+import os
 
 from pyasn1.type import univ
 from pysnmp.error import PySnmpError
@@ -33,16 +34,13 @@ sortRecords = ignoreBrokenRecords = deduplicateRecords = lostComments = False
 startOID = stopOID = None
 srcRecordType = dstRecordType = 'snmprec'
 inputFiles = []
-outputFile = sys.stdout
+outputFile = None
 escapedStrings = False
-
-if hasattr(outputFile, 'buffer'):
-    outputFile = outputFile.buffer
 
 writtenCount = skippedCount = duplicateCount = brokenCount = variationCount = 0
 
 
-class SnmprecRecord(snmprec.SnmprecRecord):
+class SnmprecRecordMixIn(object):
 
     def evaluateValue(self, oid, tag, value, **context):
         # Variation module reference
@@ -61,13 +59,23 @@ class SnmprecRecord(snmprec.SnmprecRecord):
             return snmprec.SnmprecRecord.formatValue(self, oid, value, **context)
 
 
+class SnmprecRecord(SnmprecRecordMixIn, snmprec.SnmprecRecord):
+    pass
+
+
+class CompressedSnmprecRecord(SnmprecRecordMixIn,
+                              snmprec.CompressedSnmprecRecord):
+    pass
+
+
 # data file types and parsers
-recordsSet = {
+RECORD_TYPES = {
     dump.DumpRecord.ext: dump.DumpRecord(),
     mvc.MvcRecord.ext: mvc.MvcRecord(),
     sap.SapRecord.ext: sap.SapRecord(),
     walk.WalkRecord.ext: walk.WalkRecord(),
-    SnmprecRecord.ext: SnmprecRecord()
+    SnmprecRecord.ext: SnmprecRecord(),
+    CompressedSnmprecRecord.ext: CompressedSnmprecRecord(),
 }
 
 helpMessage = """\
@@ -86,8 +94,8 @@ Usage: %s [--help]
     [--input-file=<filename>]
     [--output-file=<filename>]\
 """ % (sys.argv[0],
-       '|'.join(recordsSet),
-       '|'.join(recordsSet))
+       '|'.join(RECORD_TYPES),
+       '|'.join(RECORD_TYPES))
 
 try:
     opts, params = getopt.getopt(
@@ -176,32 +184,54 @@ Software documentation and support at http://snmplabs.com/snmpsim
         stopOID = rfc1902.ObjectIdentity(*opt[1].split('::', 1),
                                          **dict(last=True))
     if opt[0] == '--source-record-type':
-        if opt[1] not in recordsSet:
+        if opt[1] not in RECORD_TYPES:
             if verboseFlag:
                 sys.stderr.write(
                     'ERROR: unknown record type <%s> (known types are %s)\r\n'
-                    '%s\r\n' % (opt[1], ', '.join(recordsSet),
+                    '%s\r\n' % (opt[1], ', '.join(RECORD_TYPES),
                                 helpMessage))
             sys.exit(-1)
 
         srcRecordType = opt[1]
 
     if opt[0] == '--destination-record-type':
-        if opt[1] not in recordsSet:
+        if opt[1] not in RECORD_TYPES:
             if verboseFlag:
                 sys.stderr.write(
                     'ERROR: unknown record type <%s> (known types are %s)\r\n%s'
-                    '\r\n' % (opt[1], ', '.join(recordsSet),
+                    '\r\n' % (opt[1], ', '.join(RECORD_TYPES),
                               helpMessage))
             sys.exit(-1)
 
         dstRecordType = opt[1]
 
     if opt[0] == '--input-file':
-        inputFiles.append(open(opt[1], 'rb'))
+        inputFiles.append(opt[1])
 
     if opt[0] == '--output-file':
-        outputFile = open(opt[1], 'wb')
+        outputFile = opt[1]
+
+inputFiles = [RECORD_TYPES[srcRecordType].open(x) for x in inputFiles]
+
+if outputFile:
+    ext = os.path.extsep + RECORD_TYPES[dstRecordType].ext
+
+    if not outputFile.endswith(ext):
+        outputFile += ext
+
+    outputFile = RECORD_TYPES[dstRecordType].open(outputFile, 'wb')
+
+else:
+    outputFile = sys.stdout
+
+    if sys.version_info >= (3, 0, 0):
+        # binary mode write
+        outputFile = sys.stdout.buffer
+
+    elif sys.platform == "win32":
+        import msvcrt
+
+        msvcrt.setmode(sys.stdout.fileno(), os.O_BINARY)
 
 if not inputFiles:
     inputFiles.append(sys.stdin)
@@ -259,7 +289,7 @@ for inputFile in inputFiles:
         backdoor = {}
 
         try:
-            oid, value = recordsSet[srcRecordType].evaluate(line, backdoor=backdoor)
+            oid, value = RECORD_TYPES[srcRecordType].evaluate(line, backdoor=backdoor)
 
         except error.SnmpsimError:
             if ignoreBrokenRecords:
@@ -306,7 +336,7 @@ for record in recordsList:
 
     try:
         outputFile.write(
-            recordsSet[dstRecordType].format(
+            RECORD_TYPES[dstRecordType].format(
                 record[0], record[1], backdoor=record[2], nohex=escapedStrings
             )
         )

@@ -371,9 +371,9 @@ SNMPv3 message encryption protocol to use. Valid values are:
 ++++++++++++++
 
 Specifies path to the directory where SNMP simulator should look for simulation
-data in form of *.snmprec*, *.snmpwalk* or *.sapwalk* files. All files found
-beneath *--data-dir* will be considered as sources of SNMP simulation data and
-their paths will be used for SNMP configuration purposes.
+data in form of *.snmprec*, *.snmprec.bz2*, *.snmpwalk* or *.sapwalk* files.
+All files found beneath *--data-dir* will be considered as sources of SNMP
+simulation data and their paths will be used for SNMP configuration purposes.
 
 Default search path is dependent on the platform. On Linux it is:
 

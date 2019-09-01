@@ -22,16 +22,19 @@ from pysnmp.smi import view
 from pysnmp.smi.rfc1902 import ObjectIdentity
 
 from snmpsim.error import SnmpsimError
+from snmpsim.record import dump
+from snmpsim.record import mvc
+from snmpsim.record import sap
 from snmpsim.record import snmprec
+from snmpsim.record import walk
 
 # Defaults
 verboseFlag = True
 startOID = stopOID = None
 mibSources = []
 defaultMibSources = ['http://mibs.snmplabs.com/asn1/@mib@']
-outputFile = sys.stdout
-if hasattr(outputFile, 'buffer'):
-    outputFile = outputFile.buffer
+dstRecordType = 'snmprec'
+outputFile = None
 stringPool = 'Jaded zombies acted quaintly but kept driving their oxen forward'.split()
 counterRange = 0, 0xffffffff
 counter64Range = 0, 0xffffffffffffffff
@@ -43,6 +46,16 @@ automaticValues = 5000
 tableSize = 10
 modNames = []
 mibDirs = []
+
+# data file types and parsers
+RECORD_TYPES = {
+    dump.DumpRecord.ext: dump.DumpRecord(),
+    mvc.MvcRecord.ext: mvc.MvcRecord(),
+    sap.SapRecord.ext: sap.SapRecord(),
+    walk.WalkRecord.ext: walk.WalkRecord(),
+    snmprec.SnmprecRecord.ext: snmprec.SnmprecRecord(),
+    snmprec.CompressedSnmprecRecord.ext: snmprec.CompressedSnmprecRecord()
+}
 
 helpMessage = """\
 Usage: %s [--help]
@@ -57,6 +70,7 @@ Usage: %s [--help]
     [--manual-values]
     [--automatic-values=<max-probes>]
     [--table-size=<number>]
+    [--destination-record-type=<%s>]
     [--output-file=<filename>]
     [--string-pool=<words>]
     [--string-pool-file=</path/to/text/file>]
@@ -69,7 +83,8 @@ Usage: %s [--help]
 """ % (sys.argv[0],
        '|'.join([x for x in getattr(debug, 'FLAG_MAP', getattr(debug, 'flagMap', ()))
                  if x not in ('app', 'msgproc', 'proxy', 'io', 'secmod',
-                              'dsp', 'acl')]))
+                              'dsp', 'acl')]),
+       '|'.join(RECORD_TYPES))
 
 try:
     opts, params = getopt.getopt(
@@ -78,6 +93,7 @@ try:
          'pysnmp-mib-dir=', 'mib-module=', 'start-oid=', 'stop-oid=',
          'mib-source=', 'start-object=', 'stop-object=',
          'manual-values', 'automatic-values=', 'table-size=',
+         'destination-record-type=',
          'output-file=', 'string-pool=', 'string-pool-file=',
          'integer32-range=', 'counter-range=', 'counter64-range=',
          'gauge-range=', 'unsigned-range=', 'timeticks-range='])
@@ -177,6 +193,16 @@ Software documentation and support at http://snmplabs.com/snmpsim
                 'ERROR: bad value %s: %s\r\n' % (opt[1], sys.exc_info()[1]))
             sys.exit(-1)
 
+    if opt[0] == '--destination-record-type':
+        if opt[1] not in RECORD_TYPES:
+            sys.stderr.write(
+                'ERROR: unknown record type <%s> (known types are %s)\r\n%s'
+                '\r\n' % (opt[1], ', '.join(RECORD_TYPES),
+                          helpMessage))
+            sys.exit(-1)
+
+        dstRecordType = opt[1]
+
     if opt[0] == '--output-file':
         outputFile = open(opt[1], 'wb')
 
@@ -248,6 +274,26 @@ Software documentation and support at http://snmplabs.com/snmpsim
             sys.stderr.write(
                 'ERROR: bad value %s: %s\r\n' % (opt[1], sys.exc_info()[1]))
             sys.exit(-1)
+
+if outputFile:
+    ext = os.path.extsep + RECORD_TYPES[dstRecordType].ext
+
+    if not outputFile.endswith(ext):
+        outputFile += ext
+
+    outputFile = RECORD_TYPES[dstRecordType].open(outputFile, 'wb')
+
+else:
+    outputFile = sys.stdout
+
+    if sys.version_info >= (3, 0, 0):
+        # binary mode write
+        outputFile = sys.stdout.buffer
+
+    elif sys.platform == "win32":
+        import msvcrt
+
+        msvcrt.setmode(sys.stdout.fileno(), os.O_BINARY)
 
 # Catch missing params
 if not modNames:

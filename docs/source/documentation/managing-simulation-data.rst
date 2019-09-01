@@ -50,6 +50,8 @@ Valid tag values and their corresponding ASN.1/SNMP types are:
 * 68 - Opaque
 * 70 - Counter64
 
+Besides plain-text form, compressed *.snmprec.bz2* files are also supported.
+
 .. _datafile.py:
 
 Managing data files

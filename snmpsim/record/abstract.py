@@ -41,3 +41,7 @@ class AbstractRecord(object):
         raise SnmpsimError(
             'Method not implemented at '
             '%s' % self.__class__.__name__)
+
+    @staticmethod
+    def open(path, flags='rb'):
+        return open(path, flags)

@@ -42,7 +42,11 @@ from pysnmp.smi import view
 from snmpsim import confdir
 from snmpsim import error
 from snmpsim import log
+from snmpsim.record import dump
+from snmpsim.record import mvc
+from snmpsim.record import sap
 from snmpsim.record import snmprec
+from snmpsim.record import walk
 
 # Defaults
 PROGRAM_NAME = 'pcap2dev'
@@ -52,6 +56,7 @@ defaultMibSources = ['http://mibs.snmplabs.com/asn1/@mib@']
 startOID = univ.ObjectIdentifier('1.3.6')
 stopOID = None
 promiscuousMode = False
+dstRecordType = 'snmprec'
 outputDir = '.'
 transportIdOffset = 0
 loggingMethod = ['stderr']
@@ -79,6 +84,16 @@ stats = {
     'OIDs seen': 0
 }
 
+# data file types and parsers
+RECORD_TYPES = {
+    dump.DumpRecord.ext: dump.DumpRecord(),
+    mvc.MvcRecord.ext: mvc.MvcRecord(),
+    sap.SapRecord.ext: sap.SapRecord(),
+    walk.WalkRecord.ext: walk.WalkRecord(),
+    snmprec.SnmprecRecord.ext: snmprec.SnmprecRecord(),
+    snmprec.CompressedSnmprecRecord.ext: snmprec.CompressedSnmprecRecord()
+}
+
 helpMessage = """\
 Usage: %s [--help]
     [--version]
@@ -90,6 +105,7 @@ Usage: %s [--help]
     [--mib-source=<url>]
     [--start-object=<MIB-NAME::[symbol-name]|OID>]
     [--stop-object=<MIB-NAME::[symbol-name]|OID>]
+    [--destination-record-type=<%s>]
     [--output-dir=<directory>]
     [--transport-id-offset=<number>]
     [--capture-file=<filename.pcap>]
@@ -106,7 +122,8 @@ Usage: %s [--help]
        '|'.join([x for x in getattr(pyasn1_debug, 'FLAG_MAP',
                                     getattr(pyasn1_debug, 'flagMap', ()))]),
        '|'.join(log.METHODS_MAP),
-       '|'.join(log.LEVELS_MAP))
+       '|'.join(log.LEVELS_MAP),
+       '|'.join(RECORD_TYPES))
 
 try:
     opts, params = getopt.getopt(
@@ -114,6 +131,7 @@ try:
         ['help', 'version', 'debug=', 'debug-snmp=', 'debug-asn1=',
          'quiet', 'logging-method=', 'log-level=', 'start-oid=', 'stop-oid=',
          'start-object=', 'stop-object=', 'mib-source=',
+         'destination-record-type=',
          'output-dir=', 'transport-id-offset=',
          'capture-file=', 'listen-interface=', 'promiscuous-mode',
          'packet-filter=',
@@ -199,6 +217,16 @@ Software documentation and support at http://snmplabs.com/snmpsim
     if opt[0] == '--stop-object':
         stopOID = rfc1902.ObjectIdentity(
             *opt[1].split('::', 1), **dict(last=True))
+
+    if opt[0] == '--destination-record-type':
+        if opt[1] not in RECORD_TYPES:
+            sys.stderr.write(
+                'ERROR: unknown record type <%s> (known types are %s)\r\n%s'
+                '\r\n' % (opt[1], ', '.join(RECORD_TYPES),
+                          helpMessage))
+            sys.exit(-1)
+
+        dstRecordType = opt[1]
 
     elif opt[0] == '--output-dir':
         outputDir = opt[1]
@@ -581,8 +609,9 @@ except Exception:
 dataFileHandler = SnmprecRecord()
 
 for context in contexts:
-    filename = os.path.join(
-        outputDir, context + os.path.extsep + SnmprecRecord.ext)
+    ext = os.path.extsep + RECORD_TYPES[dstRecordType].ext
+
+    filename = os.path.join(outputDir, context + ext)
 
     if verboseFlag:
         log.info('Creating simulation context %s at %s' % (context, filename))
@@ -594,7 +623,7 @@ for context in contexts:
         pass
 
     try:
-        outputFile = open(filename, 'wb')
+        outputFile = RECORD_TYPES[dstRecordType].open(filename, 'wb')
 
     except IOError:
         log.error('writing %s: %s' % (filename, sys.exc_info()[1]))

@@ -6,6 +6,7 @@
 #
 import os
 import sys
+import bz2
 
 if sys.version_info[0] < 3:
     import anydbm as dbm
@@ -118,7 +119,7 @@ class RecordIndex(object):
                     '%s' % (self._dbFile, self._textFile, sys.exc_info()[1]))
 
             try:
-                text = open(self._textFile, 'rb')
+                text = self._textParser.open(self._textFile)
 
             except Exception:
                 raise error.SnmpsimError(
@@ -215,7 +216,7 @@ class RecordIndex(object):
         return self._db[oid]
 
     def open(self):
-        self.__text = open(self._textFile, 'rb')
+        self.__text = self._textParser.open(self._textFile)
         self._db = dbm.open(self._dbFile)
 
     def close(self):
