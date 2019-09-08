@@ -6,7 +6,6 @@
 #
 import os
 import sys
-import bz2
 
 if sys.version_info[0] < 3:
     import anydbm as dbm

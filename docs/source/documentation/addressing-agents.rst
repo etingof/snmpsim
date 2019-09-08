@@ -14,13 +14,25 @@ SNMP managers differently.
 Legacy mode
 -----------
 
-When running in the *--v2c-arch* mode, SNMP Simulator attempts to find a *.snmprec*
-file to fulfill a request by probing files in paths constructed from pieces of request
-data. The path construction occurs by these rules and in this order:
+When running in the *--v2c-arch* mode, SNMP Simulator is not using SNMPv3
+framework. That implies that SNMPv3 infrastructure can't be used for agent
+addressing. In this mode, only SNMP v1 and v2c versions can be served. The
+main reason for legacy mode support is higher performance.
 
-1. *community / transport-ID / source-address* .snmprec
-2. *community / transport-ID* .snmprec
-3. *community* .snmprec
+In *--v2c-arch* mode, SNMP Simulator attempts to find a *.snmprec* file to
+fulfill the request by probing files by paths constructed from pieces of
+SNMPv1/v2c request data. Path construction occurs by these rules and
+in this order:
+
+1. *self / <community> / <transport-ID> / <source-address>* .snmprec
+2. *self / <community> / <transport-ID>* .snmprec
+3. *self / <community>* .snmprec
+4. *self* .snmprec
+
+The *self* component is just a constant which conceptually refers to the SNMP
+engine serving current request.
+
+One of the use-cases is to serve requests with empty SNMP community name.
 
 In other words, SNMP Simulator first tries to take community name,
 destination and source addresses into account. If that does not match
@@ -63,7 +75,7 @@ For example, to make Simulator reporting from particular file to
 a Manager at 192.168.1.10 whenever community name "public" is used and
 queries are sent to Simulator over UDP/IPv4 to 192.168.1.1 interface
 (which is reported by Simulator under transport ID 1.3.6.1.6.1.1.0),
-device file *public/1.3.6.1.6.1.1.0/192.168.1.10.snmprec* would be used
+device file *self/public/1.3.6.1.6.1.1.0/192.168.1.10.snmprec* would be used
 for building responses.
 
 .. _v3-style-variation:
@@ -71,20 +83,31 @@ for building responses.
 SNMPv3 mode
 -----------
 
-When Simulator is NOT running in *--v2c-arch* mode, e.g. SNMPv3 engine is
-used, similar rules apply to SNMPv3 context name rather than to SNMPv1/2c
-community name. In that case device file path construction would work
-like this:
+When Simulator is NOT running in *--v2c-arch* mode, e.g. SNMPv3 framework is
+used. In this mode, all SNMP versions can be served.
 
-1. *context-name / transport-ID / source-address* .snmprec
-2. *context-name / transport-ID* .snmprec
-3. *context-name* .snmprec
+The same filesystem mapping rules apply to SNMP community name, but also to SNMPv3
+context name. The path to .snmprec file for fulfilling response is probed at these
+locations in the following order:
+
+1. *context-engine-id / context-name / transport-ID / source-address* .snmprec
+2. *context-engine-id / context-name / transport-ID* .snmprec
+3. *context-engine-id / context-name* .snmprec
+4. *context-engine-id* .snmprec
+
+The *context-engine-id* component is taken from SNMP Context Engine ID field
+of the SNMP command request. If it happens to be equal to local SNMP engine ID
+value, then the constant literal *self* will be looked up on the file system
+instead. Conceptually, *self* refers to the SNMP engine serving current request.
+
+One of the side-effects of supporting *context-engine-id* is to serve requests
+with empty SNMP context/community name  (i.e. *self.snmprec*).
 
 For example, to make Simulator reporting from particular file to
 a Manager at 192.168.1.10 whenever context-name is an empty string and
 queries are sent to Simulator over UDP/IPv4 to 192.168.1.1 interface
 (which is reported by Simulator under transport ID 1.3.6.1.6.1.1.0),
-device file *1.3.6.1.6.1.1.0/192.168.1.10.snmprec* would be used
+device file *self/1.3.6.1.6.1.1.0/192.168.1.10.snmprec* would be used
 for building responses.
 
 .. _sharing-snmprec-files:
