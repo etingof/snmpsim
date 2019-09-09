@@ -22,6 +22,7 @@ from pyasn1.type import univ
 from pyasn1.codec.ber import decoder
 from pyasn1.codec.ber import encoder
 from pyasn1.compat.octets import str2octs
+from pyasn1.compat.octets import null
 from pyasn1.error import PyAsn1Error
 from pysnmp.entity import config
 from pysnmp.entity import engine
@@ -90,6 +91,9 @@ RECORD_TYPES = {
     sap.SapRecord.ext: sap.SapRecord(),
     walk.WalkRecord.ext: walk.WalkRecord(),
 }
+
+SELF_LABEL = 'self'
+
 
 # Settings
 
@@ -527,6 +531,12 @@ def getDataFiles(tgtDir, topLen=None):
             continue
 
         # just the file name would serve for agent identification
+        if relPath[0] == SELF_LABEL:
+            relPath = relPath[1:]
+
+        if len(relPath) == 1 and relPath[0] == SELF_LABEL + os.path.extsep + dExt:
+            relPath[0] = relPath[0][4:]
+
         ident = os.path.join(*relPath)
         ident = ident[:-len(dExt) - 1]
         ident = ident.replace(os.path.sep, '/')
@@ -654,9 +664,18 @@ mibInstrumControllerSet = {
 
 
 # Suggest variations of context name based on request data
-def probeContext(transportDomain, transportAddress, contextName):
-    candidate = [
-        contextName, '.'.join([str(x) for x in transportDomain])]
+def probeContext(transportDomain, transportAddress,
+                 contextEngineId, contextName):
+    if contextEngineId:
+        candidate = [
+            contextEngineId, contextName, '.'.join(
+                [str(x) for x in transportDomain])]
+
+    else:
+        # try legacy layout w/o contextEnginId in the path
+        candidate = [
+            contextName, '.'.join(
+                [str(x) for x in transportDomain])]
 
     if transportDomain[:len(udp.domainName)] == udp.domainName:
         candidate.append(transportAddress[0])
@@ -674,6 +693,12 @@ def probeContext(transportDomain, transportAddress, contextName):
             os.path.normpath(
                 os.path.sep.join(candidate)).replace(os.path.sep, '/')).asOctets()
         del candidate[-1]
+
+    # try legacy layout w/o contextEnginId in the path
+    if contextEngineId:
+        for candidate in probeContext(
+                transportDomain, transportAddress, None, contextName):
+            yield candidate
  
 # main script body starts here
 
@@ -1208,11 +1233,14 @@ if v2cArch:
 
             communityName = reqMsg.getComponentByPosition(1)
 
-            for candidate in probeContext(transportDomain, transportAddress, communityName):
+            for candidate in probeContext(transportDomain, transportAddress,
+                                          contextEngineId=SELF_LABEL,
+                                          contextName=communityName):
                 if candidate in contexts:
                     log.info(
                         'Using %s selected by candidate %s; transport ID %s, '
-                        'source address %s, community name '
+                        'source address %s, context engine ID <empty>, '
+                        'community name '
                         '"%s"' % (contexts[candidate], candidate,
                                   univ.ObjectIdentifier(transportDomain),
                                   transportAddress[0], communityName))
@@ -1307,16 +1335,30 @@ if v2cArch:
 
 else:  # v3arch
 
-    def probeHashContext(self, snmpEngine, stateReference, contextName):
+    def probeHashContext(self, snmpEngine):
         # this API is first introduced in pysnmp 4.2.6 
         execCtx = snmpEngine.observer.getExecutionContext(
             'rfc3412.receiveMessage:request')
 
-        transportDomain, transportAddress = (
-            execCtx['transportDomain'], execCtx['transportAddress'])
+        (transportDomain,
+         transportAddress,
+         contextEngineId,
+         contextName) = (
+            execCtx['transportDomain'],
+            execCtx['transportAddress'],
+            execCtx['contextEngineId'],
+            execCtx['contextName'].prettyPrint()
+        )
+
+        if contextEngineId == snmpEngine.snmpEngineID:
+            contextEngineId = SELF_LABEL
+
+        else:
+            contextEngineId = contextEngineId.prettyPrint()
 
         for candidate in probeContext(
-                transportDomain, transportAddress, contextName):
+                transportDomain, transportAddress,
+                contextEngineId, contextName):
 
             if len(candidate) > 32:
                 probedContextName = md5(candidate).hexdigest()
@@ -1333,10 +1375,12 @@ else:  # v3arch
             else:
                 log.info(
                     'Using %s selected by candidate %s; transport ID %s, '
-                    'source address %s, context name '
+                    'source address %s, context engine ID %s, '
+                    'community name '
                     '"%s"' % (mibInstrum, candidate,
                               univ.ObjectIdentifier(transportDomain),
-                              transportAddress[0], probedContextName))
+                              transportAddress[0], contextEngineId,
+                              probedContextName))
                 contextName = probedContextName
                 break
         else:
@@ -1360,9 +1404,7 @@ else:  # v3arch
             try:
                 cmdrsp.GetCommandResponder.handleMgmtOperation(
                     self, snmpEngine, stateReference, 
-                    probeHashContext(
-                        self, snmpEngine, stateReference, contextName
-                    ),
+                    probeHashContext(self, snmpEngine),
                     PDU, (None, snmpEngine)  # custom acInfo
                 )
 
@@ -1375,9 +1417,7 @@ else:  # v3arch
             try:
                 cmdrsp.SetCommandResponder.handleMgmtOperation(
                     self, snmpEngine, stateReference, 
-                    probeHashContext(
-                        self, snmpEngine, stateReference, contextName
-                    ),
+                    probeHashContext(self, snmpEngine),
                     PDU, (None, snmpEngine)  # custom acInfo
                 )
 
@@ -1390,9 +1430,7 @@ else:  # v3arch
             try:
                 cmdrsp.NextCommandResponder.handleMgmtOperation(
                     self, snmpEngine, stateReference, 
-                    probeHashContext(
-                        self, snmpEngine, stateReference, contextName
-                    ),
+                    probeHashContext(self, snmpEngine),
                     PDU, (None, snmpEngine)  # custom acInfo
                 )
 
@@ -1405,9 +1443,7 @@ else:  # v3arch
             try:
                 cmdrsp.BulkCommandResponder.handleMgmtOperation(
                     self, snmpEngine, stateReference, 
-                    probeHashContext(
-                        self, snmpEngine, stateReference, contextName
-                    ),
+                    probeHashContext(self, snmpEngine),
                     PDU, (None, snmpEngine)  # custom acInfo
                 )
 
@@ -1554,6 +1590,8 @@ else:  # v3 mode
 
                 for v3ContextEngineId, ctxDataDirs in v3ContextEngineIds:
                     snmpContext = context.SnmpContext(snmpEngine, v3ContextEngineId)
+                    # unregister default context
+                    snmpContext.unregisterContextName(null)
 
                     log.msg(
                         'SNMPv3 Context Engine ID: '
