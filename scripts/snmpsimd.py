@@ -1599,12 +1599,13 @@ else:  # v3 mode
 
                     dataIndexInstrumController = DataIndexInstrumController()
 
-                    configureManagedObjects(
-                        ctxDataDirs or dataDirs or confdir.data, 
-                        dataIndexInstrumController,
-                        snmpEngine,
-                        snmpContext
-                    )
+                    with daemon.PrivilegesOf(procUser, procGroup):
+                        configureManagedObjects(
+                            ctxDataDirs or dataDirs or confdir.data,
+                            dataIndexInstrumController,
+                            snmpEngine,
+                            snmpContext
+                        )
 
                 # Configure access to data index
 
