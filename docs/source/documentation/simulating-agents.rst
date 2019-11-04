@@ -53,9 +53,10 @@ For example, a set up collection of *.snmprec* files would look like:
 
 .. note::
 
-    There're also a bunch of .dbm files created and maintained automatically
-    in a temporary directory. These .dbm files are used by the Simulator
-    for fast OID lookup in a data file.
+    The `--data-dir` option can be used to prepend custom directories to the
+    search path. However, if SNMP engine is configured explicitly (via the
+    `--v3-engine-id` option), then custom data directories will override the
+    default search path.
 
 .. _snmpsimd.py:
 
