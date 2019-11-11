@@ -720,6 +720,7 @@ Usage: %s [--help]
     [--args-from-file=<file>]
     [--transport-id-offset=<number>]
     [--v2c-arch]
+    [--v2c-community]
     [--v3-only]
     [--v3-engine-id=<hexvalue>]
     [--v3-context-engine-id=<hexvalue>]
@@ -750,7 +751,7 @@ try:
          'daemonize', 'process-user=', 'process-group=', 'pid-file=',
          'logging-method=', 'log-level=', 'device-dir=', 'cache-dir=',
          'variation-modules-dir=', 'force-index-rebuild',
-         'validate-device-data', 'validate-data', 'v2c-arch', 'v3-only',
+         'validate-device-data', 'validate-data', 'v2c-arch', 'v2c-community=', 'v3-only',
          'transport-id-offset=', 'variation-module-options=',
          'args-from-file=',
          # this option starts new SNMPv3 engine configuration
@@ -873,6 +874,9 @@ Software documentation and support at http://snmplabs.com/snmpsim
 
     elif opt[0] == '--v2c-arch':
         v2cArch = True
+
+    elif opt[0] == '--v2c-community':
+        v2cCommunityName = opt[1]
 
     elif opt[0] == '--v3-only':
         v3Only = True
@@ -1131,6 +1135,8 @@ def configureManagedObjects(dataDirs, dataIndexInstrumController,
         log.msg.incIdent()
 
         for fullPath, textParser, communityName in getDataFiles(dataDir):
+            if v2cCommunityName:
+                communityName = v2cCommunityName
             if communityName in _dataFiles:
                 log.error(
                     'ignoring duplicate Community/ContextName "%s" for data '
