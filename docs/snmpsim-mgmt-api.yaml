@@ -1,0 +1,1170 @@
+openapi: 3.0.0
+info:
+  license:
+    name: BSD License
+  version: '1.0.0'
+  title: 'SNMP Simulator Control Plane REST API'
+  description: >
+    The Management API is designed to support complete SNMP Simulator work flow
+    remotely. As such, Management API supports SNMp entity (Agent) creation,
+    configuration and eventual tear down. Simulation data can be uploaded,
+    modified, removed and exposed under different circumstances. On top of
+    that, SNMP agents can be grouped together to form "virtual labs" that
+    can be brought up/down altogether.
+
+    Typical management work flow looks like this:
+
+    1. Create SNMP Agent using `/entities` REST API endpoint. You can supply
+       complete agent configuration at once or add/modify it incrementally.
+       Important configuration items include: SNMP Engine ID, SNMPv3 VACM
+       user(s) credentials, SNMPv1/v2c community name(s)
+    2. Create SNMP transport endpoint(s) using `/endpoints`. These are the
+       address(es) where SNMP agent is listening for inbound SNMP commands.
+       When creating an endpoint, bind it to one specific SNMP entity.
+    3. Create SNMP simulation data by uploading the entire `.snmprec` file
+       via `/objects` endpoint. You can read/modify it on per-line basis
+       later on.
+    4. Expose simulation data to SNMP agent(s) by creating one or more request
+       routing rules via `/selectors` endpoint. Each of the selectors will
+       be examined in specified order at the time of SNMP command processing.
+       First selector matching request properties will be picked and
+       associated simulation data will be used for answering the query.
+    5. Optionally, add your new SNMP entity to a new or existing group via
+       `/groups` endpoint.
+
+servers:
+  - url: https://virtserver.swaggerhub.com/etingof/snmpsimd-control-plane/1.0.0
+
+paths:
+  /endpoints:
+    get:
+      description: >
+        This resource represents a list of all existing transport endpoints
+        that can be used by SNMP entities.
+      summary: >
+        List all existing transport endpoints
+      operationId: listEndpoints
+      tags:
+        - endpoints
+      responses:
+        "200":
+          description: >
+            An array of transport endpoints
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Endpoints"
+        default:
+          description: Unspecified error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    post:
+      summary: Create a new SNMP transport endpoint
+      operationId: createEndpoint
+      tags:
+        - endpoints
+      requestBody:
+        description: >
+          Receive a new endpoint object bound to an existing SNMP entity.
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Endpoint'
+      responses:
+        "201":
+          description: Null response
+        default:
+          description: Unspecified error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /endpoints/{endpointId}:
+    description: >
+      This resource represents a single SNMP transport endpoint identified
+      by `endpointId`.
+    get:
+      summary: Info for a specific SNMP transport endpoint
+      operationId: showEndpointById
+      tags:
+        - endpoints
+      parameters:
+        - name: endpointId
+          in: path
+          required: true
+          description: The id of the endpoint to retrieve
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Expected response to a valid request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Endpoint"
+        default:
+          description: unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    delete:
+      summary: Delete SNMP transport endpoint
+      operationId: deleteEndpoint
+      tags:
+        - endpoints
+      parameters:
+        - name: endpointId
+          in: path
+          required: true
+          description: The id of the endpoint to retrieve
+          schema:
+            type: integer
+      responses:
+        "201":
+          description: Null response
+        default:
+          description: Unspecified error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /selectors:
+    description: >
+      This resource represents a list of all existing simulation data
+      selectors.
+    get:
+      summary: >
+        List all existing simulation data selectors
+      operationId: listSelectors
+      tags:
+        - selectors
+      responses:
+        "200":
+          description: >
+            An array of simulation data selectors
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Selectors"
+        default:
+          description: Unspecified error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    post:
+      summary: Create a new simulation data selector
+      operationId: createSelector
+      tags:
+        - selectors
+      requestBody:
+        description: >
+          Receive a new selector object referring to an existing simulation
+          data object.
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Selector'
+      responses:
+        "201":
+          description: Null response
+        default:
+          description: Unspecified error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /selectors/{selectorId}:
+    description: >
+      This resource represents a single simulation data selector identified
+      by `selectorId`.
+    get:
+      summary: Info for a specific simulation data selectors
+      operationId: showSelectorById
+      tags:
+        - selectors
+      parameters:
+        - name: selectorId
+          in: path
+          required: true
+          description: The id of the selector to retrieve
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Expected response to a valid request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Selector"
+        default:
+          description: unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    delete:
+      summary: Delete simulation data selector
+      operationId: deleteSelector
+      tags:
+        - selectors
+      parameters:
+        - name: selectorId
+          in: path
+          required: true
+          description: The id of the selector to retrieve
+          schema:
+            type: integer
+      responses:
+        "201":
+          description: Null response
+        default:
+          description: Unspecified error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /objects:
+    description: >
+      This resource represents a collection of simulated data objects. Each
+      `object` in the collection corresponds to a single `.snmprec` file.
+    get:
+      summary: >
+        List all existing simulation data objects.
+      operationId: listObjects
+      tags:
+        - objects
+      responses:
+        "200":
+          description: >
+            An array of simulation data objects
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Objects"
+            text/plain:
+              schema:
+                type: string
+        default:
+          description: Unspecified error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    post:
+      summary: Create a new simulation data objects
+      operationId: createObject
+      tags:
+        - objects
+      requestBody:
+        description: >
+          Receive the entire .snmprec file in a JSON object or ASCII text form.
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Object'
+          text/plain:
+            schema:
+              type: string
+      responses:
+        "201":
+          description: Null response
+        default:
+          description: Unspecified error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /objects/{objectId}:
+    description: >
+      This resource represents a single simulation data object identified
+      by `objectId`.
+    get:
+      summary: Info for a specific simulation data object
+      operationId: showObjectsById
+      tags:
+        - objects
+      parameters:
+        - name: objectId
+          in: path
+          required: true
+          description: The id of the object to retrieve
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Expected response to a valid request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Object"
+        default:
+          description: unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    delete:
+      summary: Delete simulation data object
+      operationId: deleteObject
+      tags:
+        - objects
+      parameters:
+        - name: objectId
+          in: path
+          required: true
+          description: The id of the object to retrieve
+          schema:
+            type: integer
+      responses:
+        "201":
+          description: Null response
+        default:
+          description: Unspecified error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /entities:
+    description: >
+      This resource represents a list of all SNMP entities (agents).
+    get:
+      summary: >
+        List all existing SNMP entities
+      operationId: listEntities
+      tags:
+        - entities
+      responses:
+        "200":
+          description: >
+            An array of SNMP entities
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Entities"
+        default:
+          description: Unspecified error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    post:
+      summary: Create new SNMP entity
+      operationId: createEntity
+      tags:
+        - entities
+      requestBody:
+        description: >
+          New SNMP entity
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Entity'
+      responses:
+        "201":
+          description: Null response
+        default:
+          description: Unspecified error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /entities/{entityId}:
+    description: >
+      This resource represents a single SNMP entity (agent) identified
+      by `entityId`.
+    get:
+      summary: Info for a specific SNMP entity
+      operationId: showEntityById
+      tags:
+        - entities
+      parameters:
+        - name: entityId
+          in: path
+          required: true
+          description: The id of the entity to retrieve
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Expected response to a valid request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Entity"
+        default:
+          description: unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    delete:
+      summary: Delete SNMP entity
+      operationId: deleteEntity
+      tags:
+        - entities
+      parameters:
+        - name: entityId
+          in: path
+          required: true
+          description: The id of the entity to retrieve
+          schema:
+            type: integer
+      responses:
+        "201":
+          description: Null response
+        default:
+          description: Unspecified error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /entities/{entityId}/users:
+    description: >
+      This resource represents a SNMPv3 USM user record associated with SNMP
+      entity identified by `entityId`.
+    put:
+      summary: Add new USM user entry
+      operationId: addUsmUser
+      tags:
+        - entities
+      parameters:
+        - name: entityId
+          in: path
+          required: true
+          description: The id of the entity
+          schema:
+            type: integer
+      requestBody:
+        description: >
+          Receive a new USM user entry
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/User'
+      responses:
+        "204":
+          description: Null response
+        default:
+          description: Unspecified error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /entities/{entityId}/users/{userId}:
+    description: >
+      This resource represents a SNMPv3 USM user record associated with SNMP
+      entity identified by `entityId`.
+    delete:
+      summary: Remove USM user entry
+      operationId: delUsmUser
+      tags:
+        - entities
+      parameters:
+        - name: entityId
+          in: path
+          required: true
+          description: The id of the entity
+          schema:
+            type: integer
+        - name: userId
+          in: path
+          required: true
+          description: The id of the USM entry
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Null response
+        default:
+          description: Unspecified error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /entities/{entityId}/communities:
+    description: >
+      This resource represents a SNMP community name record associated with
+      SNMP entity identified by `entityId`.
+    put:
+      summary: Add new SNMPv1/v2c community name
+      operationId: addCommunity
+      tags:
+        - entities
+      parameters:
+        - name: entityId
+          in: path
+          required: true
+          description: The id of the entity
+          schema:
+            type: integer
+      requestBody:
+        description: >
+          Receive a new SNMPv1/v/2c community name entry
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Community'
+      responses:
+        "204":
+          description: Null response
+        default:
+          description: Unspecified error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /entities/{entityId}/communities/{communityId}:
+    description: >
+      This resource represents a SNMP community name record associated with
+      SNMP entity identified by `entityId`.
+    delete:
+      summary: Delete new SNMPv1/v2c community name
+      operationId: delCommunity
+      tags:
+        - entities
+      parameters:
+        - name: entityId
+          in: path
+          required: true
+          description: The id of the entity
+          schema:
+            type: integer
+        - name: communityId
+          in: path
+          required: true
+          description: The id of the community entry
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Null response
+        default:
+          description: Unspecified error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /entities/{entityId}/access:
+    description: >
+      This resource represents a SNMPv3 access entry (VACM) associated with
+      SNMP entity identified by `entityId`.
+    put:
+      summary: Add new SNMPv3 VACM entry
+      operationId: addVacm
+      tags:
+        - entities
+      parameters:
+        - name: entityId
+          in: path
+          required: true
+          description: The id of the entity
+          schema:
+            type: integer
+      requestBody:
+        description: >
+          Receive a new SNMPv3 VACM entry
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Access'
+      responses:
+        "204":
+          description: Null response
+        default:
+          description: Unspecified error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /entities/{entityId}/access/{accessId}:
+    description: >
+      This resource represents a SNMPv3 access entry (VACM) associated with
+      SNMP entity identified by `entityId`.
+    delete:
+      summary: Add new SNMPv3 VACM entry
+      operationId: delVacm
+      tags:
+        - entities
+      parameters:
+        - name: entityId
+          in: path
+          required: true
+          description: The id of the entity
+          schema:
+            type: integer
+        - name: accessId
+          in: path
+          required: true
+          description: The id of the VACM access entry
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Null response
+        default:
+          description: Unspecified error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /groups:
+    get:
+      description: >
+        This resource represents a list of all existing SNMP entity groups.
+      summary: >
+        List all existing SNMP entity groups
+      operationId: listGroups
+      tags:
+        - groups
+      responses:
+        "200":
+          description: >
+            An array of SNMP entity groups
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Groups"
+        default:
+          description: Unspecified error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    post:
+      summary: Create new SNMP entity group
+      operationId: createGroup
+      tags:
+        - groups
+      requestBody:
+        description: >
+          New group optionally containing SNMP entity IDs.
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Group'
+      responses:
+        "201":
+          description: Null response
+        default:
+          description: Unspecified error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /groups/{groupId}:
+    description: >
+      This resource represents a SNMP entity group identified by `groupId`.
+    get:
+      summary: Info for a specific SNMP transport endpoint
+      operationId: showGroupById
+      tags:
+        - groups
+      parameters:
+        - name: groupId
+          in: path
+          required: true
+          description: The id of the SNMP entity group
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Expected response to a valid request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Group"
+        default:
+          description: unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    delete:
+      summary: Delete SNMP entity grouping
+      operationId: deleteGroup
+      tags:
+        - groups
+      parameters:
+        - name: groupId
+          in: path
+          required: true
+          description: The id of the SNMP entity group
+          schema:
+            type: integer
+      responses:
+        "201":
+          description: Null response
+        default:
+          description: Unspecified error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /groups/{groupId}/entity/{entityId}:
+    description: >
+      This resource represents a SNMP entity identified by `entityId`
+      associated with group identified by `groupId`.
+    put:
+      summary: Add existing SNMP entity to group
+      operationId: addToGroup
+      tags:
+        - groups
+      parameters:
+        - name: groupId
+          in: path
+          required: true
+          description: The id of the SNMP entity group
+          schema:
+            type: integer
+        - name: entityId
+          in: path
+          required: true
+          description: The id of the SNMP entity
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Null response
+        default:
+          description: Unspecified error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    delete:
+      summary: Remove SNMP entity from group
+      operationId: delFromGroup
+      tags:
+        - groups
+      parameters:
+        - name: groupId
+          in: path
+          required: true
+          description: The id of the SNMP entity group
+          schema:
+            type: integer
+        - name: entityId
+          in: path
+          required: true
+          description: The id of the SNMP entity
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Null response
+        default:
+          description: Unspecified error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /groups/{groupId}/power:
+    description: >
+      This resource represents group power state. The group is identified by
+      `groupId`, power state can be queried and modified.
+    put:
+      summary: Change group power state
+      operationId: setGroupPowerState
+      tags:
+        - groups
+      parameters:
+        - name: groupId
+          in: path
+          required: true
+          description: The id of the SNMP entity group
+          schema:
+            type: integer
+      requestBody:
+        description: >
+          Carries desired group power state
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GroupPowerState'
+      responses:
+        "204":
+          description: Null response
+        default:
+          description: Unspecified error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+components:
+  schemas:
+    Access:
+      description: >
+        SNMP managed objects are identified by OIDs. SNMP includes the accesss
+        control subsystem (known as VACM) that can "mask" some of the OIDs, in
+        the imaginary tree of sub-OID numbers, on per-user/protocol version
+        basis.
+      type: object
+      required:
+        - id
+        - subtree
+      properties:
+        id:
+          description: >
+            Access entry ID
+          type: integer
+          format: int64
+        subtree:
+          description: >
+            OID subtree that this entry applies access control on.
+          type: string
+          pattern: ".*"  # TODO OID regexp
+        mask:
+          description: >
+            An OID consisting of 1's and 0's to define branches of OID tree this
+            entry applies access control on. Technically, logical *AND* operation
+            is applied on `subree` and `mask` yielding access-significant sub-OIDs.
+          type: string
+          pattern: ".*"  # TODO OID regexp
+        protocol:
+          description: >
+            SNMP protocol version this entry is applicable to
+          type: string
+          enum: [v1, v2c, v3]
+        security:
+          description: >
+            SNMP security level this entry is applicable to
+          type: string
+          enum: [noAuthNoPriv, authNoPriv, authPriv]
+        mode:
+          description: >
+            SNMP operation this entry is applicable to
+          type: string
+          enum: [read, write, notify]
+        context:
+          description: >
+            SNMP context name this entry is applicable to.
+          type: string
+        partial:
+          description: >
+            If true, match `context` as SNMP context name prefix rather than
+            matching exactly.
+          type: boolean
+
+    User:
+      description: >
+        SNMPv3 USM user entry. Contains SNMPv3 credentials grouped by
+        user name.
+      required:
+        - id
+        - username
+      properties:
+        id:
+          description: >
+            User entry ID
+          type: integer
+          format: int64
+        username:
+          description: >
+            USM user name
+          type: string
+          minLength: 1
+          maxLength: 32
+        v3AuthKey:
+          description: >
+            USM user authentication key
+          type: string
+          minLength: 8
+          maxLength: 32
+        v3AuthProtocol:
+          description: >
+            User authentication protocol
+          type: string
+          enum: [md5, sha, sha224, sha256, sha384, sha512, none]
+        v3PrivKey:
+          description: >
+            USM user privacy (encryption) key
+          type: string
+          minLength: 8
+          maxLength: 32
+        v3PrivProtocol:
+          type: string
+          enum: [des, 3des, aes, aes128, aes192, aes192blmt, aes256,
+                 aes256blmt, none]
+
+    Community:
+      description: >
+        SNMPv1/v2c community name. Only applicable to legacy SNMPv1/v2c
+        operations.
+      type: object
+      required:
+        - id
+        - name
+      properties:
+        id:
+          description: >
+            Community name ID
+          type: integer
+          format: int64
+        name:
+          type: string
+
+    Engine:
+      description: >
+        Represents a unique, independent and fully operational SNMP engine, though
+        not yet attached to any transport endpoints.
+      type: object
+      required:
+        - engineId
+      properties:
+        engineId:
+          type: string
+          pattern: ".*"  # TODO: three distinct formats
+        users:
+          type: array
+          items:
+            $ref: "#/components/schemas/User"
+        communities:
+          type: array
+          items:
+            $ref: "#/components/schemas/Community"
+        access:
+          type: array
+          items:
+            $ref: "#/components/schemas/Access"
+
+    Endpoint:
+      description: >
+        SNMP transport endpoint. Each SNMP engine can bind one or more
+        transport endpoints. Each transport endpoint can only be bound
+        by one SNMP engine.
+      type: object
+      required:
+        - id
+        - domain
+        - address
+      properties:
+        id:
+          description: >
+            Transport endpoint unique ID
+          type: integer
+          format: int64
+        entityId:
+          description: >
+            SNMP entity ID binding this endpoint
+          type: integer
+          format: int64
+        domain:
+          type: string
+          enum: [udpv4, udpv6]
+        address:
+          type: string
+          pattern: ".*"  # IPv4:port, IPv6:port, FQDN(?)
+
+    Endpoints:
+      description: >
+        Collection of SNMP transport endpoints.
+      type: array
+      items:
+        $ref: "#/components/schemas/Endpoint"
+
+    Object:
+      description: >
+        SNMP managed object instance. On SNMP side of things, managed object
+        instance is identified by a unique OID and, sometimes, an associated
+        value representing the state of the backend application object being
+        managed via SNMP.
+
+        Depending on the nature of the managed object, associated value can
+        be settable and/or modifiable.
+      type: object
+      required:
+        - id
+        - oid
+        - type
+      properties:
+        id:
+          type: integer
+          format: int64
+        oid:
+          description: >
+            OID associated with this managed object instance
+          type: string
+          pattern: ".*"  # TODO OID regexp
+        type:
+          description: >
+            SNMP type of the value assocated with this managed object.
+          type: string
+          enum: [integer32, octetstring, counter32, counter64, gauge32,
+                 opaque, ipaddress, null, timeticks]
+        value:
+          description: >
+            Static value returned by this managed object
+          type: string
+        variation:
+          description: >
+            Variation module invoked when serving this managed object
+          type: string
+          enum: [numeric, error, delay, notification, multiplex, redis,
+                 sql, subprocess, writecache]
+        variationOptions:
+          type: string
+
+    Objects:
+      description: >
+        Ordered collection of SNMP managed objects
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        objects:
+          type: array
+          items:
+            $ref: "#/components/schemas/Object"
+
+    Selector:
+      description: >
+        Set of rules for SNMP entity to choose SNMP managed objects collection
+        associated with this selector. All of the fields in the selector must
+        match for this selector to be chosen.
+      type: object
+      required:
+        - id
+      properties:
+        id:
+          type: integer
+          format: int64
+        contextEngineIds:
+          description: >
+            This context is applicable for queries for this SNMP context engine ID.
+            Empty value matches SNMP engine ID of SNMP engine considering this
+            selector.
+          type: array
+          items:
+            type: string
+        contextNames:
+          description: >
+            This context is applicable for queries for this SNMP context name.
+          type: array
+          items:
+            type: string
+        endpoints:
+          description: >
+            This context is applicable for queries coming via these endpoints.
+            Empty value matches any endpoint.
+          type: array
+          items:
+            type: integer
+            format: int64
+        source:
+          description: >
+            This context is applicable for queries coming from these network addresses.
+            Empty value matches any source.
+          type: array
+          items:
+            type: string
+        objects:
+          description: >
+            ID of SNMP managed objects collection associated with this selector.
+          type: integer
+          format: int64
+
+    Selectors:
+      description: >
+        Ordered list of selector IDs for SNMP entity to consider. First match
+        satisfies the query.
+      type: array
+      items:
+        $ref: "#/components/schemas/Selector"
+
+    Entity:
+      description: >
+        SNMP entity or SNMP agent. Consists of SNMP engine and transport
+        endpoints it binds.
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        engine:
+          $ref: "#/components/schemas/Engine"
+
+    Entities:
+      type: array
+      items:
+        $ref: "#/components/schemas/Entity"
+
+    Group:
+      description: >
+        Group of SNMP entities. Some operations can be applied to them all
+        at once.
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        entities:
+          description: >
+            SNMP entities IDs belonging to this group
+          type: array
+          items:
+            type: integer
+            format: int64
+        state:
+          description: >
+            State of SNMP entities in this group
+          type: string
+          enum: [up, down]
+
+    Groups:
+      description: >
+        A collection of groups of SNMP entities.
+      type: array
+      items:
+        $ref: "#/components/schemas/Group"
+
+    Error:
+      type: object
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: integer
+          format: int32
+        message:
+          type: string
+
+    GroupPowerState:
+      description: >
+        Desired group power state.
+      type: object
+      properties:
+        state:
+          description: >
+            Power state of all SNMP entities in this group
+          type: string
+          enum: [up, down]
