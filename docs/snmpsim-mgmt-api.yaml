@@ -6,21 +6,21 @@ info:
   title: 'SNMP Simulator Control Plane REST API'
   description: >
     The Management API is designed to support complete SNMP Simulator work flow
-    remotely. As such, Management API supports SNMp entity (Agent) creation,
+    remotely. As such, Management API supports SNMP Agent creation,
     configuration and eventual tear down. Simulation data can be uploaded,
     modified, removed and exposed under different circumstances. On top of
-    that, SNMP agents can be grouped together to form "virtual labs" that
+    that, SNMP agents can be grouped together to form "virtual lab" that
     can be brought up/down altogether.
 
     Typical management work flow looks like this:
 
-    1. Create SNMP Agent using `/entities` REST API endpoint. You can supply
+    1. Create SNMP Agent using `/agents` REST API endpoint. You can supply
        complete agent configuration at once or add/modify it incrementally.
        Important configuration items include: SNMP Engine ID, SNMPv3 VACM
        user(s) credentials, SNMPv1/v2c community name(s)
     2. Create SNMP transport endpoint(s) using `/endpoints`. These are the
        address(es) where SNMP agent is listening for inbound SNMP commands.
-       When creating an endpoint, bind it to one specific SNMP entity.
+       When creating an endpoint, bind it to one specific SNMP agent.
     3. Create SNMP simulation data by uploading the entire `.snmprec` file
        via `/objects` endpoint. You can read/modify it on per-line basis
        later on.
@@ -29,8 +29,8 @@ info:
        be examined in specified order at the time of SNMP command processing.
        First selector matching request properties will be picked and
        associated simulation data will be used for answering the query.
-    5. Optionally, add your new SNMP entity to a new or existing group via
-       `/groups` endpoint.
+    5. Optionally, add your new SNMP agent to a new or existing lab via
+       `/labs` endpoint.
 
 servers:
   - url: https://virtserver.swaggerhub.com/etingof/snmpsimd-control-plane/1.0.0
@@ -40,7 +40,7 @@ paths:
     get:
       description: >
         This resource represents a list of all existing transport endpoints
-        that can be used by SNMP entities.
+        that can be used by SNMP agents.
       summary: >
         List all existing transport endpoints
       operationId: listEndpoints
@@ -67,7 +67,7 @@ paths:
         - endpoints
       requestBody:
         description: >
-          Receive a new endpoint object bound to an existing SNMP entity.
+          Receive a new endpoint object bound to an existing SNMP agent.
         required: true
         content:
           application/json:
@@ -232,24 +232,24 @@ paths:
               schema:
                 $ref: "#/components/schemas/Error"
 
-  /objects:
+  /recordings:
     description: >
-      This resource represents a collection of simulated data objects. Each
-      `object` in the collection corresponds to a single `.snmprec` file.
+      This resource represents a collection of simulation data recordings. Each
+      `recording` in the collection corresponds to a single `.snmprec` file.
     get:
       summary: >
-        List all existing simulation data objects.
-      operationId: listObjects
+        List all existing simulation data recordings.
+      operationId: listRecordings
       tags:
-        - objects
+        - recordings
       responses:
         "200":
           description: >
-            An array of simulation data objects
+            An array of simulation data recordings
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Objects"
+                $ref: "#/components/schemas/Recordings"
             text/plain:
               schema:
                 type: string
@@ -260,10 +260,10 @@ paths:
               schema:
                 $ref: "#/components/schemas/Error"
     post:
-      summary: Create a new simulation data objects
-      operationId: createObject
+      summary: Create a new simulation data recording
+      operationId: createRecording
       tags:
-        - objects
+        - recordings
       requestBody:
         description: >
           Receive the entire .snmprec file in a JSON object or ASCII text form.
@@ -271,7 +271,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/Object'
+              $ref: '#/components/schemas/Recording'
           text/plain:
             schema:
               type: string
@@ -285,15 +285,15 @@ paths:
               schema:
                 $ref: "#/components/schemas/Error"
 
-  /objects/{objectId}:
+  /recordings/{objectId}:
     description: >
-      This resource represents a single simulation data object identified
+      This resource represents a single simulation data recording identified
       by `objectId`.
     get:
       summary: Info for a specific simulation data object
-      operationId: showObjectsById
+      operationId: showRecordingById
       tags:
-        - objects
+        - recordings
       parameters:
         - name: objectId
           in: path
@@ -307,7 +307,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Object"
+                $ref: "#/components/schemas/Recording"
         default:
           description: unexpected error
           content:
@@ -316,9 +316,9 @@ paths:
                 $ref: "#/components/schemas/Error"
     delete:
       summary: Delete simulation data object
-      operationId: deleteObject
+      operationId: deleteRecording
       tags:
-        - objects
+        - recordings
       parameters:
         - name: objectId
           in: path
@@ -336,23 +336,23 @@ paths:
               schema:
                 $ref: "#/components/schemas/Error"
 
-  /entities:
+  /agents:
     description: >
-      This resource represents a list of all SNMP entities (agents).
+      This resource represents a list of all SNMP agents.
     get:
       summary: >
-        List all existing SNMP entities
-      operationId: listEntities
+        List all existing SNMP agents
+      operationId: listAgents
       tags:
-        - entities
+        - agents
       responses:
         "200":
           description: >
-            An array of SNMP entities
+            An array of SNMP agents
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Entities"
+                $ref: "#/components/schemas/Agents"
         default:
           description: Unspecified error
           content:
@@ -360,17 +360,17 @@ paths:
               schema:
                 $ref: "#/components/schemas/Error"
     post:
-      summary: Create new SNMP entity
-      operationId: createEntity
+      summary: Create a new SNMP agent
+      operationId: createAgent
       tags:
-        - entities
+        - agents
       requestBody:
         description: >
-          New SNMP entity
+          New SNMP agent object
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/Entity'
+              $ref: '#/components/schemas/Agent'
       responses:
         "201":
           description: Null response
@@ -381,20 +381,20 @@ paths:
               schema:
                 $ref: "#/components/schemas/Error"
 
-  /entities/{entityId}:
+  /agents/{agentId}:
     description: >
-      This resource represents a single SNMP entity (agent) identified
-      by `entityId`.
+      This resource represents a single SNMP agent identified
+      by `agentId`.
     get:
-      summary: Info for a specific SNMP entity
-      operationId: showEntityById
+      summary: Info for a specific SNMP agent
+      operationId: showAgentById
       tags:
-        - entities
+        - agents
       parameters:
-        - name: entityId
+        - name: agentId
           in: path
           required: true
-          description: The id of the entity to retrieve
+          description: The id of the agent to retrieve
           schema:
             type: integer
       responses:
@@ -403,7 +403,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Entity"
+                $ref: "#/components/schemas/Agent"
         default:
           description: unexpected error
           content:
@@ -411,15 +411,15 @@ paths:
               schema:
                 $ref: "#/components/schemas/Error"
     delete:
-      summary: Delete SNMP entity
-      operationId: deleteEntity
+      summary: Delete SNMP agent
+      operationId: deleteAgent
       tags:
-        - entities
+        - agents
       parameters:
-        - name: entityId
+        - name: agentId
           in: path
           required: true
-          description: The id of the entity to retrieve
+          description: The id of the agent to retrieve
           schema:
             type: integer
       responses:
@@ -432,20 +432,20 @@ paths:
               schema:
                 $ref: "#/components/schemas/Error"
 
-  /entities/{entityId}/users:
+  /agents/{agentId}/users:
     description: >
       This resource represents a SNMPv3 USM user record associated with SNMP
-      entity identified by `entityId`.
+      agent identified by `agentId`.
     put:
       summary: Add new USM user entry
       operationId: addUsmUser
       tags:
-        - entities
+        - agents
       parameters:
-        - name: entityId
+        - name: agentId
           in: path
           required: true
-          description: The id of the entity
+          description: The id of the agent
           schema:
             type: integer
       requestBody:
@@ -466,26 +466,26 @@ paths:
               schema:
                 $ref: "#/components/schemas/Error"
 
-  /entities/{entityId}/users/{userId}:
+  /agents/{agentId}/users/{userId}:
     description: >
       This resource represents a SNMPv3 USM user record associated with SNMP
-      entity identified by `entityId`.
+      agent identified by `agentId`.
     delete:
       summary: Remove USM user entry
       operationId: delUsmUser
       tags:
-        - entities
+        - agents
       parameters:
-        - name: entityId
+        - name: agentId
           in: path
           required: true
-          description: The id of the entity
+          description: The ID of the agent
           schema:
             type: integer
         - name: userId
           in: path
           required: true
-          description: The id of the USM entry
+          description: The ID of the USM entry
           schema:
             type: integer
       responses:
@@ -498,20 +498,20 @@ paths:
               schema:
                 $ref: "#/components/schemas/Error"
 
-  /entities/{entityId}/communities:
+  /agents/{agentId}/communities:
     description: >
       This resource represents a SNMP community name record associated with
-      SNMP entity identified by `entityId`.
+      SNMP agent identified by `agentId`.
     put:
       summary: Add new SNMPv1/v2c community name
       operationId: addCommunity
       tags:
-        - entities
+        - agents
       parameters:
-        - name: entityId
+        - name: agentId
           in: path
           required: true
-          description: The id of the entity
+          description: The ID of the agent
           schema:
             type: integer
       requestBody:
@@ -532,20 +532,20 @@ paths:
               schema:
                 $ref: "#/components/schemas/Error"
 
-  /entities/{entityId}/communities/{communityId}:
+  /agents/{agentId}/communities/{communityId}:
     description: >
       This resource represents a SNMP community name record associated with
-      SNMP entity identified by `entityId`.
+      SNMP agent identified by `agentId`.
     delete:
       summary: Delete new SNMPv1/v2c community name
       operationId: delCommunity
       tags:
-        - entities
+        - agents
       parameters:
-        - name: entityId
+        - name: agentId
           in: path
           required: true
-          description: The id of the entity
+          description: The ID of the agent
           schema:
             type: integer
         - name: communityId
@@ -564,20 +564,20 @@ paths:
               schema:
                 $ref: "#/components/schemas/Error"
 
-  /entities/{entityId}/access:
+  /agents/{agentId}/access:
     description: >
       This resource represents a SNMPv3 access entry (VACM) associated with
-      SNMP entity identified by `entityId`.
+      SNMP agent identified by `agentId`.
     put:
       summary: Add new SNMPv3 VACM entry
       operationId: addVacm
       tags:
-        - entities
+        - agents
       parameters:
-        - name: entityId
+        - name: agentId
           in: path
           required: true
-          description: The id of the entity
+          description: The ID of the agent
           schema:
             type: integer
       requestBody:
@@ -598,20 +598,20 @@ paths:
               schema:
                 $ref: "#/components/schemas/Error"
 
-  /entities/{entityId}/access/{accessId}:
+  /agents/{agentId}/access/{accessId}:
     description: >
       This resource represents a SNMPv3 access entry (VACM) associated with
-      SNMP entity identified by `entityId`.
+      SNMP agent identified by `agentId`.
     delete:
       summary: Add new SNMPv3 VACM entry
       operationId: delVacm
       tags:
-        - entities
+        - agents
       parameters:
-        - name: entityId
+        - name: agentId
           in: path
           required: true
-          description: The id of the entity
+          description: The ID of the agent
           schema:
             type: integer
         - name: accessId
@@ -630,23 +630,23 @@ paths:
               schema:
                 $ref: "#/components/schemas/Error"
 
-  /groups:
+  /labs:
     get:
       description: >
-        This resource represents a list of all existing SNMP entity groups.
+        This resource represents a list of all existing virtual laboratories.
       summary: >
-        List all existing SNMP entity groups
-      operationId: listGroups
+        List all existing virtual laboratories
+      operationId: listLabs
       tags:
-        - groups
+        - labs
       responses:
         "200":
           description: >
-            An array of SNMP entity groups
+            An array of virtual laboratories
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Groups"
+                $ref: "#/components/schemas/Labs"
         default:
           description: Unspecified error
           content:
@@ -654,17 +654,17 @@ paths:
               schema:
                 $ref: "#/components/schemas/Error"
     post:
-      summary: Create new SNMP entity group
-      operationId: createGroup
+      summary: Create new virtual laboratory
+      operationId: createLab
       tags:
-        - groups
+        - labs
       requestBody:
         description: >
-          New group optionally containing SNMP entity IDs.
+          New lab optionally containing SNMP agent IDs.
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/Group'
+              $ref: '#/components/schemas/Lab'
       responses:
         "201":
           description: Null response
@@ -675,19 +675,19 @@ paths:
               schema:
                 $ref: "#/components/schemas/Error"
 
-  /groups/{groupId}:
+  /labs/{labId}:
     description: >
-      This resource represents a SNMP entity group identified by `groupId`.
+      This resource represents a virtual laboratory identified by `labId`.
     get:
       summary: Info for a specific SNMP transport endpoint
-      operationId: showGroupById
+      operationId: showLabById
       tags:
-        - groups
+        - labs
       parameters:
-        - name: groupId
+        - name: labId
           in: path
           required: true
-          description: The id of the SNMP entity group
+          description: The ID of the virtual laboratory
           schema:
             type: integer
       responses:
@@ -696,7 +696,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Group"
+                $ref: "#/components/schemas/Lab"
         default:
           description: unexpected error
           content:
@@ -704,15 +704,15 @@ paths:
               schema:
                 $ref: "#/components/schemas/Error"
     delete:
-      summary: Delete SNMP entity grouping
-      operationId: deleteGroup
+      summary: Delete virtual laboratory
+      operationId: deleteLab
       tags:
-        - groups
+        - labs
       parameters:
-        - name: groupId
+        - name: labId
           in: path
           required: true
-          description: The id of the SNMP entity group
+          description: The id of the virtual laboratory
           schema:
             type: integer
       responses:
@@ -725,26 +725,26 @@ paths:
               schema:
                 $ref: "#/components/schemas/Error"
 
-  /groups/{groupId}/entity/{entityId}:
+  /labs/{labId}/agent/{agentId}:
     description: >
-      This resource represents a SNMP entity identified by `entityId`
-      associated with group identified by `groupId`.
+      This resource represents a SNMP agent identified by `agentId`
+      associated with a virtual laboratory identified by `labId`.
     put:
-      summary: Add existing SNMP entity to group
-      operationId: addToGroup
+      summary: Add existing SNMP agent to a virtual laboratory
+      operationId: addToLab
       tags:
-        - groups
+        - labs
       parameters:
-        - name: groupId
+        - name: labId
           in: path
           required: true
-          description: The id of the SNMP entity group
+          description: The ID of the virtual laboratory
           schema:
             type: integer
-        - name: entityId
+        - name: agentId
           in: path
           required: true
-          description: The id of the SNMP entity
+          description: The id of the SNMP agent
           schema:
             type: integer
       responses:
@@ -757,21 +757,21 @@ paths:
               schema:
                 $ref: "#/components/schemas/Error"
     delete:
-      summary: Remove SNMP entity from group
-      operationId: delFromGroup
+      summary: Remove SNMP agent from the virtual laboratory
+      operationId: delFromLab
       tags:
-        - groups
+        - labs
       parameters:
-        - name: groupId
+        - name: labId
           in: path
           required: true
-          description: The id of the SNMP entity group
+          description: The ID of the virtual laboratory
           schema:
             type: integer
-        - name: entityId
+        - name: agentId
           in: path
           required: true
-          description: The id of the SNMP entity
+          description: The id of the SNMP agent
           schema:
             type: integer
       responses:
@@ -784,30 +784,31 @@ paths:
               schema:
                 $ref: "#/components/schemas/Error"
 
-  /groups/{groupId}/power:
+  /labs/{labId}/power:
     description: >
-      This resource represents group power state. The group is identified by
-      `groupId`, power state can be queried and modified.
+      This resource represents the power state of the entire virtual laboratory.
+      The virtual laboratory is identified by `labId`, power state can be
+      queried and modified.
     put:
-      summary: Change group power state
-      operationId: setGroupPowerState
+      summary: Change power state of the virtual laboratory
+      operationId: setLabPowerState
       tags:
-        - groups
+        - labs
       parameters:
-        - name: groupId
+        - name: labId
           in: path
           required: true
-          description: The id of the SNMP entity group
+          description: The ID of the virtual laboratory
           schema:
             type: integer
       requestBody:
         description: >
-          Carries desired group power state
+          Carries desired power state of the virtual laboratory
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/GroupPowerState'
+              $ref: '#/components/schemas/LabPowerState'
       responses:
         "204":
           description: Null response
@@ -936,10 +937,12 @@ components:
         Represents a unique, independent and fully operational SNMP engine, though
         not yet attached to any transport endpoints.
       type: object
-      required:
-        - engineId
       properties:
         engineId:
+          description: >
+            Administratively assigned, unique (within an administrative domain) ID
+            of SNMP engine. Newly created objects missing this field will have it
+            autogenerated.
           type: string
           pattern: ".*"  # TODO: three distinct formats
         users:
@@ -971,9 +974,13 @@ components:
             Transport endpoint unique ID
           type: integer
           format: int64
-        entityId:
+        name:
           description: >
-            SNMP entity ID binding this endpoint
+            Descriptive name of this transport endpoint e.g. "port123 at vif456"
+          type: string
+        agentId:
+          description: >
+            SNMP agent ID binding this endpoint
           type: integer
           format: int64
         domain:
@@ -990,12 +997,14 @@ components:
       items:
         $ref: "#/components/schemas/Endpoint"
 
-    Object:
+    Record:
       description: >
-        SNMP managed object instance. On SNMP side of things, managed object
-        instance is identified by a unique OID and, sometimes, an associated
-        value representing the state of the backend application object being
-        managed via SNMP.
+        SNMP record representing a single line of `.snmprec` file. In SNMP
+        parlance it's also known as SNMP managed object instance.
+
+        On SNMP side of things, managed object instance is identified
+        by a unique OID and, sometimes, an associated value representing the
+        state of the backend application object being managed via SNMP.
 
         Depending on the nature of the managed object, associated value can
         be settable and/or modifiable.
@@ -1010,44 +1019,59 @@ components:
           format: int64
         oid:
           description: >
-            OID associated with this managed object instance
+            OID associated with this SNMP managed object instance
           type: string
           pattern: ".*"  # TODO OID regexp
         type:
           description: >
-            SNMP type of the value assocated with this managed object.
+            SNMP type of the value associated with this managed object instance.
           type: string
           enum: [integer32, octetstring, counter32, counter64, gauge32,
                  opaque, ipaddress, null, timeticks]
         value:
           description: >
-            Static value returned by this managed object
+            Static value returned by this managed object instance
           type: string
         variation:
           description: >
-            Variation module invoked when serving this managed object
+            Variation module invoked when serving this managed object instance
           type: string
           enum: [numeric, error, delay, notification, multiplex, redis,
                  sql, subprocess, writecache]
         variationOptions:
           type: string
 
-    Objects:
+    Recording:
       description: >
-        Ordered collection of SNMP managed objects
+        Ordered collection of SNMP records representing a single `.snmprec`
+        file.
+      type: object
+      properties:
+        name:
+          description: >
+            Descriptive name of this recording e.g. "cisco5300 routing and L2 tables"
+          type: string
+        records:
+          type: array
+          items:
+            $ref: "#/components/schemas/Record"
+
+    Recordings:
+      description: >
+        A collection of SNMP recordings
       type: object
       properties:
         id:
           type: integer
           format: int64
-        objects:
+        recordings:
           type: array
           items:
-            $ref: "#/components/schemas/Object"
+            $ref: "#/components/schemas/Recording"
 
     Selector:
       description: >
-        Set of rules for SNMP entity to choose SNMP managed objects collection
+        Set of rules for SNMP agent to choose recordings collection
         associated with this selector. All of the fields in the selector must
         match for this selector to be chosen.
       type: object
@@ -1057,6 +1081,11 @@ components:
         id:
           type: integer
           format: int64
+        name:
+          description: >
+            Descriptive name of this selector e.g. "agentA at endpointB when
+            queried from addressC using SNMP community `secret`"
+          type: string
         contextEngineIds:
           description: >
             This context is applicable for queries for this SNMP context engine ID.
@@ -1086,65 +1115,73 @@ components:
           type: array
           items:
             type: string
-        objects:
+        recordings:
           description: >
-            ID of SNMP managed objects collection associated with this selector.
+            ID of SNMP recording associated with this selector.
           type: integer
           format: int64
 
     Selectors:
       description: >
-        Ordered list of selector IDs for SNMP entity to consider. First match
+        Ordered list of selector IDs for SNMP agent to consider. First match
         satisfies the query.
       type: array
       items:
         $ref: "#/components/schemas/Selector"
 
-    Entity:
+    Agent:
       description: >
-        SNMP entity or SNMP agent. Consists of SNMP engine and transport
+        Represents SNMP agent. Consists of SNMP engine and transport
         endpoints it binds.
       type: object
       properties:
         id:
           type: integer
           format: int64
+        name:
+          description: >
+            Descriptive name of this agent e.g. "cisco5300"
+          type: string
         engine:
           $ref: "#/components/schemas/Engine"
 
-    Entities:
+    Agents:
       type: array
       items:
-        $ref: "#/components/schemas/Entity"
+        $ref: "#/components/schemas/Agent"
 
-    Group:
+    Lab:
       description: >
-        Group of SNMP entities. Some operations can be applied to them all
-        at once.
+        Group of SNMP agents belonging to the same virtual laboratory. Some
+        operations can be applied to them all at once.
       type: object
       properties:
         id:
           type: integer
           format: int64
-        entities:
+        name:
           description: >
-            SNMP entities IDs belonging to this group
+            Descriptive name of this lab e.g. "cisco switching shop"
+          type: string
+        agents:
+          description: >
+            SNMP agent IDs belonging to this lab
           type: array
           items:
             type: integer
             format: int64
         state:
           description: >
-            State of SNMP entities in this group
+            State of SNMP agents in this lab
           type: string
           enum: [up, down]
 
-    Groups:
+    Labs:
       description: >
-        A collection of groups of SNMP entities.
+        A collection of virtual laboratories.
       type: array
       items:
-        $ref: "#/components/schemas/Group"
+        $ref: "#/components/schemas/Lab"
 
     Error:
       type: object
@@ -1158,13 +1195,13 @@ components:
         message:
           type: string
 
-    GroupPowerState:
+    LabPowerState:
       description: >
-        Desired group power state.
+        Desired lab power state.
       type: object
       properties:
         state:
           description: >
-            Power state of all SNMP entities in this group
+            Power state of all SNMP agents in this lab
           type: string
           enum: [up, down]
