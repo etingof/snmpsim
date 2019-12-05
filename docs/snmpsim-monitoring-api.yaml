@@ -3,9 +3,9 @@ info:
   license:
     name: BSD License
   version: '1.0.0'
-  title: 'SNMP Simulator Status REST API'
+  title: 'SNMP Simulator Monitoring REST API'
   description: >
-    Status API provides the insight for the operator to how SNMP Simulator
+    Monitoring API provides the insight for the operator to how SNMP Simulator
     is doing. That includes health reporting and operational statistics.
     The data is provided by running SNMP Simulator, REST API is essentially
     read-only.
@@ -27,7 +27,7 @@ info:
     etc.
 
 servers:
-  - url: https://virtserver.swaggerhub.com/etingof/snmpsimd-status-plane/1.0.0
+  - url: https://virtserver.swaggerhub.com/etingof/snmpsimd-monitoring/1.0.0
 
 paths:
   /processes:
