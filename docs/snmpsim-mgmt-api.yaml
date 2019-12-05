@@ -5,7 +5,7 @@ info:
   version: '1.0.0'
   title: 'SNMP Simulator Control Plane REST API'
   description: >
-    The Management API is designed to support complete SNMP Simulator work flow
+    Management API is designed to support complete SNMP Simulator work flow
     remotely. As such, Management API supports SNMP Agent creation,
     configuration and eventual tear down. Simulation data can be uploaded,
     modified, removed and exposed under different circumstances. On top of
@@ -96,7 +96,7 @@ paths:
         - name: endpointId
           in: path
           required: true
-          description: The id of the endpoint to retrieve
+          description: The ID of the endpoint to retrieve
           schema:
             type: integer
       responses:
@@ -121,7 +121,7 @@ paths:
         - name: endpointId
           in: path
           required: true
-          description: The id of the endpoint to retrieve
+          description: The ID of the endpoint to retrieve
           schema:
             type: integer
       responses:
@@ -194,7 +194,7 @@ paths:
         - name: selectorId
           in: path
           required: true
-          description: The id of the selector to retrieve
+          description: The ID of the selector to retrieve
           schema:
             type: integer
       responses:
@@ -219,7 +219,7 @@ paths:
         - name: selectorId
           in: path
           required: true
-          description: The id of the selector to retrieve
+          description: The ID of the selector to retrieve
           schema:
             type: integer
       responses:
@@ -298,7 +298,7 @@ paths:
         - name: objectId
           in: path
           required: true
-          description: The id of the object to retrieve
+          description: The ID of the object to retrieve
           schema:
             type: integer
       responses:
@@ -323,7 +323,7 @@ paths:
         - name: objectId
           in: path
           required: true
-          description: The id of the object to retrieve
+          description: The ID of the object to retrieve
           schema:
             type: integer
       responses:
@@ -394,7 +394,7 @@ paths:
         - name: agentId
           in: path
           required: true
-          description: The id of the agent to retrieve
+          description: The ID of the agent to retrieve
           schema:
             type: integer
       responses:
@@ -419,7 +419,7 @@ paths:
         - name: agentId
           in: path
           required: true
-          description: The id of the agent to retrieve
+          description: The ID of the agent to retrieve
           schema:
             type: integer
       responses:
@@ -445,7 +445,7 @@ paths:
         - name: agentId
           in: path
           required: true
-          description: The id of the agent
+          description: The ID of the agent
           schema:
             type: integer
       requestBody:
@@ -551,73 +551,7 @@ paths:
         - name: communityId
           in: path
           required: true
-          description: The id of the community entry
-          schema:
-            type: integer
-      responses:
-        "204":
-          description: Null response
-        default:
-          description: Unspecified error
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
-
-  /agents/{agentId}/access:
-    description: >
-      This resource represents a SNMPv3 access entry (VACM) associated with
-      SNMP agent identified by `agentId`.
-    put:
-      summary: Add new SNMPv3 VACM entry
-      operationId: addVacm
-      tags:
-        - agents
-      parameters:
-        - name: agentId
-          in: path
-          required: true
-          description: The ID of the agent
-          schema:
-            type: integer
-      requestBody:
-        description: >
-          Receive a new SNMPv3 VACM entry
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Access'
-      responses:
-        "204":
-          description: Null response
-        default:
-          description: Unspecified error
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
-
-  /agents/{agentId}/access/{accessId}:
-    description: >
-      This resource represents a SNMPv3 access entry (VACM) associated with
-      SNMP agent identified by `agentId`.
-    delete:
-      summary: Add new SNMPv3 VACM entry
-      operationId: delVacm
-      tags:
-        - agents
-      parameters:
-        - name: agentId
-          in: path
-          required: true
-          description: The ID of the agent
-          schema:
-            type: integer
-        - name: accessId
-          in: path
-          required: true
-          description: The id of the VACM access entry
+          description: The ID of the community entry
           schema:
             type: integer
       responses:
@@ -712,7 +646,7 @@ paths:
         - name: labId
           in: path
           required: true
-          description: The id of the virtual laboratory
+          description: The ID of the virtual laboratory
           schema:
             type: integer
       responses:
@@ -744,7 +678,7 @@ paths:
         - name: agentId
           in: path
           required: true
-          description: The id of the SNMP agent
+          description: The ID of the SNMP agent
           schema:
             type: integer
       responses:
@@ -771,7 +705,7 @@ paths:
         - name: agentId
           in: path
           required: true
-          description: The id of the SNMP agent
+          description: The ID of the SNMP agent
           schema:
             type: integer
       responses:
@@ -821,59 +755,6 @@ paths:
 
 components:
   schemas:
-    Access:
-      description: >
-        SNMP managed objects are identified by OIDs. SNMP includes the accesss
-        control subsystem (known as VACM) that can "mask" some of the OIDs, in
-        the imaginary tree of sub-OID numbers, on per-user/protocol version
-        basis.
-      type: object
-      required:
-        - id
-        - subtree
-      properties:
-        id:
-          description: >
-            Access entry ID
-          type: integer
-          format: int64
-        subtree:
-          description: >
-            OID subtree that this entry applies access control on.
-          type: string
-          pattern: ".*"  # TODO OID regexp
-        mask:
-          description: >
-            An OID consisting of 1's and 0's to define branches of OID tree this
-            entry applies access control on. Technically, logical *AND* operation
-            is applied on `subree` and `mask` yielding access-significant sub-OIDs.
-          type: string
-          pattern: ".*"  # TODO OID regexp
-        protocol:
-          description: >
-            SNMP protocol version this entry is applicable to
-          type: string
-          enum: [v1, v2c, v3]
-        security:
-          description: >
-            SNMP security level this entry is applicable to
-          type: string
-          enum: [noAuthNoPriv, authNoPriv, authPriv]
-        mode:
-          description: >
-            SNMP operation this entry is applicable to
-          type: string
-          enum: [read, write, notify]
-        context:
-          description: >
-            SNMP context name this entry is applicable to.
-          type: string
-        partial:
-          description: >
-            If true, match `context` as SNMP context name prefix rather than
-            matching exactly.
-          type: boolean
-
     User:
       description: >
         SNMPv3 USM user entry. Contains SNMPv3 credentials grouped by
@@ -887,30 +768,39 @@ components:
             User entry ID
           type: integer
           format: int64
-        username:
+        name:
           description: >
-            USM user name
+            SNMP security name of this entry.
+          type: string
+        level:
+          description: >
+            SNMP security level.
+          type: string
+          enum: [noAuthNoPriv, authNoPriv, authPriv]
+        user:
+          description: >
+            USM user name.
           type: string
           minLength: 1
           maxLength: 32
-        v3AuthKey:
+        authKey:
           description: >
             USM user authentication key
           type: string
           minLength: 8
           maxLength: 32
-        v3AuthProtocol:
+        authProtocol:
           description: >
             User authentication protocol
           type: string
           enum: [md5, sha, sha224, sha256, sha384, sha512, none]
-        v3PrivKey:
+        privKey:
           description: >
             USM user privacy (encryption) key
           type: string
           minLength: 8
           maxLength: 32
-        v3PrivProtocol:
+        privProtocol:
           type: string
           enum: [des, 3des, aes, aes128, aes192, aes192blmt, aes256,
                  aes256blmt, none]
@@ -930,6 +820,15 @@ components:
           type: integer
           format: int64
         name:
+          description: >
+            SNMP security name of this entry.
+          type: string
+        model:
+          description: >
+            SNMP security model.
+          type: string
+          enum: [v1, v2c]
+        community:
           type: string
 
     Engine:
@@ -953,10 +852,6 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/Community"
-        access:
-          type: array
-          items:
-            $ref: "#/components/schemas/Access"
 
     Endpoint:
       description: >
@@ -1086,35 +981,49 @@ components:
             Descriptive name of this selector e.g. "agentA at endpointB when
             queried from addressC using SNMP community `secret`"
           type: string
-        contextEngineIds:
+        contextEngineId:
           description: >
             This context is applicable for queries for this SNMP context engine ID.
             Empty value matches SNMP engine ID of SNMP engine considering this
             selector.
-          type: array
-          items:
-            type: string
-        contextNames:
+          type: string
+        contextName:
           description: >
             This context is applicable for queries for this SNMP context name.
-          type: array
-          items:
-            type: string
-        endpoints:
+          type: string
+        endpoint:
           description: >
-            This context is applicable for queries coming via these endpoints.
+            This context is applicable for queries coming via this endpoint.
             Empty value matches any endpoint.
-          type: array
-          items:
-            type: integer
-            format: int64
+          type: integer
+          format: int64
         source:
           description: >
-            This context is applicable for queries coming from these network addresses.
-            Empty value matches any source.
-          type: array
-          items:
-            type: string
+            This context is applicable for queries coming from this network
+            address. Empty value matches any source.
+          type: string
+        model:
+          description: >
+            This context is applicable for queries coming over this SNMP
+            security model.
+          type: string
+          enum: [v1, v2c, any]
+        level:
+          description: >
+            This context is applicable for queries coming at this SNMP security
+            level.
+          type: string
+          enum: [noAuthNoPriv, authNoPriv, authPriv, any]
+        username:
+          description: >
+            This context is applicable for queries coming with this SNMPv3 USM
+            user name. Empty value matches any user name.
+          type: string
+        community:
+          description: >
+            This context is applicable for queries coming with this SNMPv1/v2c
+            community name. Empty value matches any community name.
+          type: string
         recordings:
           description: >
             ID of SNMP recording associated with this selector.
@@ -1183,6 +1092,17 @@ components:
       items:
         $ref: "#/components/schemas/Lab"
 
+    LabPowerState:
+      description: >
+        Desired lab power state.
+      type: object
+      properties:
+        state:
+          description: >
+            Power state of all SNMP agents in this lab
+          type: string
+          enum: [up, down]
+
     Error:
       type: object
       required:
@@ -1194,14 +1114,3 @@ components:
           format: int32
         message:
           type: string
-
-    LabPowerState:
-      description: >
-        Desired lab power state.
-      type: object
-      properties:
-        state:
-          description: >
-            Power state of all SNMP agents in this lab
-          type: string
-          enum: [up, down]

@@ -1,0 +1,421 @@
+openapi: 3.0.0
+info:
+  license:
+    name: BSD License
+  version: '1.0.0'
+  title: 'SNMP Simulator Status REST API'
+  description: >
+    Status API provides the insight for the operator to how SNMP Simulator
+    is doing. That includes health reporting and operational statistics.
+    The data is provided by running SNMP Simulator, REST API is essentially
+    read-only.
+
+    The `/processes` endpoint exposes the details on SNMP simulator health
+    as a set of UNIX processes. It's mostly concern with processes being
+    present, resources being consumed reasonably and internal faults noted.
+
+    Typical use of the `/processes` endpoint by some monitoring application
+    can be a parameterized REST API call designed to reveal missing processes,
+    overly consumed system resources or serious application-specific errors
+    occurring in SNMP simulator.
+
+    The `/messages` endpoint is all about SNMP traffic being handled. This
+    endpoint can report passing SNMP traffic in great details. Built-in
+    filtering allows selecting just certain aspects of SNMP exchange. For
+    example, the user can inspect SNMP traffic belonging to one particular
+    manager or agent, SNMP commands with specific user or community name
+    etc.
+
+servers:
+  - url: https://virtserver.swaggerhub.com/etingof/snmpsimd-status-plane/1.0.0
+
+paths:
+  /processes:
+    get:
+      description: >
+        Collection of SNMP simulator system process information.
+      summary: >
+        Search for and list process information.
+      operationId: listProcesses
+      tags:
+        - processes
+      parameters:
+        - name: newer
+          in: query
+          description: >
+            Select processes with uptime lesser than specified.
+          required: false
+          schema:
+            type: integer
+        - name: larger
+          in: query
+          description: >
+            Select processes with the amount of consumed memory larger
+            than specified.
+          required: false
+          schema:
+            type: integer
+        - name: hotter
+          in: query
+          description: >
+            Select processes with CPU utilization higher than specified.
+          required: false
+          schema:
+            type: integer
+        - name: sicker
+          in: query
+          description: >
+            Select processes with fatal, critical and warning counters
+            greater than specified.
+          required: false
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: >
+            An array of process information objects
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Processes"
+        default:
+          description: Unspecified error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /messages:
+    get:
+      description: >
+        Paged collection of messages ordered from most recent.
+      summary: >
+        Search for and list messages
+      operationId: listMessages
+      tags:
+        - messages
+      parameters:
+        - name: id
+          in: query
+          description: >
+            Select message with this ID
+          required: false
+          schema:
+            type: integer
+        - name: worker
+          in: query
+          description: >
+            Select messages handled by this worker process.
+          required: false
+          schema:
+            type: integer
+        - name: older
+          in: query
+          description: >
+            Select messages older than specified
+          required: false
+          schema:
+            type: integer
+        - name: newer
+          in: query
+          description: >
+            Select messages newer than specified
+          required: false
+          schema:
+            type: integer
+        - name: transport
+          in: query
+          description: >
+            Select messages arrived via specified transport
+          required: false
+          schema:
+            type: string
+        - name: source
+          in: query
+          description: >
+            Select messages arrived from specified address
+          required: false
+          schema:
+            type: string
+        - name: destination
+          in: query
+          description: >
+            Select messages arrived to specified address
+          required: false
+          schema:
+            type: string
+        - name: model
+          in: query
+          description: >
+            Select messages sent over specified SNMP security model (version).
+          required: false
+          schema:
+            type: string
+            enum: [v1, v2c, v3]
+        - name: level
+          in: query
+          description: >
+            Select messages sent using specified SNMP security level.
+          required: false
+          schema:
+            type: string
+            enum: [noAuthNoPriv, authNoPriv, authPriv]
+        - name: user
+          in: query
+          description: >
+            Select messages sent in behalf of specified SNMPv3 USM user
+          required: false
+          schema:
+            type: string
+        - name: community
+          in: query
+          description: >
+            Select messages sent using specified SNMPv1/v2c community name
+          required: false
+          schema:
+            type: string
+        - name: tag
+          in: query
+          description: >
+            Select messages having this tag present among its tags.
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Paged array of message objects
+          headers:
+            x-next:
+              description: A link to the next page of responses
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Messages"
+        default:
+          description: Unspecified error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+components:
+  schemas:
+    Message:
+      description: >
+        SNMP message lifecycle record
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        worker:
+          description: >
+            ID of the worker process handling this message.
+          type: integer
+          format: int64
+        time:
+          description: >
+            When this message has arrived
+          type: integer
+        transport:
+          type: string
+          enum: [udpv4, udpv6]
+        source:
+          description: >
+            Network address from which this message has been received by
+            Simulator
+          type: string
+        destination:
+          description: >
+            Network address at which this message has been received by
+            Simulator
+          type: string
+        engineId:
+          description: >
+            SNMP engine ID of the SNMP engine receiving this message.
+          type: string
+          pattern: ".*"  # TODO: three distinct formats
+        model:
+          description: >
+            SNMP security model (protocol) being used.
+          type: string
+          enum: [v1, v2c, v3]
+        level:
+          description: >
+            SNMP security level being used.
+          type: string
+          enum: [noAuthNoPriv, authNoPriv, authPriv]
+        user:
+          description: >
+            SNMPv3 USM username passed in request
+          type: string
+        community:
+          description: >
+            SNMPv1/v2c passed in request
+          type: string
+        payload:
+          type: object
+          properties:
+            id:
+              type: integer
+              format: int32
+            request:
+              $ref: "#/components/schemas/VarBinds"
+            response:
+              $ref: "#/components/schemas/VarBinds"
+        record:
+          description: >
+            Human friendly representation of the simulation data item
+            being used for answering this query.
+          type: object
+          properties:
+            name:
+              type: string
+        raw:
+          description: >
+            Raw SNMP packets as in the wire.
+          type: object
+          properties:
+            inbound:
+              type: string
+            outbound:
+              type: string
+        status:
+          $ref: "#/components/schemas/MessageStatus"
+        tags:
+          description: >
+            Free form tags set by the Simulator to assist grouping/searching.
+            Tags can include IDs of the agent that handled this message and
+            ID of the recording collection used to form the response.
+          type: array
+          items:
+            type: string
+
+    MessageStatus:
+      description: >
+        SNMP request outcome
+      type: object
+      properties:
+        result:
+          type: string
+          enum: [OK, FAILED]
+        category:
+          description: >
+            On failure, where exactly it failed
+          type: string
+          enum: [user, community, signature, cipher, parser, access, object,
+                 routing, variation, other]
+        details:
+          description: >
+            On failure, unstructured message explaining the cause
+          type: string
+
+    VarBind:
+      description: >
+        A single SNMP PDU variable-binding.
+      type: object
+      required:
+        - oid
+        - type
+        - value
+      properties:
+        oid:
+          description: >
+            OID associated with this SNMP managed object instance
+          type: string
+          pattern: ".*"  # TODO OID regexp
+        type:
+          description: >
+            SNMP type of the value associated with this managed object instance.
+          type: string
+          enum: [integer32, octetstring, counter32, counter64, gauge32,
+                 opaque, ipaddress, null, timeticks]
+        value:
+          description: >
+            Static value returned by this managed object instance
+          type: string
+
+    VarBinds:
+      description: >
+        An ordered collection of SNMP PDU variable-binding pairs
+      type: object
+      properties:
+        elements:
+          type: array
+          items:
+            $ref: "#/components/schemas/VarBind"
+
+    Messages:
+      description: >
+        An array of messages.
+      type: array
+      items:
+        $ref: "#/components/schemas/Message"
+
+    Process:
+      description: >
+        SNMP simulator system is composed of many running processes.
+        This object describes common properties of a process.
+      type: object
+      properties:
+        cmdline:
+          description: >
+            Path to process executable and its command-line parameters.
+          type: string
+        uptime:
+          description: >
+            How long this process has been up (in seconds).
+          type: integer
+        owner:
+          description: >
+            OS user:group owning this process.
+          type: string
+        memory:
+          description: >
+            How much virtual memory this process is consuming.
+          type: integer
+        cpu:
+          description: >
+            How much CPU this process is putting on CPU (last 1, 5, and
+            15 minutes).
+          type: integer
+        files:
+          description: >
+            How many open files this process has.
+          type: integer
+        health:
+          description: >
+            How healthy this process has been lately in terms of the number
+            of internal events occurred since process start. Warning-level
+            expire automatically over time.
+          type: object
+          properties:
+            fatal:
+              type: integer
+            critical:
+              type: integer
+            warning:
+              type: integer
+            info:
+              type: integer
+
+    Processes:
+      description: >
+        An array of process information.
+      type: array
+      items:
+        $ref: "#/components/schemas/Process"
+
+    Error:
+      type: object
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: integer
+          format: int32
+        message:
+          type: string
