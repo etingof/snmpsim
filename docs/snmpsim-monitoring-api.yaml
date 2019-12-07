@@ -10,20 +10,43 @@ info:
     The data is provided by running SNMP Simulator, REST API is essentially
     read-only.
 
+
     The `/processes` endpoint exposes the details on SNMP simulator health
     as a set of UNIX processes. It's mostly concern with processes being
     present, resources being consumed reasonably and internal faults noted.
+
 
     Typical use of the `/processes` endpoint by some monitoring application
     can be a parameterized REST API call designed to reveal missing processes,
     overly consumed system resources or serious application-specific errors
     occurring in SNMP simulator.
 
-    The `/subsystems` endpoint is all about SNMP traffic being handled by
-    certain simulator subsystem. Provided data is mostly ever increasing
-    counters reflecting the activity of the subsystem. The consumer of this
-    endpoint is expected to poll it periodically pushing collected data
-    into a time-series database for dynamics computing and data aggregation.
+
+    The `/activity` endpoint is all about SNMP
+    traffic being handled by certain simulator
+    subsystem. Conceptually, any SNMP command
+    traverses simulator subsystems in order
+
+    * transport endpoint
+
+    * agent
+
+    * recording
+
+
+    Reported data reflects cumulative SNMP traffic
+    optionally selected by any subsystem.
+
+
+    For example, the user can get packet count for all agents or for a single
+    specific agent, for agent+endpoint combination (an agent can listen on
+    multiple endpoints) or for agent+recording pair (any single recording can
+    be used by many agents).
+
+
+    The consumer of this endpoint is expected to poll it periodically pushing
+    collected data into a time-series database for dynamics computing and data
+    aggregation.
 
 servers:
   - url: https://virtserver.swaggerhub.com/etingof/snmpsimd-monitoring/1.0.0
@@ -84,164 +107,45 @@ paths:
               schema:
                 $ref: "#/components/schemas/Error"
 
-  /subsystems/agents:
+  /activity:
     get:
       description: >
-        Activity report for all agents.
-      summary: >
-        Live agents activity report.
-      operationId: listAgents
+        Activity report for a selection of agents / endpoints / recordings.
+      operationId: listActivity
       tags:
-        - agents
-      responses:
-        '200':
-          description: Agents activity report object
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Subsystems"
-        default:
-          description: Unspecified error
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
-
-  /subsystems/agents/{agentId}:
-    get:
-      description: >
-        Activity report for a selected agent.
-      summary: >
-        Live agent activity report.
-      operationId: listAgent
-      tags:
-        - agents
+        - activity
       parameters:
         - name: agentId
-          in: path
+          in: query
           description: >
             Report activity for the agent with this `name`. A single agent can
             listen on multiple transport endpoints.
-          required: true
+          required: false
           schema:
             type: string
-      responses:
-        '200':
-          description: Agent activity report object
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Subsystem"
-        default:
-          description: Unspecified error
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
-
-  /subsystems/endpoints:
-    get:
-      description: >
-        Activity report for all endpoints.
-      summary: >
-        Live endpoints activity report.
-      operationId: listEndpoints
-      tags:
-        - endpoints
-      responses:
-        '200':
-          description: Endpoints activity report object
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Subsystems"
-        default:
-          description: Unspecified error
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
-
-  /subsystems/endpoints/{endpointId}:
-    get:
-      description: >
-        Activity report for a selected transport endpoint.
-      summary: >
-        Live endpoint activity report.
-      operationId: listEndpoint
-      tags:
-        - endpoints
-      parameters:
         - name: endpointId
-          in: path
+          in: query
           description: >
             Report activity for transport endpoint with this `name`. Only one
             agent can listen on any single endpoint.
-          required: true
+          required: false
           schema:
             type: string
-      responses:
-        '200':
-          description: Endpoint activity report object
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Subsystem"
-        default:
-          description: Unspecified error
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
-
-  /subsystems/recordings:
-    get:
-      description: >
-        Activity report for all recordings.
-      summary: >
-        Live recordings activity report.
-      operationId: listRecordings
-      tags:
-        - recordings
-      responses:
-        '200':
-          description: Recordings activity report object
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Subsystems"
-        default:
-          description: Unspecified error
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
-
-  /subsystems/recordings/{recordingId}:
-    get:
-      description: >
-        Activity report for a selected recording.
-      summary: >
-        Live recording activity report.
-      operationId: listRecording
-      tags:
-        - recordings
-      parameters:
         - name: recordingId
-          in: path
+          in: query
           description: >
             Report activity for recording with this `name`. Multiple
             agents can hit any single recording.
-          required: true
+          required: false
           schema:
             type: string
       responses:
         '200':
-          description: Recording activity report object
+          description: Activity object
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Subsystem"
+                $ref: "#/components/schemas/Activity"
         default:
           description: Unspecified error
           content:
@@ -251,9 +155,10 @@ paths:
 
 components:
   schemas:
-    Subsystem:
+    Activity:
       description: >
-        Activity information for a single subsystem such as agent/endpoint/recording.
+        Activity information for an agent/endpoint/recording or their
+        sums/combinations.
       type: object
       properties:
         name:
@@ -262,29 +167,41 @@ components:
           type: integer
         last_hit:
           type: integer
-        counters:
+        get:
           $ref: "#/components/schemas/Counters"
-
-    Subsystems:
-      description: >
-        An array of subsystem activity information.
-      type: array
-      items:
-        $ref: "#/components/schemas/Subsystem"
+        set:
+          $ref: "#/components/schemas/Counters"
+        getnext:
+          $ref: "#/components/schemas/Counters"
+        getbulk:
+          $ref: "#/components/schemas/Counters"
 
     Counters:
       description: >
-        Activity counters.
+        Activity counters since system initialization.
       type: object
       properties:
-        successful:
+        total:
           description: >
-            Number of successful operations since system initialization
+            Total number of requests.
           type: integer
-        errored:
+          format: int64
+        protocol_errors:
           description: >
-            Number of failed operations since system initialization
+            Number of protocol-level failures.
           type: integer
+          format: int64
+        routing_errors:
+          description: >
+            Number of requests that can't be routed to a recording.
+          type: integer
+          format: int64
+        data_errors:
+          description: >
+            Number of requests that failed on recording data accommodation
+            including variation modules failures.
+          type: integer
+          format: int64
 
     Process:
       description: >

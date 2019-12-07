@@ -12,23 +12,29 @@ info:
     that, SNMP agents can be grouped together to form "virtual lab" that
     can be brought up/down altogether.
 
+
     Typical management work flow looks like this:
+
 
     1. Create SNMP Agent using `/agents` REST API endpoint. You can supply
        complete agent configuration at once or add/modify it incrementally.
        Important configuration items include: SNMP Engine ID, SNMPv3 VACM
        user(s) credentials, SNMPv1/v2c community name(s)
+
     2. Create SNMP transport endpoint(s) using `/endpoints`. These are the
        address(es) where SNMP agent is listening for inbound SNMP commands.
        When creating an endpoint, bind it to one specific SNMP agent.
+
     3. Create SNMP simulation data by uploading the entire `.snmprec` file
        via `/objects` endpoint. You can read/modify it on per-line basis
        later on.
+
     4. Expose simulation data to SNMP agent(s) by creating one or more request
        routing rules via `/selectors` endpoint. Each of the selectors will
        be examined in specified order at the time of SNMP command processing.
        First selector matching request properties will be picked and
        associated simulation data will be used for answering the query.
+
     5. Optionally, add your new SNMP agent to a new or existing lab via
        `/labs` endpoint.
 
