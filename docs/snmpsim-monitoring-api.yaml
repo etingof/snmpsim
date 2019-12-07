@@ -19,12 +19,11 @@ info:
     overly consumed system resources or serious application-specific errors
     occurring in SNMP simulator.
 
-    The `/messages` endpoint is all about SNMP traffic being handled. This
-    endpoint can report passing SNMP traffic in great details. Built-in
-    filtering allows selecting just certain aspects of SNMP exchange. For
-    example, the user can inspect SNMP traffic belonging to one particular
-    manager or agent, SNMP commands with specific user or community name
-    etc.
+    The `/subsystems` endpoint is all about SNMP traffic being handled by
+    certain simulator subsystem. Provided data is mostly ever increasing
+    counters reflecting the activity of the subsystem. The consumer of this
+    endpoint is expected to poll it periodically pushing collected data
+    into a time-series database for dynamics computing and data aggregation.
 
 servers:
   - url: https://virtserver.swaggerhub.com/etingof/snmpsimd-monitoring/1.0.0
@@ -85,114 +84,164 @@ paths:
               schema:
                 $ref: "#/components/schemas/Error"
 
-  /messages:
+  /subsystems/agents:
     get:
       description: >
-        Paged collection of messages ordered from most recent.
+        Activity report for all agents.
       summary: >
-        Search for and list messages
-      operationId: listMessages
+        Live agents activity report.
+      operationId: listAgents
       tags:
-        - messages
+        - agents
+      responses:
+        '200':
+          description: Agents activity report object
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Subsystems"
+        default:
+          description: Unspecified error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /subsystems/agents/{agentId}:
+    get:
+      description: >
+        Activity report for a selected agent.
+      summary: >
+        Live agent activity report.
+      operationId: listAgent
+      tags:
+        - agents
       parameters:
-        - name: id
-          in: query
+        - name: agentId
+          in: path
           description: >
-            Select message with this ID
-          required: false
-          schema:
-            type: integer
-        - name: worker
-          in: query
-          description: >
-            Select messages handled by this worker process.
-          required: false
-          schema:
-            type: integer
-        - name: older
-          in: query
-          description: >
-            Select messages older than specified
-          required: false
-          schema:
-            type: integer
-        - name: newer
-          in: query
-          description: >
-            Select messages newer than specified
-          required: false
-          schema:
-            type: integer
-        - name: transport
-          in: query
-          description: >
-            Select messages arrived via specified transport
-          required: false
-          schema:
-            type: string
-        - name: source
-          in: query
-          description: >
-            Select messages arrived from specified address
-          required: false
-          schema:
-            type: string
-        - name: destination
-          in: query
-          description: >
-            Select messages arrived to specified address
-          required: false
-          schema:
-            type: string
-        - name: model
-          in: query
-          description: >
-            Select messages sent over specified SNMP security model (version).
-          required: false
-          schema:
-            type: string
-            enum: [v1, v2c, v3]
-        - name: level
-          in: query
-          description: >
-            Select messages sent using specified SNMP security level.
-          required: false
-          schema:
-            type: string
-            enum: [noAuthNoPriv, authNoPriv, authPriv]
-        - name: user
-          in: query
-          description: >
-            Select messages sent in behalf of specified SNMPv3 USM user
-          required: false
-          schema:
-            type: string
-        - name: community
-          in: query
-          description: >
-            Select messages sent using specified SNMPv1/v2c community name
-          required: false
-          schema:
-            type: string
-        - name: tag
-          in: query
-          description: >
-            Select messages having this tag present among its tags.
-          required: false
+            Report activity for the agent with this `name`. A single agent can
+            listen on multiple transport endpoints.
+          required: true
           schema:
             type: string
       responses:
         '200':
-          description: Paged array of message objects
-          headers:
-            x-next:
-              description: A link to the next page of responses
-              schema:
-                type: string
+          description: Agent activity report object
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Messages"
+                $ref: "#/components/schemas/Subsystem"
+        default:
+          description: Unspecified error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /subsystems/endpoints:
+    get:
+      description: >
+        Activity report for all endpoints.
+      summary: >
+        Live endpoints activity report.
+      operationId: listEndpoints
+      tags:
+        - endpoints
+      responses:
+        '200':
+          description: Endpoints activity report object
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Subsystems"
+        default:
+          description: Unspecified error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /subsystems/endpoints/{endpointId}:
+    get:
+      description: >
+        Activity report for a selected transport endpoint.
+      summary: >
+        Live endpoint activity report.
+      operationId: listEndpoint
+      tags:
+        - endpoints
+      parameters:
+        - name: endpointId
+          in: path
+          description: >
+            Report activity for transport endpoint with this `name`. Only one
+            agent can listen on any single endpoint.
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Endpoint activity report object
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Subsystem"
+        default:
+          description: Unspecified error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /subsystems/recordings:
+    get:
+      description: >
+        Activity report for all recordings.
+      summary: >
+        Live recordings activity report.
+      operationId: listRecordings
+      tags:
+        - recordings
+      responses:
+        '200':
+          description: Recordings activity report object
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Subsystems"
+        default:
+          description: Unspecified error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /subsystems/recordings/{recordingId}:
+    get:
+      description: >
+        Activity report for a selected recording.
+      summary: >
+        Live recording activity report.
+      operationId: listRecording
+      tags:
+        - recordings
+      parameters:
+        - name: recordingId
+          in: path
+          description: >
+            Report activity for recording with this `name`. Multiple
+            agents can hit any single recording.
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Recording activity report object
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Subsystem"
         default:
           description: Unspecified error
           content:
@@ -202,157 +251,40 @@ paths:
 
 components:
   schemas:
-    Message:
+    Subsystem:
       description: >
-        SNMP message lifecycle record
+        Activity information for a single subsystem such as agent/endpoint/recording.
       type: object
       properties:
-        id:
+        name:
+          type: string
+        first_hit:
           type: integer
-          format: int64
-        worker:
-          description: >
-            ID of the worker process handling this message.
+        last_hit:
           type: integer
-          format: int64
-        time:
-          description: >
-            When this message has arrived
-          type: integer
-        transport:
-          type: string
-          enum: [udpv4, udpv6]
-        source:
-          description: >
-            Network address from which this message has been received by
-            Simulator
-          type: string
-        destination:
-          description: >
-            Network address at which this message has been received by
-            Simulator
-          type: string
-        engineId:
-          description: >
-            SNMP engine ID of the SNMP engine receiving this message.
-          type: string
-          pattern: ".*"  # TODO: three distinct formats
-        model:
-          description: >
-            SNMP security model (protocol) being used.
-          type: string
-          enum: [v1, v2c, v3]
-        level:
-          description: >
-            SNMP security level being used.
-          type: string
-          enum: [noAuthNoPriv, authNoPriv, authPriv]
-        user:
-          description: >
-            SNMPv3 USM username passed in request
-          type: string
-        community:
-          description: >
-            SNMPv1/v2c passed in request
-          type: string
-        payload:
-          type: object
-          properties:
-            id:
-              type: integer
-              format: int32
-            request:
-              $ref: "#/components/schemas/VarBinds"
-            response:
-              $ref: "#/components/schemas/VarBinds"
-        record:
-          description: >
-            Human friendly representation of the simulation data item
-            being used for answering this query.
-          type: object
-          properties:
-            name:
-              type: string
-        raw:
-          description: >
-            Raw SNMP packets as in the wire.
-          type: object
-          properties:
-            inbound:
-              type: string
-            outbound:
-              type: string
-        status:
-          $ref: "#/components/schemas/MessageStatus"
-        tags:
-          description: >
-            Free form tags set by the Simulator to assist grouping/searching.
-            Tags can include IDs of the agent that handled this message and
-            ID of the recording collection used to form the response.
-          type: array
-          items:
-            type: string
+        counters:
+          $ref: "#/components/schemas/Counters"
 
-    MessageStatus:
+    Subsystems:
       description: >
-        SNMP request outcome
-      type: object
-      properties:
-        result:
-          type: string
-          enum: [OK, FAILED]
-        category:
-          description: >
-            On failure, where exactly it failed
-          type: string
-          enum: [user, community, signature, cipher, parser, access, object,
-                 routing, variation, other]
-        details:
-          description: >
-            On failure, unstructured message explaining the cause
-          type: string
-
-    VarBind:
-      description: >
-        A single SNMP PDU variable-binding.
-      type: object
-      required:
-        - oid
-        - type
-        - value
-      properties:
-        oid:
-          description: >
-            OID associated with this SNMP managed object instance
-          type: string
-          pattern: ".*"  # TODO OID regexp
-        type:
-          description: >
-            SNMP type of the value associated with this managed object instance.
-          type: string
-          enum: [integer32, octetstring, counter32, counter64, gauge32,
-                 opaque, ipaddress, null, timeticks]
-        value:
-          description: >
-            Static value returned by this managed object instance
-          type: string
-
-    VarBinds:
-      description: >
-        An ordered collection of SNMP PDU variable-binding pairs
-      type: object
-      properties:
-        elements:
-          type: array
-          items:
-            $ref: "#/components/schemas/VarBind"
-
-    Messages:
-      description: >
-        An array of messages.
+        An array of subsystem activity information.
       type: array
       items:
-        $ref: "#/components/schemas/Message"
+        $ref: "#/components/schemas/Subsystem"
+
+    Counters:
+      description: >
+        Activity counters.
+      type: object
+      properties:
+        successful:
+          description: >
+            Number of successful operations since system initialization
+          type: integer
+        errored:
+          description: >
+            Number of failed operations since system initialization
+          type: integer
 
     Process:
       description: >
