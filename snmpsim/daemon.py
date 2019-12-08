@@ -43,8 +43,8 @@ else:
                 # exit first parent
                 os._exit(0)
 
-        except OSError:
-            raise error.SnmpsimError('ERROR: fork #1 failed: %s' % sys.exc_info()[1])
+        except OSError as exc:
+            raise error.SnmpsimError('ERROR: fork #1 failed: %s' % exc)
 
         # decouple from parent environment
         try:
@@ -63,8 +63,8 @@ else:
                 # exit from second parent
                 os._exit(0)
 
-        except OSError:
-            raise error.SnmpsimError('ERROR: fork #2 failed: %s' % sys.exc_info()[1])
+        except OSError as exc:
+            raise error.SnmpsimError('ERROR: fork #2 failed: %s' % exc)
 
         def signal_cb(s, f):
             raise KeyboardInterrupt
@@ -90,9 +90,9 @@ else:
                 os.close(fd)
                 os.rename(nm, pidfile)
 
-        except Exception:
+        except Exception as exc:
             raise error.SnmpsimError(
-                'Failed to create PID file %s: %s' % (pidfile, sys.exc_info()[1]))
+                'Failed to create PID file %s: %s' % (pidfile, exc))
 
         # redirect standard file descriptors
         sys.stdout.flush()
@@ -136,17 +136,16 @@ else:
                 runningUid = pwd.getpwnam(self._uname).pw_uid
                 runningGid = grp.getgrnam(self._gname).gr_gid
 
-            except Exception:
+            except Exception as exc:
                 raise error.SnmpsimError(
-                    'getpwnam()/getgrnam() failed for %s/%s: %s' % (
-                        self._uname, self._gname, sys.exc_info()[1]))
+                    'getpwnam()/getgrnam() failed for %s/%s: '
+                    '%s' % (self._uname, self._gname, exc))
 
             try:
                 os.setgroups([])
 
-            except Exception:
-                raise error.SnmpsimError(
-                    'setgroups() failed: %s' % sys.exc_info()[1])
+            except Exception as exc:
+                raise error.SnmpsimError('setgroups() failed: %s' % exc)
 
             try:
                 if self._final:
@@ -160,11 +159,11 @@ else:
                     os.setegid(runningGid)
                     os.seteuid(runningUid)
 
-            except Exception:
+            except Exception as exc:
                 raise error.SnmpsimError(
                     '%s failed for %s/%s: %s' % (
                         self._final and 'setgid()/setuid()' or 'setegid()/seteuid()',
-                        runningGid, runningUid, sys.exc_info()[1]))
+                        runningGid, runningUid, exc))
 
             os.umask(63)  # 0077
 
@@ -176,7 +175,7 @@ else:
                 os.setegid(self._oldgid)
                 os.seteuid(self._olduid)
 
-            except Exception:
+            except Exception as exc:
                 raise error.SnmpsimError(
                     'setegid()/seteuid() failed for %s/%s: %s' % (
-                        self._oldgid, self._olduid, sys.exc_info()[1]))
+                        self._oldgid, self._olduid, exc))

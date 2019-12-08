@@ -29,7 +29,6 @@ from snmpsim.record import sap
 from snmpsim.record import snmprec
 from snmpsim.record import walk
 
-
 RECORD_TYPES = {
     dump.DumpRecord.ext: dump.DumpRecord(),
     mvc.MvcRecord.ext: mvc.MvcRecord(),
@@ -101,9 +100,8 @@ def main():
              'integer32-range=', 'counter-range=', 'counter64-range=',
              'gauge-range=', 'unsigned-range=', 'timeticks-range='])
 
-    except Exception:
-        sys.stderr.write(
-            'ERROR: %s\r\n%s\r\n' % (sys.exc_info()[1], HELP_MESSAGE))
+    except Exception as exc:
+        sys.stderr.write('ERROR: %s\r\n%s\r\n' % (exc, HELP_MESSAGE))
         return 1
 
     if params:
@@ -183,18 +181,17 @@ Software documentation and support at http://snmplabs.com/snmpsim
             try:
                 automaticValues = int(opt[1])
 
-            except ValueError:
+            except ValueError as exc:
                 sys.stderr.write(
-                    'ERROR: bad value %s: %s\r\n' % (opt[1], sys.exc_info()[1]))
+                    'ERROR: bad value %s: %s\r\n' % (opt[1], exc))
                 return 1
 
         if opt[0] == '--table-size':
             try:
                 tableSize = int(opt[1])
 
-            except ValueError:
-                sys.stderr.write(
-                    'ERROR: bad value %s: %s\r\n' % (opt[1], sys.exc_info()[1]))
+            except ValueError as exc:
+                sys.stderr.write('ERROR: bad value %s: %s\r\n' % (opt[1], exc))
                 return 1
 
         if opt[0] == '--destination-record-type':
@@ -219,64 +216,63 @@ Software documentation and support at http://snmplabs.com/snmpsim
                 stringPool = f.read().split()
                 f.close()
 
-            except Exception:
+            except Exception as exc:
                 sys.stderr.write(
                     'ERROR: text file "%s" open failure '
-                    '%s\r\n' % (opt[1], sys.exc_info()[1]))
+                    '%s\r\n' % (opt[1], exc))
                 return 1
 
         if opt[0] == '--counter-range':
             try:
                 counterRange = [int(x) for x in opt[1].split(',')]
 
-            except ValueError:
+            except ValueError as exc:
                 sys.stderr.write(
-                    'ERROR: bad value %s: %s\r\n' % (opt[1], sys.exc_info()[1]))
+                    'ERROR: bad value %s: %s\r\n' % (opt[1], exc))
                 return 1
 
         if opt[0] == '--counter64-range':
             try:
                 counter64Range = [int(x) for x in opt[1].split(',')]
 
-            except ValueError:
+            except ValueError as exc:
                 sys.stderr.write(
-                    'ERROR: bad value %s: %s\r\n' % (opt[1], sys.exc_info()[1]))
+                    'ERROR: bad value %s: %s\r\n' % (opt[1], exc))
                 return 1
 
         if opt[0] == '--gauge-range':
             try:
                 gaugeRange = [int(x) for x in opt[1].split(',')]
 
-            except ValueError:
+            except ValueError as exc:
                 sys.stderr.write(
-                    'ERROR: bad value %s: %s\r\n' % (opt[1], sys.exc_info()[1]))
+                    'ERROR: bad value %s: %s\r\n' % (opt[1], exc))
                 return 1
 
         if opt[0] == '--timeticks-range':
             try:
                 timeticksRange = [int(x) for x in opt[1].split(',')]
 
-            except ValueError:
+            except ValueError as exc:
                 sys.stderr.write(
-                    'ERROR: bad value %s: %s\r\n' % (opt[1], sys.exc_info()[1]))
+                    'ERROR: bad value %s: %s\r\n' % (opt[1], exc))
                 return 1
 
         if opt[0] == '--integer32-range':
             try:
                 int32Range = [int(x) for x in opt[1].split(',')]
 
-            except ValueError:
+            except ValueError as exc:
                 sys.stderr.write(
-                    'ERROR: bad value %s: %s\r\n' % (opt[1], sys.exc_info()[1]))
+                    'ERROR: bad value %s: %s\r\n' % (opt[1], exc))
                 return 1
 
         if opt[0] == '--unsigned-range':
             try:
                 unsignedRange = [int(x) for x in opt[1].split(',')]
 
-            except ValueError:
-                sys.stderr.write(
-                    'ERROR: bad value %s: %s\r\n' % (opt[1], sys.exc_info()[1]))
+            except ValueError as exc:
+                sys.stderr.write('ERROR: bad value %s: %s\r\n' % (opt[1], exc))
                 return 1
 
     if outputFile:
@@ -365,11 +361,11 @@ Software documentation and support at http://snmplabs.com/snmpsim
 
                 return syntax.clone(val)
 
-            except PyAsn1Error:
+            except PyAsn1Error as exc:
                 if makeGuess == 1:
                     sys.stderr.write(
                         '*** Inconsistent value: %s\r\n*** See constraints and '
-                        'suggest a better one for:\r\n' % sys.exc_info()[1])
+                        'suggest a better one for:\r\n' % exc)
 
                 if makeGuess:
                     makeGuess -= 1
@@ -430,8 +426,8 @@ Software documentation and support at http://snmplabs.com/snmpsim
         if isinstance(stopOID, ObjectIdentity):
             stopOID.resolveWithMib(mibViewController)
 
-    except error.PySnmpError:
-        sys.stderr.write('ERROR: %s\r\n' % sys.exc_info()[1])
+    except error.PySnmpError as exc:
+        sys.stderr.write('ERROR: %s\r\n' % exc)
         return 1
 
     output = []
@@ -447,9 +443,9 @@ Software documentation and support at http://snmplabs.com/snmpsim
         try:
             oid = ObjectIdentity(modName).resolveWithMib(mibViewController)
 
-        except error.PySnmpError:
+        except error.PySnmpError as exc:
             sys.stderr.write('ERROR: failed on MIB %s: '
-                             '%s\r\n' % (modName, sys.exc_info()[1]))
+                             '%s\r\n' % (modName, exc))
             return 1
 
         hint = rowHint = ''
@@ -590,8 +586,8 @@ Software documentation and support at http://snmplabs.com/snmpsim
                 try:
                     outputFile.write(dataFileHandler.format(oid, val))
 
-                except SnmpsimError:
-                    sys.stderr.write('ERROR: %s\r\n' % (sys.exc_info()[1],))
+                except SnmpsimError as exc:
+                    sys.stderr.write('ERROR: %s\r\n' % (exc,))
 
                 else:
                     unique.add(oid)
@@ -614,8 +610,8 @@ if __name__ == '__main__':
         sys.stderr.write('shutting down process...')
         rc = 0
 
-    except Exception:
-        sys.stderr.write('process terminated: %s' % sys.exc_info()[1])
+    except Exception as exc:
+        sys.stderr.write('process terminated: %s' % exc)
 
         for line in traceback.format_exception(*sys.exc_info()):
             sys.stderr.write(line.replace('\n', ';'))

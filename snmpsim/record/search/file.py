@@ -8,8 +8,8 @@ from pyasn1.compat.octets import str2octs
 
 
 # read lines from text file ignoring #comments and blank lines
-def getRecord(fileObj, lineNo=None,
-              offset=0):
+def getRecord(fileObj, lineNo=None, offset=0):
+
     line = fileObj.readline()
 
     if lineNo is not None and line:
@@ -31,8 +31,8 @@ def getRecord(fileObj, lineNo=None,
     return line, lineNo, offset
 
 
-def findEol(fileObj, offset, blockSize=256,
-            eol=str2octs('\n')):
+def findEol(fileObj, offset, blockSize=256, eol=str2octs('\n')):
+
     while True:
         if offset < blockSize:
             offset, blockSize = 0, offset
@@ -55,8 +55,8 @@ def findEol(fileObj, offset, blockSize=256,
 
 
 # In-place, by-OID binary search
-def searchRecordByOid(oid, fileObj,
-                      textParser):
+def searchRecordByOid(oid, fileObj, textParser):
+
     lo = mid = 0;
     prev_mid = -1
 

@@ -11,23 +11,15 @@ import os
 import stat
 import sys
 import traceback
-if sys.version_info[:2] < (2, 5):
-    from md5 import md5
+from hashlib import md5
 
-else:
-    from hashlib import md5
-
-from pyasn1.type import univ
+from pyasn1 import debug as pyasn1_debug
 from pyasn1.codec.ber import decoder
 from pyasn1.codec.ber import encoder
-from pyasn1.compat.octets import str2octs
 from pyasn1.compat.octets import null
+from pyasn1.compat.octets import str2octs
 from pyasn1.error import PyAsn1Error
-from pysnmp.entity import config
-from pysnmp.entity import engine
-from pysnmp.entity.rfc3413 import context
-from pysnmp.entity.rfc3413 import cmdrsp
-from pysnmp.carrier.asynsock.dgram import udp
+from pyasn1.type import univ
 try:
     from pysnmp.carrier.asynsock.dgram import udp6
 except ImportError:
@@ -36,29 +28,33 @@ try:
     from pysnmp.carrier.asynsock.dgram import unix
 except ImportError:
     unix = None
+from pysnmp import debug as pysnmp_debug
+from pysnmp import error
+from pysnmp.carrier.asynsock.dgram import udp
 from pysnmp.carrier.asynsock.dispatch import AsynsockDispatcher
+from pysnmp.entity import config
+from pysnmp.entity import engine
+from pysnmp.entity.rfc3413 import cmdrsp
+from pysnmp.entity.rfc3413 import context
+from pysnmp.proto import api
+from pysnmp.proto import rfc1902
+from pysnmp.proto import rfc1905
 from pysnmp.smi import exval, indices
 from pysnmp.smi.error import MibOperationError
-from pysnmp.proto import api
-from pysnmp.proto import rfc1905
-from pysnmp.proto import rfc1902
-from pysnmp import error
-from pyasn1 import debug as pyasn1_debug
-from pysnmp import debug as pysnmp_debug
 
-from snmpsim.error import NoDataNotification
-from snmpsim.error import SnmpsimError
+from snmpsim import confdir
 from snmpsim import daemon
 from snmpsim import log
-from snmpsim import confdir
+from snmpsim.error import NoDataNotification
+from snmpsim.error import SnmpsimError
 from snmpsim.record import dump
 from snmpsim.record import mvc
 from snmpsim.record import sap
-from snmpsim.record import walk
 from snmpsim.record import snmprec
+from snmpsim.record import walk
+from snmpsim.record.search.database import RecordIndex
 from snmpsim.record.search.file import getRecord
 from snmpsim.record.search.file import searchRecordByOid
-from snmpsim.record.search.database import RecordIndex
 
 PROGRAM_NAME = 'snmp-command-responder'
 
@@ -292,9 +288,10 @@ class SnmprecRecordMixIn(object):
             except MibOperationError:
                 raise
 
-            except PyAsn1Error:
-                raise SnmpsimError('value evaluation for %s = %r failed: '
-                                   '%s\r\n' % (oid, value, sys.exc_info()[1]))
+            except PyAsn1Error as exc:
+                raise SnmpsimError(
+                    'value evaluation for %s = %r failed: '
+                    '%s\r\n' % (oid, value, exc))
 
         return oid, value
 
@@ -361,9 +358,10 @@ class DataFile(AbstractLayout):
         try:
             text, db = self.getHandles()
 
-        except SnmpsimError:
-            log.error('Problem with data file or its index: '
-                      '%s' % sys.exc_info()[1])
+        except SnmpsimError as exc:
+            log.error(
+                'Problem with data file or its index: %s' % exc)
+
             return [(vb[0], errorStatus) for vb in varBinds]
 
         varsRemaining = varsTotal = len(varBinds)
@@ -493,19 +491,20 @@ class DataFile(AbstractLayout):
                 except MibOperationError:
                     raise
 
-                except Exception:
+                except Exception as exc:
                     _oid = oid
                     _val = errorStatus
-                    log.error('data error at %s for %s: '
-                              '%s' % (self, textOid, sys.exc_info()[1]))
+                    log.error(
+                        'data error at %s for %s: %s' % (self, textOid, exc))
 
                 break
 
             rspVarBinds.append((_oid, _val))
 
-        log.info('Response var-binds: '
-                 '%s' % (', '.join(['%s=<%s>' % (
-            vb[0], vb[1].prettyPrint()) for vb in rspVarBinds])))
+        log.info(
+            'Response var-binds: %s' % (
+                ', '.join(['%s=<%s>' % (
+                    vb[0], vb[1].prettyPrint()) for vb in rspVarBinds])))
 
         return rspVarBinds
  
@@ -754,8 +753,8 @@ def main():
              'data-dir=', 'max-varbinds=', 'agent-udpv4-endpoint=',
              'agent-udpv6-endpoint=', 'agent-unix-endpoint='])
 
-    except Exception:
-        sys.stderr.write('ERROR: %s\r\n%s\r\n' % (sys.exc_info()[1], HELP_MESSAGE))
+    except Exception as exc:
+        sys.stderr.write('ERROR: %s\r\n%s\r\n' % (exc, HELP_MESSAGE))
         return 1
 
     if params:
@@ -880,9 +879,9 @@ Software documentation and support at http://snmplabs.com/snmpsim
             try:
                 transportIdOffset = max(0, int(opt[1]))
 
-            except Exception:
+            except Exception as exc:
                 sys.stderr.write(
-                    'ERROR: %s\r\n%s\r\n' % (sys.exc_info()[1], HELP_MESSAGE))
+                    'ERROR: %s\r\n%s\r\n' % (exc, HELP_MESSAGE))
                 return 1
 
         # processing of the following args is postponed till SNMP engine startup
@@ -913,9 +912,9 @@ Software documentation and support at http://snmplabs.com/snmpsim
                 else:
                     maxVarBinds = max(1, int(opt[1]))
 
-            except Exception:
+            except Exception as exc:
                 sys.stderr.write(
-                    'ERROR: %s\r\n%s\r\n' % (sys.exc_info()[1], HELP_MESSAGE))
+                    'ERROR: %s\r\n%s\r\n' % (exc, HELP_MESSAGE))
                 return 1
 
         elif opt[0] == '--args-from-file':
@@ -923,10 +922,10 @@ Software documentation and support at http://snmplabs.com/snmpsim
                 v3Args.extend(
                     [x.split('=', 1) for x in open(opt[1]).read().split()])
 
-            except Exception:
+            except Exception as exc:
                 sys.stderr.write(
                     'ERROR: file %s opening failure: %s\r\n'
-                    '%s\r\n' % (opt[1], sys.exc_info()[1], HELP_MESSAGE))
+                    '%s\r\n' % (opt[1], exc, HELP_MESSAGE))
                 return 1
 
     if v2cArch and (
@@ -941,27 +940,27 @@ Software documentation and support at http://snmplabs.com/snmpsim
             try:
                 v3Args.append((opt[0], IPv4TransportEndpoints().add(opt[1])))
 
-            except Exception:
+            except Exception as exc:
                 sys.stderr.write(
-                    'ERROR: %s\r\n%s\r\n' % (sys.exc_info()[1], HELP_MESSAGE))
+                    'ERROR: %s\r\n%s\r\n' % (exc, HELP_MESSAGE))
                 return 1
 
         elif opt[0] == '--agent-udpv6-endpoint':
             try:
                 v3Args.append((opt[0], IPv6TransportEndpoints().add(opt[1])))
 
-            except Exception:
+            except Exception as exc:
                 sys.stderr.write(
-                    'ERROR: %s\r\n%s\r\n' % (sys.exc_info()[1], HELP_MESSAGE))
+                    'ERROR: %s\r\n%s\r\n' % (exc, HELP_MESSAGE))
                 return 1
 
         elif opt[0] == '--agent-unix-endpoint':
             try:
                 v3Args.append((opt[0], UnixTransportEndpoints().add(opt[1])))
 
-            except Exception:
+            except Exception as exc:
                 sys.stderr.write(
-                    'ERROR: %s\r\n%s\r\n' % (sys.exc_info()[1], HELP_MESSAGE))
+                    'ERROR: %s\r\n%s\r\n' % (exc, HELP_MESSAGE))
                 return 1
 
         else:
@@ -984,18 +983,18 @@ Software documentation and support at http://snmplabs.com/snmpsim
             if loggingLevel:
                 log.setLevel(loggingLevel)
 
-        except SnmpsimError:
-            sys.stderr.write('%s\r\n%s\r\n' % (sys.exc_info()[1], HELP_MESSAGE))
+        except SnmpsimError as exc:
+            sys.stderr.write('%s\r\n%s\r\n' % (exc, HELP_MESSAGE))
             return 1
 
     if not foregroundFlag:
         try:
             daemon.daemonize(pidFile)
 
-        except Exception:
+        except Exception as exc:
             sys.stderr.write(
                 'ERROR: cant daemonize process: %s\r\n'
-                '%s\r\n' % (sys.exc_info()[1], HELP_MESSAGE))
+                '%s\r\n' % (exc, HELP_MESSAGE))
             return 1
 
     # hook up variation modules
@@ -1050,10 +1049,10 @@ Software documentation and support at http://snmplabs.com/snmpsim
                     else:
                         execfile(mod, ctx)
 
-                except Exception:
+                except Exception as exc:
                     log.error(
                         'Variation module "%s" execution failure: '
-                        '%s' % (mod, sys.exc_info()[1]))
+                        '%s' % (mod, exc))
                     return 1
 
                 else:
@@ -1073,9 +1072,9 @@ Software documentation and support at http://snmplabs.com/snmpsim
             with daemon.PrivilegesOf(procUser, procGroup):
                 os.makedirs(confdir.cache)
 
-        except OSError:
+        except OSError as exc:
             log.error('failed to create cache directory "%s": '
-                      '%s' % (confdir.cache, sys.exc_info()[1]))
+                      '%s' % (confdir.cache, exc))
             return 1
 
         else:
@@ -1098,21 +1097,22 @@ Software documentation and support at http://snmplabs.com/snmpsim
                 with daemon.PrivilegesOf(procUser, procGroup):
                     body['init'](options=body['args'], mode='variating')
 
-            except Exception:
+            except Exception as exc:
                 log.error(
                     'Variation module "%s" from "%s" load FAILED: '
-                    '%s' % (body['alias'], body['path'], sys.exc_info()[1]))
+                    '%s' % (body['alias'], body['path'], exc))
 
             else:
                 log.info(
                     'Variation module "%s" from "%s" '
                     'loaded OK' % (body['alias'], body['path']))
 
-
     # Build pysnmp Managed Objects base from data files information
 
-    def configureManagedObjects(dataDirs, dataIndexInstrumController,
-                                snmpEngine=None, snmpContext=None):
+    def configureManagedObjects(
+            dataDirs, dataIndexInstrumController, snmpEngine=None,
+            snmpContext=None):
+
         _mibInstrums = {}
         _dataFiles = {}
 
@@ -1191,10 +1191,10 @@ Software documentation and support at http://snmplabs.com/snmpsim
         del _mibInstrums
         del _dataFiles
 
-
     if v2cArch:
 
-        def getBulkHandler(reqVarBinds, nonRepeaters, maxRepetitions, readNextVars):
+        def getBulkHandler(
+                reqVarBinds, nonRepeaters, maxRepetitions, readNextVars):
 
             N = min(int(nonRepeaters), len(reqVarBinds))
             M = int(maxRepetitions)
@@ -1218,8 +1218,10 @@ Software documentation and support at http://snmplabs.com/snmpsim
 
             return rspVarBinds
 
-        def commandResponderCbFun(transportDispatcher, transportDomain,
-                                  transportAddress, wholeMsg):
+        def commandResponderCbFun(
+                transportDispatcher, transportDomain, transportAddress,
+                wholeMsg):
+
             while wholeMsg:
                 msgVer = api.decodeMessageVersion(wholeMsg)
 
@@ -1298,9 +1300,8 @@ Software documentation and support at http://snmplabs.com/snmpsim
                 except NoDataNotification:
                     return wholeMsg
 
-                except Exception:
-                    log.error(
-                        'Ignoring SNMP engine failure: %s' % sys.exc_info()[1])
+                except Exception as exc:
+                    log.error('Ignoring SNMP engine failure: %s' % exc)
                     return wholeMsg
 
                 # Poor man's v2c->v1 translation
@@ -1667,9 +1668,10 @@ Software documentation and support at http://snmplabs.com/snmpsim
                                 PRIV_PROTOCOLS[v3PrivProtos[v3User]],
                                 v3PrivKeys[v3User])
 
-                        except error.PySnmpError:
-                            log.error('bad USM values for user %s: '
-                                      '%s' % (v3User, sys.exc_info()[1]))
+                        except error.PySnmpError as exc:
+                            log.error(
+                                'bad USM values for user %s: '
+                                '%s' % (v3User, exc))
                             return 1
 
                         log.info('SNMPv3 USM SecurityName: %s' % v3User)
@@ -1789,10 +1791,10 @@ Software documentation and support at http://snmplabs.com/snmpsim
                         snmpEngine = engine.SnmpEngine(
                             snmpEngineID=univ.OctetString(hexValue=v3EngineId))
 
-                except Exception:
+                except Exception as exc:
                     log.error(
                         'SNMPv3 Engine initialization failed, EngineID "%s": '
-                        '%s' % (v3EngineId, sys.exc_info()[1]))
+                        '%s' % (v3EngineId, exc))
                     return 1
 
                 config.addContext(snmpEngine, '')
@@ -1884,10 +1886,6 @@ Software documentation and support at http://snmplabs.com/snmpsim
 
     transportDispatcher.jobStarted(1)  # server job would never finish
 
-    # Python 2.4 does not support the "finally" clause
-
-    exc_info = None
-
     with daemon.PrivilegesOf(procUser, procGroup, final=True):
 
         try:
@@ -1896,32 +1894,26 @@ Software documentation and support at http://snmplabs.com/snmpsim
         except KeyboardInterrupt:
             log.info('Shutting down process...')
 
-        except Exception:
-            exc_info = sys.exc_info()
+        finally:
+            if variationModules:
+                log.info('Shutting down variation modules:')
 
-        if variationModules:
-            log.info('Shutting down variation modules:')
+                for name, contexts in variationModules.items():
+                    body = contexts[0]
+                    try:
+                        body['shutdown'](options=body['args'], mode='variation')
 
-            for name, contexts in variationModules.items():
-                body = contexts[0]
-                try:
-                    body['shutdown'](options=body['args'], mode='variation')
+                    except Exception as exc:
+                        log.error(
+                            'Variation module "%s" shutdown FAILED: '
+                            '%s' % (name, exc))
 
-                except Exception:
-                    log.error(
-                        'Variation module "%s" shutdown FAILED: '
-                        '%s' % (name, sys.exc_info()[1]))
+                    else:
+                        log.info('Variation module "%s" shutdown OK' % name)
 
-                else:
-                    log.info('Variation module "%s" shutdown OK' % name)
+            transportDispatcher.closeDispatcher()
 
-        transportDispatcher.closeDispatcher()
-
-        log.info('Process terminated')
-
-        if exc_info:
-            for line in traceback.format_exception(*exc_info):
-                log.error(line.replace('\n', ';'))
+            log.info('Process terminated')
 
     return 0
 
@@ -1934,8 +1926,8 @@ if __name__ == '__main__':
         sys.stderr.write('shutting down process...')
         rc = 0
 
-    except Exception:
-        sys.stderr.write('process terminated: %s' % sys.exc_info()[1])
+    except Exception as exc:
+        sys.stderr.write('process terminated: %s' % exc)
 
         for line in traceback.format_exception(*sys.exc_info()):
             sys.stderr.write(line.replace('\n', ';'))

@@ -49,8 +49,9 @@ class SnmprecGrammar(AbstractGrammar):
         try:
             oid, tag, value = octs2str(line).strip().split('|', 2)
 
-        except Exception:
-            raise error.SnmpsimError('broken record <%s>' % line)
+        except Exception as exc:
+            raise error.SnmpsimError(
+                'broken record <%s>: %s' % (line, exc))
 
         else:
             if oid and tag:

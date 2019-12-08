@@ -4,8 +4,6 @@
 # Copyright (c) 2010-2019, Ilya Etingof <etingof@gmail.com>
 # License: http://snmplabs.com/snmpsim/license.html
 #
-import os
-import sys
 
 if sys.version_info[0] < 3:
     import anydbm as dbm
@@ -14,6 +12,8 @@ if sys.version_info[0] < 3:
 else:
     import dbm
     whichdb = dbm.whichdb
+import os
+import sys
 
 from snmpsim import confdir, log, error
 from snmpsim.record.search.file import getRecord
@@ -44,8 +44,7 @@ class RecordIndex(object):
 
     def __str__(self):
         return 'Data file %s, %s-indexed, %s' % (
-            self._textFile, self._dbType, self._db and 'opened' or 'closed'
-        )
+            self._textFile, self._dbType, self._db and 'opened' or 'closed')
 
     def isOpen(self):
         return self._db is not None
@@ -114,16 +113,15 @@ class RecordIndex(object):
                     break
             else:
                 raise error.SnmpsimError(
-                    'Failed to create %s for data file %s: '
-                    '%s' % (self._dbFile, self._textFile, sys.exc_info()[1]))
+                    'Failed to create %s for data file '
+                    '%s' % (self._dbFile, self._textFile))
 
             try:
                 text = self._textParser.open(self._textFile)
 
-            except Exception:
+            except Exception as exc:
                 raise error.SnmpsimError(
-                    'Failed to open data file %s: '
-                    '%s' % (self._dbFile, sys.exc_info()[0]))
+                    'Failed to open data file %s: %s' % (self._dbFile, exc))
 
             log.msg(
                 'Building index %s for data file %s (open flags '
@@ -146,9 +144,8 @@ class RecordIndex(object):
                 try:
                     oid, tag, val = self._textParser.grammar.parse(line)
 
-                except Exception:
+                except Exception as exc:
                     db.close()
-                    exc = sys.exc_info()[1]
 
                     for dbFile in self._dbFiles:
                         try:
@@ -165,9 +162,8 @@ class RecordIndex(object):
                     try:
                         self._textParser.evaluateOid(oid)
 
-                    except Exception:
+                    except Exception as exc:
                         db.close()
-                        exc = sys.exc_info()[1]
 
                         for dbFile in self._dbFiles:
                             try:
@@ -184,10 +180,10 @@ class RecordIndex(object):
                             oid, tag, val, dataValidation=True
                         )
 
-                    except Exception:
+                    except Exception as exc:
                         log.msg(
                             'ERROR at line %s, value %r: '
-                            '%s' % (lineNo, val, sys.exc_info()[1]))
+                            '%s' % (lineNo, val, exc))
 
                 # for lines serving subtrees, type is empty in tag field
                 db[oid] = '%d,%d,%d' % (offset, tag[0] == ':', prevOffset)

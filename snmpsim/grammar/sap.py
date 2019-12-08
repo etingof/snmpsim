@@ -43,8 +43,9 @@ class SapGrammar(abstract.AbstractGrammar):
         try:
             oid, tag, value = [x.strip() for x in octs2str(line).split(',', 2)]
 
-        except Exception:
-            raise error.SnmpsimError('broken record <%s>' % line)
+        except Exception as exc:
+            raise error.SnmpsimError(
+                'broken record <%s>: %s' % (line, exc))
 
         else:
             if oid and tag:

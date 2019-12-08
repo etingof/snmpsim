@@ -25,9 +25,10 @@ class DumpRecord(abstract.AbstractRecord):
         try:
             value = self.grammar.TAG_MAP[tag](value)
 
-        except Exception:
+        except Exception as exc:
             raise SnmpsimError(
-                'value evaluation error for tag %r, value %r' % (tag, value))
+                'value evaluation error for tag %r, value %r: '
+                '%s' % (tag, value, exc))
 
         # not all callers supply the context - just ignore it
         try:
@@ -50,12 +51,13 @@ class DumpRecord(abstract.AbstractRecord):
 
         else:
             try:
-                oid, tag, value = self.evaluateValue(oid, tag, value, **context)
+                oid, tag, value = self.evaluateValue(
+                    oid, tag, value, **context)
 
-            except PyAsn1Error:
+            except PyAsn1Error as exc:
                 raise SnmpsimError(
                     'value evaluation for %s = %r failed: '
-                    '%s\r\n' % (oid, value, sys.exc_info()[1]))
+                    '%s\r\n' % (oid, value, exc))
 
         return oid, value
 
