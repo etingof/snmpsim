@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 #
 # This file is part of snmpsim software.
 #
@@ -49,7 +48,7 @@ from snmpsim.record import sap
 from snmpsim.record import snmprec
 from snmpsim.record import walk
 
-PROGRAM_NAME = 'pcap2dev'
+PROGRAM_NAME = 'snmpsim-record-traffic'
 
 RECORD_TYPES = {
     dump.DumpRecord.ext: dump.DumpRecord(),
@@ -213,12 +212,16 @@ Software documentation and support at http://snmplabs.com/snmpsim
             return 1
 
         elif opt[0] in ('--debug', '--debug-snmp'):
-            pysnmp_debug.setLogger(pysnmp_debug.Debug(*opt[1].split(','), **dict(
-                loggerName='pcap2dev.pysnmp')))
+            pysnmp_debug.setLogger(
+                pysnmp_debug.Debug(
+                    *opt[1].split(','),
+                    **dict(loggerName='%s.pysnmp' % PROGRAM_NAME)))
 
         elif opt[0] == '--debug-asn1':
-            pyasn1_debug.setLogger(pyasn1_debug.Debug(*opt[1].split(','), **dict(
-                loggerName='pcap2dev.pyasn1')))
+            pyasn1_debug.setLogger(
+                pyasn1_debug.Debug(
+                    *opt[1].split(','),
+                    **dict(loggerName='%s.pyasn1' % PROGRAM_NAME)))
 
         elif opt[0] == '--logging-method':
             loggingMethod = opt[1].split(':')

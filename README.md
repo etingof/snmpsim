@@ -31,8 +31,9 @@ Features
 Download
 --------
 
-SNMP simulator software is freely available for download from [PyPI](https://pypi.org/project/snmpsim/)
-and [project site](http://snmplabs.com/snmpsim/download.html).
+SNMP simulator software is freely available for download from
+[PyPI](https://pypi.org/project/snmpsim/) and
+[project site](http://snmplabs.com/snmpsim/download.html).
 
 Installation
 ------------
@@ -46,10 +47,11 @@ $ pip install snmpsim
 How to use SNMP simulator
 -------------------------
 
-Once installed, invoke snmpsimd.py and point it to a directory with simulation data:
+Once installed, invoke `snmpsim-command-responder` and point it to a directory
+with simulation data:
 
 ```
-$ snmpsimd.py --data-dir=./data --agent-udpv4-endpoint=127.0.0.1:1024
+$ snmpsim-command-responder --data-dir=./data --agent-udpv4-endpoint=127.0.0.1:1024
 ```
 
 Simulation data is stored in simple plaint-text files having OID|TYPE|VALUE
@@ -71,7 +73,8 @@ IP addresses into data files.
 You can immediately generate simulation data file by querying existing SNMP agent:
 
 ```
-$ snmprec.py --agent-udpv4-endpoint=demo.snmplabs.com --output-file=./data/public.snmprec
+$ snmpsim-record-commands --agent-udpv4-endpoint=demo.snmplabs.com \
+    --output-file=./data/public.snmprec
 SNMP version 2c, Community name: public
 Querying UDP/IPv4 agent at 195.218.195.228:161
 Agent response timeout: 3.00 secs, retries: 3
@@ -82,7 +85,8 @@ OIDs dumped: 182, elapsed: 11.97 sec, rate: 7.00 OIDs/sec, errors: 0
 Alternatively, you could build simulation data from a MIB file:
 
 ```
-$ mib2dev.py --output-file=./data/public.snmprec --mib-module=IF-MIB
+$ snmpsim-record-mibs --output-file=./data/public.snmprec \
+    --mib-module=IF-MIB
 # MIB module: IF-MIB, from the beginning till the end
 # Starting table IF-MIB::ifTable (1.3.6.1.2.1.2.2)
 # Synthesizing row #1 of table 1.3.6.1.2.1.2.2.1

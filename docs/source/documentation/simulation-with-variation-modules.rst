@@ -20,7 +20,8 @@ restarts.
 
 Variation modules may be used for triggering events at other systems. For
 instance the *notification* module will send SNMP TRAP/INFORM SNMP messages
-to pre-configured SNMP Managers on SNMP SET request arrival to *snmpsimd.py*.
+to pre-configured SNMP Managers on SNMP SET request arrival to
+*snmpsim-command-responder*.
 
 Finally, variation module API let you develop your own code in Python
 to fulfill your special needs and use your variation module with stock
@@ -80,8 +81,8 @@ the command line.
 
 Simulator will load and bootstrap all variation modules it finds. Some
 modules can accept initialization parameters (like database connection
-credentials) through *snmpsimd.py* *--variation-module-options* command-line
-parameter.
+credentials) through *snmpsim-command-responder* *--variation-module-options*
+command-line parameter.
 
 For example, the following Simulator invocation will configure its
 *sql* variation module to use sqlite database (sqlite3 Python module)
@@ -89,7 +90,7 @@ and /var/tmp/snmpsim.db database file:
 
 .. code-block:: bash
 
-    $ snmpsimd.py --variation-module-options=sql:dbtype:sqlite3,\
+    $ snmpsim-command-responder --variation-module-options=sql:dbtype:sqlite3,\
         database:/var/tmp/snmpsim.db
 
 IF you are using multiple database connections or database types
@@ -103,7 +104,8 @@ distinct database file for storing their persistent values:
 
 .. code-block:: bash
 
-    $ snmpsimd.py --variation-module-options=writecache=dbA:file:/var/tmp/fileA.db \
+    $ snmpsim-command-responder \
+        --variation-module-options=writecache=dbA:file:/var/tmp/fileA.db \
         --variation-module-options=writecache=dbB:file:/var/tmp/fileB.db
 
 The syntax for *--variation-module-options=* module configuration string is
@@ -120,7 +122,8 @@ tokens as an escaping aid:
 
 .. code-block:: bash
 
-    $ snmpsimd.py --variation-module-options=writecache:file::C:\TEMP\fileA.db
+    $ snmpsim-command-responder \
+        --variation-module-options=writecache:file::C:\TEMP\fileA.db
 
 The same separator escaping method works for module options in *.snmprec* value
 field. The only difference is that *.snmprec* value syntax uses equal sign and
@@ -418,7 +421,8 @@ used as a disk-based data store:
 
 .. code-block:: bash
 
-    $ snmpsimd.py --variation-module-options=writecache:file:/tmp/shelves.db
+    $ snmpsim-command-responder \
+        --variation-module-options=writecache:file:/tmp/shelves.db
 
 All modifed values will be kept and then subsequently used on a per-OID
 basis in the specified file. If data store file is not specified, the
@@ -584,7 +588,8 @@ Windows platform and False on all others.
 
 .. code-block:: bash
 
-    $ snmpsimd.py --variation-module-options=subprocess:shell:1
+    $ snmpsim-command-responder \
+        --variation-module-options=subprocess:shell:1
 
 Value part of *.snmprec* line should contain space-separated path
 to external program executable followed by optional command-line
@@ -773,15 +778,17 @@ For SQLite database invocation use the following command:
 
 .. code-block:: bash
 
-    $ snmpsimd.py --variation-module-options=sql:dbtype:sqlite3,database:/var/tmp/sqlite.db
+    $ snmpsim-command-responder \
+        --variation-module-options=sql:dbtype:sqlite3,database:/var/tmp/sqlite.db
 
 To use a MySQL database for OID/value storage, the following Simulator
 invocation would work:
 
 .. code-block:: bash
 
-    $ snmpsimd.py --variation-module-options=sql:dbtype:mysql.connector,\
-      host:127.0.0.1,port:3306,user:snmpsim,password:snmpsim,database:snmpsim
+    $ snmpsim-command-responder \
+        --variation-module-options=sql:dbtype:mysql.connector,\
+        host:127.0.0.1,port:3306,user:snmpsim,password:snmpsim,database:snmpsim
 
 assuming you have the
 `MySQL Connector/Python driver <href="http://dev.mysql.com/doc/refman/5.5/en/connector-python.html>`_
@@ -794,24 +801,26 @@ command-line for *.snmprec* might work:
 
 .. code-block:: bash
 
-    $ snmpsimd.py --variation-module-options=sql:dbtype:mysql.connector,
-      unix_socket:/var/run/mysql/mysql.sock,user:snmpsim,password:snmpsim,
-      database:snmpsim
+    $ snmpsim-command-responder \
+        --variation-module-options=sql:dbtype:mysql.connector,\
+            unix_socket:/var/run/mysql/mysql.sock,user:snmpsim,\
+            password:snmpsim,database:snmpsim
 
 Alternatively, the `MySQL for Python <https://sourceforge.net/projects/mysql-python/>`_ package
 can be used for Simulator to MySQL connection:
 
 .. code-block:: bash
 
-    $ snmpsimd.py --variation-module-options=sql:dbtype:MySQLdb,host:127.0.0.1,
-      port:3306,user:snmpsim,passwd:snmpsim,db:snmpsim
+    $ snmpsim-command-responder \
+        --variation-module-options=sql:dbtype:MySQLdb,host:127.0.0.1,\
+            port:3306,user:snmpsim,passwd:snmpsim,db:snmpsim
 
 If you wish to use `PostgresSQL <http://www.postgresql.org/>`_
 database for OID/value storage, the following command line will do the job:
 
 .. code-block:: bash
 
-    $ snmpsimd.py --variation-module-options=sql:dbtype:psycopg2,
+    $ snmpsim-command-responder --variation-module-options=sql:dbtype:psycopg2,
       user:snmpsim,password:snmpsim,database:snmpsim
 
 assuming you have the
@@ -876,7 +885,8 @@ Redis database connection string. The following parameters are supported:
 
 .. code-block:: bash
 
-    $ snmpsimd.py --variation-module-options=redis:host:127.0.0.1,port:6379,db:0
+    $ snmpsim-command-responder \
+        --variation-module-options=redis:host:127.0.0.1,port:6379,db:0
 
 
 SNMP variable-bindings recorded by Simulator in a single recording session is

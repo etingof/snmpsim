@@ -128,8 +128,8 @@ Recognized log levels are:
 SNMP Simulator options
 ----------------------
 
-SNMP Simulator can be run as the *snmpsimd.py* program taking the following
-command-line options.
+SNMP Simulator can be run as the *snmpsim-command-responder* program taking
+the following command-line options.
 
 **--daemonize**
 +++++++++++++++
@@ -208,8 +208,8 @@ Example:
 +++++++++++++++++++++++++
 
 Force rebuilding indices for all the .snmprec files regardless of their age and
-status. With this option, the rebuild happens on every *snmpsimd.py* process
-startup.
+status. With this option, the rebuild happens on every *snmpsim-command-responder*
+process startup.
 
 The default is off.
 
@@ -226,9 +226,9 @@ The default is off.
 **--args-from-file**
 ++++++++++++++++++++
 
-All command-line options to *snmpsimd.py* could be stored in a file and passes
-through this option. File could be easier to manage, and does not impose any
-limit on the length of the command line.
+All command-line options to *snmpsim-command-responder* could be stored in a
+file and passes through this option. File could be easier to manage, and does
+not impose any limit on the length of the command line.
 
 **--transport-id-offset**
 +++++++++++++++++++++++++
@@ -237,8 +237,9 @@ With SNMP, transport endpoints (network addresses and ports) are identified by
 OIDs. Each kind of network transport (e.g. IPv4-over-UDP) has its own OID
 prefix, while the instances of it are identified by a longer OID.
 
-When *snmpsimd.py* is asked to initialize a transport endpoint, it will take
-the prefix OID and append a single sub-OID number starting from this offset.
+When *snmpsim-command-responder* is asked to initialize a transport endpoint,
+it will take the prefix OID and append a single sub-OID number starting from
+this offset.
 
 The default is one.
 
@@ -269,7 +270,7 @@ option apply to the SNMP engine being configured.
 
 .. code-block:: bash
 
-   snmpsimd.py --v3-engine-id=0102030405070809 ...
+   snmpsim-command-responder --v3-engine-id=0102030405070809 ...
 
 .. note::
 
@@ -402,7 +403,7 @@ engines created afterwards (by *--v3-engine-id* option) up to the next
 
 .. code-block:: bash
 
-   $ snmpsimd.py --agent-udpv4-endpoint=127.0.0.1:161
+   $ snmpsim-command-responder --agent-udpv4-endpoint=127.0.0.1:161
 
 .. note::
 
@@ -420,7 +421,7 @@ engines created afterwards (by *--v3-engine-id* option) up to the next
 
 .. code-block:: bash
 
-   $ snmpsimd.py --agent-udpv4-endpoint=[::1]:161
+   $ snmpsim-command-responder --agent-udpv4-endpoint=[::1]:161
 
 .. note::
 

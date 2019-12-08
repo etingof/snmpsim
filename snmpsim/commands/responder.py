@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 #
 # This file is part of snmpsim software.
 #
@@ -61,7 +60,7 @@ from snmpsim.record.search.file import getRecord
 from snmpsim.record.search.file import searchRecordByOid
 from snmpsim.record.search.database import RecordIndex
 
-PROGRAM_NAME = 'snmpsimd'
+PROGRAM_NAME = 'snmp-command-responder'
 
 AUTH_PROTOCOLS = {
     'MD5': config.usmHMACMD5AuthProtocol,
@@ -731,7 +730,7 @@ def main():
     transportIdOffset = 0
     v2cArch = False
     v3Only = False
-    pidFile = '/var/run/snmpsim/snmpsimd.pid'
+    pidFile = '/var/run/snmpsim/%s.pid' % PROGRAM_NAME
     foregroundFlag = True
     procUser = procGroup = None
     loggingMethod = ['stderr']
@@ -800,13 +799,15 @@ Software documentation and support at http://snmplabs.com/snmpsim
 
         elif opt[0] in ('--debug', '--debug-snmp'):
             pysnmp_debug.setLogger(
-                pysnmp_debug.Debug(*opt[1].split(','),
-                                   **dict(loggerName='snmpsimd.pysnmp')))
+                pysnmp_debug.Debug(
+                    *opt[1].split(','),
+                    **dict(loggerName='%s.pysnmp' % PROGRAM_NAME)))
 
         elif opt[0] == '--debug-asn1':
             pyasn1_debug.setLogger(
-                pyasn1_debug.Debug(*opt[1].split(','),
-                                   **dict(loggerName='snmpsimd.pyasn1')))
+                pyasn1_debug.Debug(
+                    *opt[1].split(','),
+                    **dict(loggerName='%s.pyasn1' % PROGRAM_NAME)))
 
         elif opt[0] == '--daemonize':
             foregroundFlag = False

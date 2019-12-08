@@ -20,12 +20,13 @@ The easiest way to deploy SNMP Simulator is by downloading it from PyPI:
 Run SNMP simulation
 -------------------
 
-Once installed, invoke *snmpsimd.py* daemon and point it to a directory containing
-simulation data:
+Once installed, invoke *snmpsim-command-responder* daemon and point it to a
+directory containing simulation data:
 
 .. code-block:: bash
 
-   $ snmpsimd.py --data-dir=./data --agent-udpv4-endpoint=127.0.0.1:1024
+   $ snmpsim-command-responder --data-dir=./data \
+        --agent-udpv4-endpoint=127.0.0.1:1024
 
 Test the setup
 --------------
@@ -71,7 +72,8 @@ as a donor device:
 
 .. code-block:: bash
 
-   $ snmprec.py --agent-udpv4-endpoint=demo.snmplabs.com --output-file=./data/public.snmprec
+   $ snmpsim-record-commands --agent-udpv4-endpoint=demo.snmplabs.com \
+        --output-file=./data/public.snmprec
    SNMP version 2c, Community name: public
    Querying UDP/IPv4 agent at 195.218.195.228:161
    Agent response timeout: 3.00 secs, retries: 3
@@ -85,7 +87,8 @@ Alternatively, you could build simulation data from a MIB file:
 
 .. code-block:: bash
 
-   $ mib2dev.py --output-file=./data/public.snmprec --mib-module=IF-MIB
+   $ snmpsim-record-mibs --output-file=./data/public.snmprec \
+        --mib-module=IF-MIB
    # MIB module: IF-MIB, from the beginning till the end
    # Starting table IF-MIB::ifTable (1.3.6.1.2.1.2.2)
    # Synthesizing row #1 of table 1.3.6.1.2.1.2.2.1

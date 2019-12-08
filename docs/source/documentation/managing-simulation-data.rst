@@ -52,21 +52,22 @@ Valid tag values and their corresponding ASN.1/SNMP types are:
 
 Besides plain-text form, compressed *.snmprec.bz2* files are also supported.
 
-.. _datafile.py:
+.. _snmpsim-manage-records:
 
 Managing data files
 -------------------
 
-The *datafile.py* tool is designed to perform a few handy operations
+The *snmpsim-manage-records* tool is designed to perform a few handy operations
 on the data files.
 
 If you possess *.snmpwalk* or *.sapwalk* snapshots and wish to convert them
 into Simulator's native *.snmprec* data file format (what can be required
-for using variation modules), run the *datafile.py* tool like this:
+for using variation modules), run the *snmpsim-manage-records* tool like this:
 
 .. code-block:: bash
 
-    $ datafile.py --input-file=linux.snmpwalk --source-record-type=snmpwalk
+    $ snmpsim-manage-records --input-file=linux.snmpwalk \
+        --source-record-type=snmpwalk
     1.3.6.1.2.1.1.1.0|4|Linux cray 2.6.37.6-smp #2 SMP Sat Apr 9 23:39:07 CDT 2011 i686
     1.3.6.1.2.1.1.2.0|6|1.3.6.1.4.1.8072.3.2.10
     1.3.6.1.2.1.1.3.0|67|121722922
@@ -82,12 +83,12 @@ for using variation modules), run the *datafile.py* tool like this:
 
 SNMP Simulator requires data files to be sorted (by OID) and containing no
 duplicate OIDs. In case your data file does not comply with these requirements
-for some reason, you could pass it through the *datafile.py* tool to
+for some reason, you could pass it through the *snmpsim-manage-records* tool to
 fix data file:
 
 .. code-block:: bash
 
-    $ datafile.py --input-file=tcp-mib.snmprec --sort-records
+    $ snmpsim-manage-records --input-file=tcp-mib.snmprec --sort-records
       --ignore-broken-records --deduplicate-records
     1.3.6.1.2.1.6.1.0|2|1
     1.3.6.1.2.1.6.2.0|2|4
@@ -100,13 +101,13 @@ fix data file:
     # Records: written 33, filtered out 0, deduplicated 0, broken 0, variated 0
 
 If you have a huge data file and wish to use just a part of it for
-simulation purposes, datafile.py tool could cut a slice form a data file
-and store records in a new one:
+simulation purposes, snmpsim-manage-records tool could cut a slice form a
+data file and store records in a new one:
 
 .. code-block:: bash
 
-    $ datafile.py --input-file=tcp-mib.snmprec --start-oid=1.3.6.1.2.1.6.13
-      --stop-oid=1.3.6.1.2.1.6.14
+    $ snmpsim-manage-records --input-file=tcp-mib.snmprec \
+        --start-oid=1.3.6.1.2.1.6.13 --stop-oid=1.3.6.1.2.1.6.14
     1.3.6.1.2.1.6.13.1.1.72.192.51.208.2.234.233.215.7.3|2|1
     1.3.6.1.2.1.6.13.1.2.72.192.51.208.2.234.233.215.7.3|64x|8b896863
     1.3.6.1.2.1.6.13.1.3.72.192.51.208.2.234.233.215.7.3|2|3
@@ -118,8 +119,9 @@ Merge of multiple data files into a single data file is also supported:
 
 .. code-block:: bash
 
-    $ datafile.py --input-file=tcp-mib.snmprec --input-file=udp-mib.snmprec
-      --sort-records --deduplicate-records
+    $ snmpsim-manage-records --input-file=tcp-mib.snmprec \
+        --input-file=udp-mib.snmprec --sort-records \
+        --deduplicate-records
     1.3.6.1.2.1.6.1.0|2|1
     1.3.6.1.2.1.6.2.0|2|4
     1.3.6.1.2.1.6.3.0|2|2
@@ -132,15 +134,15 @@ Merge of multiple data files into a single data file is also supported:
 Having string values more human-readable may be more convenient in the
 course of adjusting simulation data, debugging etc. By default, strings in
 simulation data are hexified. By passing such *.snmprec* file through
-the *datafile.py --escaped-strings* call, you can convert your *.snmprec*
-data into Python string literal representation:
+the *snmpsim-manage-records --escaped-strings* call, you can convert your
+*.snmprec* data into Python string literal representation:
 
 .. code-block:: bash
 
     $ head data/sample.snmprec
     1.3.6.1.2.1.55.1.5.1.8.2|4x|00127962f940
     $
-    $ datafile.py --source-record-type=snmprec  --input-file=data/sample.snmprec
-        --escaped-strings
+    $ snmpsim-manage-records --source-record-type=snmprec  \
+        --input-file=data/sample.snmprec --escaped-strings
     1.3.6.1.2.1.55.1.5.1.8.2|4e|\x00\x12yb\xf9@
     # Records: written 1, filtered out 0, deduplicated 0, broken 0, variated 0

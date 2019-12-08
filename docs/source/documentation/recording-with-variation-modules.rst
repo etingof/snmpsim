@@ -11,9 +11,10 @@ and so on. To facilitate capturing such information, some of the stock
 variation modules support snapshots recording mode.
 
 To invoke a variation module while recording SNMP Agent with
-the :ref:`snmprec.py <snmprec.py>` tool, pass its name via the *--variation-module*
-command-line option. Additional variation module parameters could also be passed
-through the *--variation-module-options* switch.
+the :ref:`snmpsim-record-commands <snmpsim-record-commands>` tool, pass its
+name via the *--variation-module* command-line option. Additional variation
+module parameters could also be passed through the
+*--variation-module-options* switch.
 
 The following standard modules support the recording feature:
 
@@ -66,11 +67,12 @@ options whilst running in recording mode:
 Examples
 ++++++++
 
-In the examples the :ref:`snmprec.py <snmprec.py>` tool will be used.
+In the examples the :ref:`snmpsim-record-commands <snmpsim-record-commands>`
+tool will be used.
 
 .. code-block:: bash
 
-    $ snmprec.py --agent-udpv4-endpoint=demo.snmplabs.com \
+    $ snmpsim-record-commands --agent-udpv4-endpoint=demo.snmplabs.com \
       --start-oid=1.3.6.1.2.1.2 --stop-oid=1.3.6.1.2.1.3 \
       --variation-module=numeric \
       --variation-module-options=taglist:65,iterations:2,period:15 \
@@ -116,7 +118,7 @@ Examples
 
 .. code-block:: bash
 
-    $ snmprec.py --agent-udpv4-endpoint=demo.snmplabs.com \
+    $ snmpsim-record-commands --agent-udpv4-endpoint=demo.snmplabs.com \
       --start-oid=1.3.6.1.2.1.2 --stop-oid=1.3.6.1.2.1.3 \
       --variation-module=delay
     Scanning "/usr/local/share/snmpsim/variation" directory for variation
@@ -166,7 +168,7 @@ Examples
 
 .. code-block:: bash
 
-    $ snmprec.py --agent-udpv4-endpoint=demo.snmplabs.com \
+    $ snmpsim-record-commands --agent-udpv4-endpoint=demo.snmplabs.com \
       --start-oid=1.3.6.1.2.1.2 --stop-oid=1.3.6.1.2.1.3 \
       --output-file=data/multiplex.snmprec \
       --variation-module=multiplex \
@@ -220,7 +222,7 @@ Running with SQLite DB backend:
 
 .. code-block:: bash
 
-    $ snmprec.py --agent-udpv4-endpoint=demo.snmplabs.com
+    $ snmpsim-record-commands --agent-udpv4-endpoint=demo.snmplabs.com
       --start-oid=1.3.6.1.2.1.2 --stop-oid=1.3.6.1.2.1.3
       --output-file=data/sql.snmprec
       --variation-module=sql
@@ -262,12 +264,13 @@ following contents:
     up to 8 spaces (must be 10 chars in total) to make the ordering work
     properly with standard SQL sorting.
 
-The following :ref:`snmprec.py <snmprec.py>` call push snapshots into
-MySQL database using native MySQL's Connector/Python driver:
+The following :ref:`snmpsim-record-commands <snmpsim-record-commands>` call
+push snapshots into MySQL database using native MySQL's Connector/Python
+driver:
 
 .. code-block:: bash
 
-    $ snmprec.py --agent-udpv4-endpoint=demo.snmplabs.com \
+    $ snmpsim-record-commands --agent-udpv4-endpoint=demo.snmplabs.com \
       --output-file=data/sql.snmprec \
       --variation-module=sql \
       --variation-module-options=dbtype:mysql.connector,host:127.0.0.1, \
@@ -281,11 +284,12 @@ for creating new tables.
 
 Another variation of MySQL server installation setup on a UNIX system employs
 UNIX domain socket for client-server communication. In that case the following
-command-line for :ref:`snmprec.py <snmprec.py>` might work:
+command-line for :ref:`snmpsim-record-commands <snmpsim-record-commands>`
+might work:
 
 .. code-block:: bash
 
-    $ snmprec.py --agent-udpv4-endpoint=demo.snmplabs.com \
+    $ snmpsim-record-commands --agent-udpv4-endpoint=demo.snmplabs.com \
       --output-file=data/sql.snmprec \
       --variation-module=sql
       --variation-module-options=dbtype:mysql.connector,unix_socket: \
@@ -296,7 +300,7 @@ package could be used for SNMP Simulator's MySQL connection:
 
 .. code-block:: bash
 
-    $ snmprec.py --agent-udpv4-endpoint=demo.snmplabs.com \
+    $ snmpsim-record-commands --agent-udpv4-endpoint=demo.snmplabs.com \
       --output-file=data/sql.snmprec \
       --variation-module=sql \
       --variation-module-options=dbtype:MySQLdb,host:127.0.0.1,port:3306, \
@@ -307,7 +311,7 @@ as a backend data store:
 
 .. code-block:: bash
 
-    $ snmprec.py --agent-udpv4-endpoint=demo.snmplabs.com \
+    $ snmpsim-record-commands --agent-udpv4-endpoint=demo.snmplabs.com \
       --output-file=data/sql.snmprec \
       --variation-module=sql \
       --variation-module-options=dbtype:psycopg2,database:snmpsim,user:snmpsim, \
@@ -366,7 +370,7 @@ SNMP Agent:
 
 .. code-block:: bash
 
-    $ snmprec.py --agent-udpv4-endpoint=demo.snmplabs.com \
+    $ snmpsim-record-commands --agent-udpv4-endpoint=demo.snmplabs.com \
       --start-oid=1.3.6.1.2.1.2 --stop-oid=1.3.6.1.2.1.3 \
       --output-file=data/redis.snmprec \
       --variation-module=redis \

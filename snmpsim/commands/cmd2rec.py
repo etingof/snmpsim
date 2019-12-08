@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 #
 # This file is part of snmpsim software.
 #
@@ -168,7 +167,7 @@ class CompressedSnmprecRecord(
 
 RECORD_TYPES[CompressedSnmprecRecord.ext] = CompressedSnmprecRecord()
 
-PROGRAM_NAME = 'snmprec'
+PROGRAM_NAME = 'snmpsim-record-commands'
 
 
 def main():
@@ -271,12 +270,14 @@ Software documentation and support at http://snmplabs.com/snmpsim
         elif opt[0] in ('--debug', '--debug-snmp'):
             pysnmp_debug.setLogger(
                 pysnmp_debug.Debug(
-                    *opt[1].split(','), **dict(loggerName='snmprec.pysnmp')))
+                    *opt[1].split(','),
+                    **dict(loggerName='%s.pysnmp' % PROGRAM_NAME)))
 
         elif opt[0] == '--debug-asn1':
             pyasn1_debug.setLogger(
                 pyasn1_debug.Debug(
-                    *opt[1].split(','), **dict(loggerName='snmprec.pyasn1')))
+                    *opt[1].split(','),
+                    **dict(loggerName='%s.pyasn1' % PROGRAM_NAME)))
 
         elif opt[0] == '--logging-method':
             loggingMethod = opt[1].split(':')
