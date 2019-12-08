@@ -46,7 +46,7 @@ by the Simulator on startup for each endpoint it is listening on.
 
 .. code-block:: bash
 
-    $ snmpsimd.py --agent-udpv4-endpoint=127.0.0.1:1024 \
+    $ snmpsim-command-responder --agent-udpv4-endpoint=127.0.0.1:1024 \
         --agent-udpv6-endpoint='[::1]:1161'
     ...
     SNMPv3 credentials:
@@ -127,11 +127,12 @@ read from the snapshot file being pointed to:
     $ ls -l private.snmprec
     lrwxrwxrwx 1 root users 14 Apr  5 20:58 private.snmprec -> public.snmprec
 
-Shared device files are mentioned explicitly on *snmpsimd.py* startup:
+Shared device files are mentioned explicitly on *snmpsim-command-responder*
+startup:
 
 .. code-block:: bash
 
-    $ snmpsimd.py --agent-udpv4-endpoint=127.0.0.1:1161
+    $ snmpsim-command-responder --agent-udpv4-endpoint=127.0.0.1:1161
     Scanning "/home/root/.snmpsim/variation" directory for variation modules...
       no directory
     Scanning "/usr/local/share/snmpsim/variation" directory for variation modules...

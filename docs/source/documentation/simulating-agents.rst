@@ -4,8 +4,8 @@
 Simulating SNMP Agents
 ======================
 
-The *snmpsimd.py* program performs actual SNMP agent simulation based on the simulation
-data provided.
+The *snmpsim-command-responder* program performs actual SNMP agent simulation
+based on the simulation data provided.
 
 .. _simulation-data-location:
 
@@ -58,16 +58,16 @@ For example, a set up collection of *.snmprec* files would look like:
     `--v3-engine-id` option), then custom data directories will override the
     default search path.
 
-.. _snmpsimd.py:
+.. _snmpsim-command-responder:
 
 SNMP Simulator daemon
 ---------------------
 
-The *snmpsimd.py* tool hosts multiple independent SNMP Command Responders.
-It can run multiple SNMP engines exchanging data over multiple network interfaces.
-Each SNMP engine instance can serve many independent sets of SNMP management
-objects (MIBs) sourced from :ref:`local .snmprec files <snmprec>`
-or :ref:`variation modules <simulation-with-variation-modules>`.
+The *snmpsim-command-responder* tool hosts multiple independent SNMP Command
+Responders. It can run multiple SNMP engines exchanging data over multiple
+network interfaces. Each SNMP engine instance can serve many independent sets
+of SNMP management objects (MIBs) sourced from :ref:`local .snmprec files
+<snmprec>` or :ref:`variation modules <simulation-with-variation-modules>`.
 
 .. _multiple-listen-interfaces:
 
@@ -84,7 +84,7 @@ newline-separated list of transport endpoints for Simulator to listen on.
 
 .. code-block:: bash
 
-    $ snmpsimd.py --agent-udpv4-endpoint=127.0.0.1:1024 \
+    $ snmpsim-command-responder --agent-udpv4-endpoint=127.0.0.1:1024 \
         --agent-udpv6-endpoint='[::1]:1161'
     Scanning "/home/user/.snmpsim/variation" directory for variation modules...
     no directory
@@ -140,7 +140,7 @@ newline-separated list of transport endpoints for Simulator to listen on.
 .. note::
 
     An unprivileged port *1024* has been chosen in this example to avoid
-    running *snmpsimd.py* process as root.
+    running *snmpsim-command-responder* process as root.
 
 By this point you can run you favorite SNMP Manager to talk to either
 of the two simulated devices through whatever transport you prefer.
@@ -198,7 +198,7 @@ different data files e.g. simulated SNMP agents.
 
 .. code-block:: bash
 
-    $ snmpsimd.py --agent-udpv4-endpoint=127.0.0.1  \
+    $ snmpsim-command-responder --agent-udpv4-endpoint=127.0.0.1  \
       --v3-user=wallace --v3-auth-key=testkey123 --v3-priv-key=testkey839 \
       --v3-user=gromit --v3-auth-key=testkey564 --v3-priv-key=testkey6534
     Scanning "/home/user/.snmpsim/variation" directory for variation modules...
@@ -280,7 +280,8 @@ command line.
 
 .. code-block:: bash
 
-    $ snmpsimd.py --agent-udpv4-endpoint=127.0.0.1 --v3-engine-id=010203040505060809
+    $ snmpsim-command-responder --agent-udpv4-endpoint=127.0.0.1 \
+        --v3-engine-id=010203040505060809
     Scanning "/home/user/.snmpsim/variation" directory for variation modules...
     ...
     SNMPv3 EngineID 0x010203040505060809
@@ -315,7 +316,7 @@ options.  For example:
 
 .. code-block:: bash
 
-    $ snmpsimd.py \
+    $ snmpsim-command-responder \
       --v3-engine-id=010203040505060809 \
       --v3-user=wallace --v3-auth-key=testkey123 \
       --agent-udpv4-endpoint=127.0.0.1:1161 \
@@ -351,7 +352,7 @@ non-privileged UNIX user and group to switch into upon port allocation:
 
 .. code-block:: bash
 
-    # snmpsimd.py --agent-udpv4-endpoint=127.0.0.1:161 \
+    # snmpsim-command-responder --agent-udpv4-endpoint=127.0.0.1:161 \
         --process-user=simulator --process-group=simulator
 
 On UNIX systems Simulator can be run as a daemon. Make sure to re-direct
@@ -359,7 +360,7 @@ its console output into syslog:
 
 .. code-block:: bash
 
-    # snmpsimd.py --agent-udpv4-endpoint=127.0.0.1:161 \
+    # snmpsim-command-responder --agent-udpv4-endpoint=127.0.0.1:161 \
         --process-user=simulator --process-group=simulator \
         --daemonize --logging-method=syslog:local1:debug
 
@@ -373,7 +374,7 @@ server over TCP or UDP:
 
 .. code-block:: bash
 
-    # snmpsimd.py --agent-udpv4-endpoint=127.0.0.1:161 \
+    # snmpsim-command-responder --agent-udpv4-endpoint=127.0.0.1:161 \
         --process-user=simulator --process-group=simulator \
         --daemonize --logging-method=syslog:local1:debug:192.168.1.1:514:udp
 
@@ -381,7 +382,7 @@ Finally, Simulator can simply log to a local log file:
 
 .. code-block:: bash
 
-    # snmpsimd.py --agent-udpv4-endpoint=127.0.0.1:161 \
+    # snmpsim-command-responder --agent-udpv4-endpoint=127.0.0.1:161 \
         --process-user=simulator --process-group=simulator \
         --daemonize --logging-method=file:/var/log/snmpsimd.log
 

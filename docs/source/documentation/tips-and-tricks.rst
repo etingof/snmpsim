@@ -21,16 +21,17 @@ request processing what may cause subsequent requests to build up in
 input queue and contribute to increasing latency.
 
 A simple receipt aimed at maximizing throughput and minimizing latency is
-to run multiple instances of the *snmpsimd.py* bound to distinct IP
-interfaces or ports what effectively makes SNMP Simulator executing multiple requests
-at once for as long as they are sent towards different *snmpsimd.py* instances.
+to run multiple instances of the *snmpsim-command-responder* bound to distinct
+IP interfaces or ports what effectively makes SNMP Simulator executing multiple
+requests at once for as long as they are sent towards different
+*snmpsim-command-responder* instances.
 
-Here is how we invoke two *snmpsimd.py* instances at different IP interfaces
-serving the same set of data files:
+Here is how we invoke two *snmpsim-command-responder* instances at different IP
+interfaces serving the same set of data files:
 
 .. code-block:: bash
 
-    # snmpsimd.py --agent-udpv4-endpoint=127.0.0.1 \
+    # snmpsim-command-responder --agent-udpv4-endpoint=127.0.0.1 \
                   --agent-udpv4-endpoint=127.0.0.2 \
                   --transport-id-offset=1 \
                   --data-dir=/usr/local/share/snmpsim/data \
@@ -38,7 +39,7 @@ serving the same set of data files:
                   --v2c-arch \
                   --process-user=nobody --process-group=nogroup \
                   --daemonize &&
-    # snmpsimd.py --agent-udpv4-endpoint=127.0.0.3 \
+    # snmpsim-command-responder --agent-udpv4-endpoint=127.0.0.3 \
                   --agent-udpv4-endpoint=127.0.0.4 \
                   --transport-id-offset=3 \
                   --data-dir=/usr/local/share/snmpsim/data \
@@ -49,11 +50,13 @@ serving the same set of data files:
 
 Several things to note here:
 
-* The *snmpsimd.py* instances share common data directory however use
-  their own, dedicated cache directories.
-* Each *snmpsimd.py* instance is listening on multiple IP interfaces
-  (for the purpose of :ref:`address-based <addressing-simulation-data>`
-  simulation)
+* The *snmpsim-command-responder* instances share common data directory
+  however use their own, dedicated cache directories.
+
+* Each *snmpsim-command-responder* instance is listening on multiple IP
+  interfaces (for the purpose of
+  :ref:`address-based <addressing-simulation-data>` simulation)
+
 * The transport ID's are configured explicitly making the following
   *--data-dir* layout possible:
 
@@ -98,11 +101,11 @@ for Simulator to listen on.
     --agent-udpv4-endpoint=127.0.0.3:161
     ...
     --agent-udpv4-endpoint=127.0.1.254:161
-    # snmpsimd.py --args-from-file=ips.txt \
-                  --data-dir=/usr/local/share/snmpsim/data \
-                  --v2c-arch \
-                  --process-user=nobody --process-group=nogroup \
-                  --daemonize &
+    # snmpsim-command-responder --args-from-file=ips.txt \
+          --data-dir=/usr/local/share/snmpsim/data \
+          --v2c-arch \
+          --process-user=nobody --process-group=nogroup \
+          --daemonize &
 
 .. note::
 
@@ -153,8 +156,8 @@ operations slower that SNMPv1/v2c ones. The SNMP Simulator can run
 faster when it uses a much lighter and lower-level SNMPv1/v2c architecture
 at the expense of not supporting v3 operations.
 
-Use the *--v2c-arch* command line parameter to switch *snmpsimd.py* into
-SNMPv1/v2c operation mode.
+Use the *--v2c-arch* command line parameter to switch *snmpsim-command-responder*
+into SNMPv1/v2c operation mode.
 
 .. _tips-quick-startup:
 

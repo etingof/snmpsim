@@ -2,7 +2,7 @@
 
 set -e
 
-python scripts/snmprec.py --agent-udpv4-endpoint=demo.snmplabs.com
+snmpsim-record-commands --agent-udpv4-endpoint=demo.snmplabs.com
 # this fails with new pysnmp's TEXTUAL-CONVENTION parser
-# python scripts/mib2dev.py --mib-module=IF-MIB
-python scripts/mib2dev.py --mib-module=SNMPv2-MIB
+# snmpsim-record-mibs --mib-module=IF-MIB
+snmpsim-record-mibs --mib-module=SNMPv2-MIB
