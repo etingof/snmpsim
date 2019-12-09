@@ -27,9 +27,6 @@ License :: OSI Approved :: BSD License
 Natural Language :: English
 Operating System :: OS Independent
 Programming Language :: Python :: 2
-Programming Language :: Python :: 2.4
-Programming Language :: Python :: 2.5
-Programming Language :: Python :: 2.6
 Programming Language :: Python :: 2.7
 Programming Language :: Python :: 3
 Programming Language :: Python :: 3.2
@@ -57,8 +54,8 @@ def howto_install_setuptools():
 """)
 
 
-if sys.version_info[:2] < (2, 4):
-    print("ERROR: this package requires Python 2.4 or later!")
+if sys.version_info[:2] < (2, 7):
+    print("ERROR: this package requires Python 2.7 or later!")
     sys.exit(1)
 
 try:
@@ -77,9 +74,7 @@ except ImportError:
 
     from distutils.core import setup
 
-    params = {}
-    if sys.version_info[:2] > (2, 4):
-        params['requires'] = ['pysnmp(>=4.4.3,<5.0.0)']
+    params = {'requires': ['pysnmp(>=4.4.3,<5.0.0)']}
 
 doclines = [x.strip() for x in (__doc__ or '').split('\n') if x]
 

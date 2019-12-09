@@ -85,9 +85,8 @@ class SyslogLogger(AbstractLogger):
                 socktype=(len(priv) > 4 and priv[4] == 'tcp' and
                           socket.SOCK_STREAM or socket.SOCK_DGRAM))
 
-        except Exception:
-            raise SnmpsimError(
-                'Bad syslog option(s): %s' % sys.exc_info()[1])
+        except Exception as exc:
+            raise SnmpsimError('Bad syslog option(s): %s' % exc)
 
         handler.setFormatter(
             logging.Formatter('%(asctime)s %(name)s: %(message)s'))
@@ -136,7 +135,7 @@ class FileLogger(AbstractLogger):
 
                 self._failure = False
 
-            except IOError:
+            except IOError as exc:
                 # File rotation seems to fail, postpone the next run
                 timestamp = time.time()
                 self.rolloverAt = self.computeRollover(timestamp)
@@ -144,7 +143,7 @@ class FileLogger(AbstractLogger):
                 if not self._failure:
                     self._failure = True
                     error('Failed to rotate log/timestamp file '
-                          '%s: %s' % (self._filename, sys.exc_info()[1]))
+                          '%s: %s' % (self._filename, exc))
 
     def init(self, *priv):
         if not priv:
@@ -202,9 +201,8 @@ class FileLogger(AbstractLogger):
             else:
                 handler = handlers.WatchedFileHandler(priv[0])
 
-        except Exception:
-            raise SnmpsimError(
-                'Failure configure logging: %s' % sys.exc_info()[1])
+        except Exception as exc:
+            raise SnmpsimError('Failure configure logging: %s' % exc)
 
         handler.setFormatter(logging.Formatter('%(message)s'))
 
@@ -229,8 +227,8 @@ class StreamLogger(AbstractLogger):
         try:
             handler = logging.StreamHandler(self.stream)
 
-        except AttributeError:
-            raise SnmpsimError('Stream logger failure: %s' % sys.exc_info()[1])
+        except AttributeError as exc:
+            raise SnmpsimError('Stream logger failure: %s' % exc)
 
         handler.setFormatter(logging.Formatter('%(message)s'))
 

@@ -26,7 +26,7 @@ from pyasn1.codec.ber import decoder
 from pyasn1.error import PyAsn1Error
 from pyasn1.type import univ
 from pysnmp import debug as pysnmp_debug
-from pysnmp.carrier.asynsock.dgram import udp
+from pysnmp.carrier.asyncore.dgram import udp
 from pysnmp.error import PySnmpError
 from pysnmp.proto import api
 from pysnmp.proto.rfc1902 import Bits
@@ -48,7 +48,7 @@ from snmpsim.record import sap
 from snmpsim.record import snmprec
 from snmpsim.record import walk
 
-PROGRAM_NAME = 'snmpsim-record-traffic'
+PROGRAM_NAME = os.path.basename(sys.argv[0])
 
 RECORD_TYPES = {
     dump.DumpRecord.ext: dump.DumpRecord(),
@@ -166,10 +166,9 @@ def main():
              'variation-modules-dir=', 'variation-module=',
              'variation-module-options='])
 
-    except Exception:
+    except Exception as exc:
         sys.stderr.write(
-            'ERROR: %s\r\n'
-            '%s\r\n' % (sys.exc_info()[1], HELP_MESSAGE))
+            'ERROR: %s\r\n%s\r\n' % (exc, HELP_MESSAGE))
         return 1
 
     if params:
@@ -267,9 +266,9 @@ Software documentation and support at http://snmplabs.com/snmpsim
             try:
                 transportIdOffset = max(0, int(opt[1]))
 
-            except Exception:
+            except Exception as exc:
                 sys.stderr.write(
-                    'ERROR: %s\r\n%s\r\n' % (sys.exc_info()[1], HELP_MESSAGE))
+                    'ERROR: %s\r\n%s\r\n' % (exc, HELP_MESSAGE))
                 return 1
 
         elif opt[0] == '--listen-interface':
@@ -293,12 +292,6 @@ Software documentation and support at http://snmplabs.com/snmpsim
         elif opt[0] == '--variation-module-options':
             variationModuleOptions = opt[1]
 
-    if params:
-        sys.stderr.write(
-            'ERROR: extra arguments supplied %s\r\n'
-            '%s\r\n' % (params, HELP_MESSAGE))
-        return 1
-
     if not pcap:
         sys.stderr.write(
             'ERROR: pylibpcap package is missing!\r\nGet it by running `pip install '
@@ -312,9 +305,8 @@ Software documentation and support at http://snmplabs.com/snmpsim
         if loggingLevel:
             log.setLevel(loggingLevel)
 
-    except error.SnmpsimError:
-        sys.stderr.write(
-            '%s\r\n%s\r\n' % (sys.exc_info()[1], HELP_MESSAGE))
+    except error.SnmpsimError as exc:
+        sys.stderr.write('%s\r\n%s\r\n' % (exc, HELP_MESSAGE))
         sys.exit(1)
 
     if (isinstance(startOID, rfc1902.ObjectIdentity) or
@@ -333,8 +325,8 @@ Software documentation and support at http://snmplabs.com/snmpsim
             if isinstance(stopOID, rfc1902.ObjectIdentity):
                 stopOID.resolveWithMib(mibViewController)
 
-        except PySnmpError:
-            sys.stderr.write('ERROR: %s\r\n' % sys.exc_info()[1])
+        except PySnmpError as exc:
+            sys.stderr.write('ERROR: %s\r\n' % exc)
             return 1
 
     # Load variation module
@@ -363,9 +355,9 @@ Software documentation and support at http://snmplabs.com/snmpsim
                 else:
                     execfile(mod, ctx)
 
-            except Exception:
+            except Exception as exc:
                 log.error('Variation module "%s" execution '
-                          'failure: %s' % (mod, sys.exc_info()[1]))
+                          'failure: %s' % (mod, exc))
                 return 1
 
             else:
@@ -394,9 +386,9 @@ Software documentation and support at http://snmplabs.com/snmpsim
             handler(options=variationModuleOptions, mode='recording',
                     startOID=startOID, stopOID=stopOID)
 
-        except Exception:
+        except Exception as exc:
             log.error('Variation module "%s" initialization '
-                      'FAILED: %s' % (variationModuleName, sys.exc_info()[1]))
+                      'FAILED: %s' % (variationModuleName, exc))
 
         else:
             log.info('Variation module "%s" '
@@ -413,10 +405,10 @@ Software documentation and support at http://snmplabs.com/snmpsim
         try:
             pcapObj.open_live(listenInterface, 65536, promiscuousMode, 1000)
 
-        except Exception:
+        except Exception as exc:
             log.error(
                 'Error opening interface %s for snooping: '
-                '%s' % (listenInterface, sys.exc_info()[1]))
+                '%s' % (listenInterface, exc))
             return 1
 
     elif captureFile:
@@ -426,9 +418,9 @@ Software documentation and support at http://snmplabs.com/snmpsim
         try:
             pcapObj.open_offline(captureFile)
 
-        except Exception:
+        except Exception as exc:
             log.error('Error opening capture file %s for reading: '
-                      '%s' % (captureFile, sys.exc_info()[1]))
+                      '%s' % (captureFile, exc))
             return 1
 
     else:
@@ -580,8 +572,6 @@ Software documentation and support at http://snmplabs.com/snmpsim
 
         handleSnmpMessage(parsePacket(data), timestamp)
 
-    exc_info = None
-
     try:
         if listenInterface:
             log.info(
@@ -603,146 +593,142 @@ Software documentation and support at http://snmplabs.com/snmpsim
     except (TypeError, KeyboardInterrupt):
         log.info('Shutting down process...')
 
-    except Exception:
-        exc_info = sys.exc_info()
+    finally:
+        dataFileHandler = SnmprecRecord()
 
-    dataFileHandler = SnmprecRecord()
+        for context in contexts:
+            ext = os.path.extsep + RECORD_TYPES[dstRecordType].ext
 
-    for context in contexts:
-        ext = os.path.extsep + RECORD_TYPES[dstRecordType].ext
+            filename = os.path.join(outputDir, context + ext)
 
-        filename = os.path.join(outputDir, context + ext)
+            if verboseFlag:
+                log.info(
+                    'Creating simulation context %s at '
+                    '%s' % (context, filename))
 
-        if verboseFlag:
-            log.info('Creating simulation context %s at %s' % (context, filename))
+            try:
+                os.mkdir(os.path.dirname(filename))
 
-        try:
-            os.mkdir(os.path.dirname(filename))
+            except OSError:
+                pass
 
-        except OSError:
-            pass
+            try:
+                outputFile = RECORD_TYPES[dstRecordType].open(filename, 'wb')
 
-        try:
-            outputFile = RECORD_TYPES[dstRecordType].open(filename, 'wb')
+            except IOError as exc:
+                log.error('writing %s: %s' % (filename, exc))
+                return 1
 
-        except IOError:
-            log.error('writing %s: %s' % (filename, sys.exc_info()[1]))
-            return 1
+            count = total = iteration = 0
+            timeOffset = 0
+            reqTime = time.time()
 
-        count = total = iteration = 0
-        timeOffset = 0
-        reqTime = time.time()
+            oids = sorted(contexts[context])
+            oids.append(oids[-1])  # duplicate last OID to trigger stopFlag
 
-        oids = sorted(contexts[context])
-        oids.append(oids[-1])  # duplicate last OID to trigger stopFlag
+            while True:
+                for oid in oids:
 
-        while True:
-            for oid in oids:
+                    timeline, values = contexts[context][oid]
 
-                timeline, values = contexts[context][oid]
+                    value = values[
+                        min(len(values) - 1,
+                            bisect.bisect_left(timeline, timeOffset))
+                    ]
 
-                value = values[
-                    min(len(values) - 1,
-                        bisect.bisect_left(timeline, timeOffset))
-                ]
+                    if value.tagSet in (rfc1905.NoSuchObject.tagSet,
+                                        rfc1905.NoSuchInstance.tagSet,
+                                        rfc1905.EndOfMibView.tagSet):
+                        stats['SNMP exceptions'] += 1
+                        continue
 
-                if value.tagSet in (rfc1905.NoSuchObject.tagSet,
-                                    rfc1905.NoSuchInstance.tagSet,
-                                    rfc1905.EndOfMibView.tagSet):
-                    stats['SNMP exceptions'] += 1
-                    continue
+                    # remove value enumeration
 
-                # remove value enumeration
+                    if value.tagSet == Integer32.tagSet:
+                        value = Integer32(value)
 
-                if value.tagSet == Integer32.tagSet:
-                    value = Integer32(value)
+                    if value.tagSet == Unsigned32.tagSet:
+                        value = Unsigned32(value)
 
-                if value.tagSet == Unsigned32.tagSet:
-                    value = Unsigned32(value)
+                    if value.tagSet == Bits.tagSet:
+                        value = OctetString(value)
 
-                if value.tagSet == Bits.tagSet:
-                    value = OctetString(value)
+                    # Build .snmprec record
 
-                # Build .snmprec record
+                    ctx = {
+                        'origOid': oid,
+                        'origValue': value,
+                        'count': count,
+                        'total': total,
+                        'iteration': iteration,
+                        'reqTime': reqTime,
+                        'startOID': startOID,
+                        'stopOID': stopOID,
+                        'stopFlag': oids.index(oid) == len(oids) - 1,
+                        'variationModule': variationModule
+                    }
 
-                ctx = {
-                    'origOid': oid,
-                    'origValue': value,
-                    'count': count,
-                    'total': total,
-                    'iteration': iteration,
-                    'reqTime': reqTime,
-                    'startOID': startOID,
-                    'stopOID': stopOID,
-                    'stopFlag': oids.index(oid) == len(oids) - 1,
-                    'variationModule': variationModule
-                }
+                    try:
+                        line = dataFileHandler.format(oid, value, **ctx)
 
-                try:
-                    line = dataFileHandler.format(oid, value, **ctx)
+                    except error.MoreDataNotification as exc:
+                        count = 0
+                        iteration += 1
 
-                except error.MoreDataNotification:
-                    count = 0
-                    iteration += 1
+                        moreDataNotification = exc
+                        if 'period' in moreDataNotification:
+                            timeOffset += moreDataNotification['period']
+                            log.info(
+                                '%s OIDs dumped, advancing time window to '
+                                '%.2f sec(s)...' % (total, timeOffset))
+                        break
 
-                    moreDataNotification = sys.exc_info()[1]
-                    if 'period' in moreDataNotification:
-                        timeOffset += moreDataNotification['period']
-                        log.info(
-                            '%s OIDs dumped, advancing time window to '
-                            '%.2f sec(s)...' % (total, timeOffset))
-                    break
+                    except error.NoDataNotification:
+                        pass
 
-                except error.NoDataNotification:
-                    pass
+                    except error.SnmpsimError as exc:
+                        log.error(exc)
+                        continue
 
-                except error.SnmpsimError:
-                    log.error((sys.exc_info()[1],))
-                    continue
+                    else:
+                        outputFile.write(line)
+
+                        count += 1
+                        total += 1
 
                 else:
-                    outputFile.write(line)
+                    break
 
-                    count += 1
-                    total += 1
+            outputFile.flush()
+            outputFile.close()
+
+        if variationModule:
+            log.info('Shutting down variation module '
+                     '"%s"...' % variationModuleName)
+
+            handler = variationModule['shutdown']
+
+            try:
+                handler(options=variationModuleOptions, mode='recording')
+
+            except Exception as exc:
+                log.error('Variation module "%s" shutdown FAILED: '
+                          '%s' % (variationModuleName, exc))
 
             else:
-                break
+                log.info('Variation module "%s" shutdown OK' % variationModuleName)
 
-        outputFile.flush()
-        outputFile.close()
-
-    if variationModule:
-        log.info('Shutting down variation module '
-                 '"%s"...' % variationModuleName)
-
-        handler = variationModule['shutdown']
-
-        try:
-            handler(options=variationModuleOptions, mode='recording')
-
-        except Exception:
-            log.error('Variation module "%s" shutdown FAILED: '
-                      '%s' % (variationModuleName, sys.exc_info()[1]))
-
-        else:
-            log.info('Variation module "%s" shutdown OK' % variationModuleName)
-
-    log.info("""\
+        log.info("""\
     PCap statistics:
         packets snooped: %s
         packets dropped: %s
         packets dropped: by interface %s\
     """ % pcapObj.stats())
 
-    log.info("""\
+        log.info("""\
     SNMP statistics:
         %s\
     """ % '    '.join(['%s: %s\r\n' % kv for kv in stats.items()]))
-
-    if exc_info:
-        for line in traceback.format_exception(*exc_info):
-            log.error(line.replace('\n', ';'))
 
     return 0
 
@@ -755,8 +741,8 @@ if __name__ == '__main__':
         sys.stderr.write('shutting down process...')
         rc = 0
 
-    except Exception:
-        sys.stderr.write('process terminated: %s' % sys.exc_info()[1])
+    except Exception as exc:
+        sys.stderr.write('process terminated: %s' % exc)
 
         for line in traceback.format_exception(*sys.exc_info()):
             sys.stderr.write(line.replace('\n', ';'))

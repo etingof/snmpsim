@@ -5,7 +5,6 @@
 # License: http://snmplabs.com/snmpsim/license.html
 #
 import bz2
-import sys
 
 from snmpsim import error
 from snmpsim.grammar import snmprec
@@ -99,10 +98,10 @@ class SnmprecRecord(dump.DumpRecord):
             else:
                 return oid, tag, self.grammar.TAG_MAP[tag](value)
 
-        except Exception:
+        except Exception as exc:
             raise error.SnmpsimError(
                 'value evaluation error for tag %r, value '
-                '%r: %s' % (tag, value, sys.exc_info()[1]))
+                '%r: %s' % (tag, value, exc))
 
     def formatValue(self, oid, value, **context):
         if 'nohex' in context and context['nohex']:

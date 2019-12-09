@@ -16,19 +16,9 @@ import traceback
 from pyasn1 import debug as pyasn1_debug
 from pyasn1.type import univ
 from pysnmp import debug as pysnmp_debug
-from pysnmp.carrier.asynsock.dgram import udp
-
-try:
-    from pysnmp.carrier.asynsock.dgram import udp6
-
-except ImportError:
-    udp6 = None
-
-try:
-    from pysnmp.carrier.asynsock.dgram import unix
-
-except ImportError:
-    unix = None
+from pysnmp.carrier.asyncore.dgram import udp
+from pysnmp.carrier.asyncore.dgram import udp6
+from pysnmp.carrier.asyncore.dgram import unix
 from pysnmp.entity import engine, config
 from pysnmp.entity.rfc3413 import cmdgen
 from pysnmp.error import PySnmpError
@@ -46,7 +36,6 @@ from snmpsim.record import mvc
 from snmpsim.record import sap
 from snmpsim.record import snmprec
 from snmpsim.record import walk
-
 
 AUTH_PROTOCOLS = {
     'MD5': config.usmHMACMD5AuthProtocol,
@@ -167,11 +156,10 @@ class CompressedSnmprecRecord(
 
 RECORD_TYPES[CompressedSnmprecRecord.ext] = CompressedSnmprecRecord()
 
-PROGRAM_NAME = 'snmpsim-record-commands'
+PROGRAM_NAME = os.path.basename(sys.argv[0])
 
 
 def main():
-    # Defaults
     getBulkFlag = False
     continueOnErrors = 0
     getBulkRepetitions = 25
@@ -223,9 +211,9 @@ def main():
              'variation-modules-dir=', 'variation-module=',
              'variation-module-options=', 'continue-on-errors='])
 
-    except Exception:
+    except Exception as exc:
         sys.stderr.write(
-            'ERROR: %s\r\n%s\r\n' % (sys.exc_info()[1], HELP_MESSAGE))
+            'ERROR: %s\r\n%s\r\n' % (exc, HELP_MESSAGE))
         return 1
 
     if params:
@@ -582,9 +570,9 @@ Software documentation and support at http://snmplabs.com/snmpsim
         if loggingLevel:
             log.setLevel(loggingLevel)
 
-    except error.SnmpsimError:
+    except error.SnmpsimError as exc:
         sys.stderr.write(
-            '%s\r\n%s\r\n' % (sys.exc_info()[1], HELP_MESSAGE))
+            '%s\r\n%s\r\n' % (exc, HELP_MESSAGE))
         return 1
 
     if getBulkFlag and not snmpVersion:
@@ -618,9 +606,9 @@ Software documentation and support at http://snmplabs.com/snmpsim
                 else:
                     execfile(mod, ctx)
 
-            except Exception:
+            except Exception as exc:
                 log.error('Variation module "%s" execution failure: '
-                          '%s' % (mod, sys.exc_info()[1]))
+                          '%s' % (mod, exc))
                 return 1
 
             else:
@@ -728,8 +716,8 @@ Software documentation and support at http://snmplabs.com/snmpsim
             if isinstance(stopOID, ObjectIdentity):
                 stopOID.resolveWithMib(mibViewController)
 
-        except PySnmpError:
-            sys.stderr.write('ERROR: %s\r\n' % sys.exc_info()[1])
+        except PySnmpError as exc:
+            sys.stderr.write('ERROR: %s\r\n' % exc)
             return 1
 
     # Variation module initialization
@@ -745,13 +733,14 @@ Software documentation and support at http://snmplabs.com/snmpsim
 
         try:
             handler = variationModule['init']
+
             handler(snmpEngine=snmpEngine, options=variationModuleOptions,
                     mode='recording', startOID=startOID, stopOID=stopOID)
 
-        except Exception:
+        except Exception as exc:
             log.error(
                 'Variation module "%s" initialization FAILED: '
-                '%s' % (variationModuleName, sys.exc_info()[1]))
+                '%s' % (variationModuleName, exc))
 
         else:
             log.info(
@@ -879,11 +868,11 @@ Software documentation and support at http://snmplabs.com/snmpsim
                 try:
                     line = dataFileHandler.format(oid, value, **context)
 
-                except error.MoreDataNotification:
+                except error.MoreDataNotification as exc:
                     cbCtx['count'] = 0
                     cbCtx['iteration'] += 1
 
-                    moreDataNotification = sys.exc_info()[1]
+                    moreDataNotification = exc
 
                     if 'period' in moreDataNotification:
                         log.info(
@@ -916,8 +905,8 @@ Software documentation and support at http://snmplabs.com/snmpsim
                 except error.NoDataNotification:
                     pass
 
-                except error.SnmpsimError:
-                    log.error((sys.exc_info()[1],))
+                except error.SnmpsimError as exc:
+                    log.error(exc)
                     continue
 
                 else:
@@ -972,11 +961,7 @@ Software documentation and support at http://snmplabs.com/snmpsim
         '....' % (getBulkFlag and 'GETBULK' or 'GETNEXT',
                   startOID, stopOID or '<end-of-mib>'))
 
-    t = time.time()
-
-    # Python 2.4 does not support the "finally" clause
-
-    exc_info = None
+    started = time.time()
 
     try:
         snmpEngine.transportDispatcher.runDispatcher()
@@ -984,46 +969,43 @@ Software documentation and support at http://snmplabs.com/snmpsim
     except KeyboardInterrupt:
         log.info('Shutting down process...')
 
-    except Exception:
-        exc_info = sys.exc_info()
+    finally:
+        if variationModule:
+            log.info('Shutting down variation module '
+                     '%s...' % variationModuleName)
 
-    if variationModule:
-        log.info('Shutting down variation module '
-                 '%s...' % variationModuleName)
+            try:
+                handler = variationModule['shutdown']
 
-        try:
-            handler = variationModule['shutdown']
-            handler(snmpEngine=snmpEngine,
-                    options=variationModuleOptions,
-                    mode='recording')
+                handler(snmpEngine=snmpEngine,
+                        options=variationModuleOptions,
+                        mode='recording')
 
-        except Exception:
-            log.error(
-                'Variation module %s shutdown FAILED: '
-                '%s' % (variationModuleName, sys.exc_info()[1]))
+            except Exception as exc:
+                log.error(
+                    'Variation module %s shutdown FAILED: '
+                    '%s' % (variationModuleName, exc))
 
-        else:
-            log.info('Variation module %s shutdown OK' % variationModuleName)
+            else:
+                log.info(
+                    'Variation module %s shutdown OK' % variationModuleName)
 
-    snmpEngine.transportDispatcher.closeDispatcher()
+        snmpEngine.transportDispatcher.closeDispatcher()
 
-    t = time.time() - t
+        started = time.time() - started
 
-    cbCtx['total'] += cbCtx['count']
+        cbCtx['total'] += cbCtx['count']
 
-    log.info(
-        'OIDs dumped: %s, elapsed: %.2f sec, rate: %.2f OIDs/sec, errors: '
-        '%d' % (cbCtx['total'], t, t and cbCtx['count'] // t or 0,
-                cbCtx['errors']))
+        log.info(
+            'OIDs dumped: %s, elapsed: %.2f sec, rate: %.2f OIDs/sec, errors: '
+            '%d' % (cbCtx['total'], started,
+                    started and cbCtx['count'] // started or 0,
+                    cbCtx['errors']))
 
-    if exc_info:
-        for line in traceback.format_exception(*exc_info):
-            log.error(line.replace('\n', ';'))
+        outputFile.flush()
+        outputFile.close()
 
-    outputFile.flush()
-    outputFile.close()
-
-    return 0
+        return 0
 
 
 if __name__ == '__main__':
@@ -1034,8 +1016,8 @@ if __name__ == '__main__':
         sys.stderr.write('shutting down process...')
         rc = 0
 
-    except Exception:
-        sys.stderr.write('process terminated: %s' % sys.exc_info()[1])
+    except Exception as exc:
+        sys.stderr.write('process terminated: %s' % exc)
 
         for line in traceback.format_exception(*sys.exc_info()):
             sys.stderr.write(line.replace('\n', ';'))

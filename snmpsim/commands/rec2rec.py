@@ -7,8 +7,9 @@
 # SNMP Simulator data file management tool
 #
 import getopt
-import sys
 import os
+import sys
+import traceback
 
 from pyasn1.type import univ
 from pysnmp.error import PySnmpError
@@ -84,6 +85,8 @@ Usage: %s [--help]
        '|'.join(RECORD_TYPES),
        '|'.join(RECORD_TYPES))
 
+PROGRAM_NAME = os.path.basename(sys.argv[0])
+
 
 def main():
     verboseFlag = True
@@ -111,9 +114,9 @@ def main():
              'destination-record-type=',
              'input-file=', 'output-file='])
 
-    except Exception:
+    except Exception as exc:
         if verboseFlag:
-            sys.stderr.write('ERROR: %s\r\n%s\r\n' % (sys.exc_info()[1], HELP_MESSAGE))
+            sys.stderr.write('ERROR: %s\r\n%s\r\n' % (exc, HELP_MESSAGE))
         return 1
 
     if params:
@@ -254,8 +257,8 @@ Software documentation and support at http://snmplabs.com/snmpsim
             if isinstance(stopOID, rfc1902.ObjectIdentity):
                 stopOID.resolveWithMib(mibViewController)
 
-        except PySnmpError:
-            sys.stderr.write('ERROR: %s\r\n' % sys.exc_info()[1])
+        except PySnmpError as exc:
+            sys.stderr.write('ERROR: %s\r\n' % exc)
             return 1
 
     recordsList = []
@@ -292,12 +295,12 @@ Software documentation and support at http://snmplabs.com/snmpsim
             try:
                 oid, value = RECORD_TYPES[srcRecordType].evaluate(line, backdoor=backdoor)
 
-            except error.SnmpsimError:
+            except error.SnmpsimError as exc:
                 if ignoreBrokenRecords:
                     if verboseFlag:
                         sys.stderr.write(
                             '# Skipping broken record <%s>: '
-                            '%s\r\n' % (line, sys.exc_info()[1]))
+                            '%s\r\n' % (line, exc))
                     brokenCount += 1
                     continue
 
@@ -305,7 +308,7 @@ Software documentation and support at http://snmplabs.com/snmpsim
                     if verboseFlag:
                         sys.stderr.write(
                             'ERROR: broken record <%s>: '
-                            '%s\r\n' % (line, sys.exc_info()[1]))
+                            '%s\r\n' % (line, exc))
 
                     return 1
 
@@ -342,8 +345,8 @@ Software documentation and support at http://snmplabs.com/snmpsim
                 )
             )
 
-        except Exception:
-            sys.stderr.write('ERROR: record not written: %s\r\n' % sys.exc_info()[1])
+        except Exception as exc:
+            sys.stderr.write('ERROR: record not written: %s\r\n' % exc)
             break
 
         writtenCount += 1

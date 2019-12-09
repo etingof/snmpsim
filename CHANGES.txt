@@ -1,5 +1,5 @@
 
-Revision 1.0.0, released XX-10-2019
+Revision 1.0.0, released XX-12-2019
 -----------------------------------
 
 - Command-line tools refactored into entry-points and renamed for better
@@ -10,6 +10,8 @@ Revision 1.0.0, released XX-10-2019
   * mib2dev.py -> snmpsim-record-mibs
   * pcap2dev.py -> snmpsim-record-traffic
   * datafile.py -> snmpsim-manage-records
+
+- Python 2.4-2.6 support has been dropped.
 
 - Converted integration tests from depending on @snmplabs.com to local,
   autonomous test suite.
