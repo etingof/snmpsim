@@ -13,18 +13,12 @@ import sys
 import time
 import traceback
 
-try:
-    from pysnmp.carrier.asynsock.dgram import udp6
-except ImportError:
-    udp6 = None
-try:
-    from pysnmp.carrier.asynsock.dgram import unix
-except ImportError:
-    unix = None
 from pyasn1 import debug as pyasn1_debug
 from pyasn1.type import univ
 from pysnmp import debug as pysnmp_debug
-from pysnmp.carrier.asynsock.dgram import udp
+from pysnmp.carrier.asyncore.dgram import udp
+from pysnmp.carrier.asyncore.dgram import udp6
+from pysnmp.carrier.asyncore.dgram import unix
 from pysnmp.entity import engine, config
 from pysnmp.entity.rfc3413 import cmdgen
 from pysnmp.error import PySnmpError
@@ -162,7 +156,7 @@ class CompressedSnmprecRecord(
 
 RECORD_TYPES[CompressedSnmprecRecord.ext] = CompressedSnmprecRecord()
 
-PROGRAM_NAME = 'snmpsim-record-commands'
+PROGRAM_NAME = os.path.basename(sys.argv[0])
 
 
 def main():

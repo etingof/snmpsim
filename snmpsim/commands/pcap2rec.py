@@ -26,7 +26,7 @@ from pyasn1.codec.ber import decoder
 from pyasn1.error import PyAsn1Error
 from pyasn1.type import univ
 from pysnmp import debug as pysnmp_debug
-from pysnmp.carrier.asynsock.dgram import udp
+from pysnmp.carrier.asyncore.dgram import udp
 from pysnmp.error import PySnmpError
 from pysnmp.proto import api
 from pysnmp.proto.rfc1902 import Bits
@@ -48,7 +48,7 @@ from snmpsim.record import sap
 from snmpsim.record import snmprec
 from snmpsim.record import walk
 
-PROGRAM_NAME = 'snmpsim-record-traffic'
+PROGRAM_NAME = os.path.basename(sys.argv[0])
 
 RECORD_TYPES = {
     dump.DumpRecord.ext: dump.DumpRecord(),
@@ -291,12 +291,6 @@ Software documentation and support at http://snmplabs.com/snmpsim
 
         elif opt[0] == '--variation-module-options':
             variationModuleOptions = opt[1]
-
-    if params:
-        sys.stderr.write(
-            'ERROR: extra arguments supplied %s\r\n'
-            '%s\r\n' % (params, HELP_MESSAGE))
-        return 1
 
     if not pcap:
         sys.stderr.write(

@@ -5,7 +5,6 @@
 # License: http://snmplabs.com/snmpsim/license.html
 #
 import bz2
-import sys
 
 from snmpsim import error
 from snmpsim.grammar import snmprec

@@ -1,0 +1,270 @@
+openapi: 3.0.0
+info:
+  license:
+    name: BSD License
+  version: '1.0.0'
+  title: 'SNMP Simulator Monitoring REST API'
+  description: >
+    Monitoring API provides the insight for the operator to how SNMP Simulator
+    is doing. That includes health reporting and operational statistics.
+    The data is provided by running SNMP Simulator, REST API is essentially
+    read-only.
+
+
+    The `/processes` endpoint exposes the details on SNMP simulator health
+    as a set of UNIX processes. It's mostly concern with processes being
+    present, resources being consumed reasonably and internal faults noted.
+
+
+    Typical use of the `/processes` endpoint by some monitoring application
+    can be a parameterized REST API call designed to reveal missing processes,
+    overly consumed system resources or serious application-specific errors
+    occurring in SNMP simulator.
+
+
+    The `/activity` endpoint is all about SNMP
+    traffic being handled by certain simulator
+    subsystem. Conceptually, any SNMP command
+    traverses simulator subsystems in order
+
+    * transport endpoint
+
+    * agent
+
+    * recording
+
+
+    Reported data reflects cumulative SNMP traffic
+    optionally selected by any subsystem.
+
+
+    For example, the user can get packet count for all agents or for a single
+    specific agent, for agent+endpoint combination (an agent can listen on
+    multiple endpoints) or for agent+recording pair (any single recording can
+    be used by many agents).
+
+
+    The consumer of this endpoint is expected to poll it periodically pushing
+    collected data into a time-series database for dynamics computing and data
+    aggregation.
+
+servers:
+  - url: https://virtserver.swaggerhub.com/etingof/snmpsimd-monitoring/1.0.0
+
+paths:
+  /processes:
+    get:
+      description: >
+        Collection of SNMP simulator system process information.
+      summary: >
+        Search for and list process information.
+      operationId: listProcesses
+      tags:
+        - processes
+      parameters:
+        - name: newer
+          in: query
+          description: >
+            Select processes with uptime lesser than specified.
+          required: false
+          schema:
+            type: integer
+        - name: larger
+          in: query
+          description: >
+            Select processes with the amount of consumed memory larger
+            than specified.
+          required: false
+          schema:
+            type: integer
+        - name: hotter
+          in: query
+          description: >
+            Select processes with CPU utilization higher than specified.
+          required: false
+          schema:
+            type: integer
+        - name: sicker
+          in: query
+          description: >
+            Select processes with fatal, critical and warning counters
+            greater than specified.
+          required: false
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: >
+            An array of process information objects
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Processes"
+        default:
+          description: Unspecified error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /activity:
+    get:
+      description: >
+        Activity report for a selection of agents / endpoints / recordings.
+      operationId: listActivity
+      tags:
+        - activity
+      parameters:
+        - name: agentId
+          in: query
+          description: >
+            Report activity for the agent with this `name`. A single agent can
+            listen on multiple transport endpoints.
+          required: false
+          schema:
+            type: string
+        - name: endpointId
+          in: query
+          description: >
+            Report activity for transport endpoint with this `name`. Only one
+            agent can listen on any single endpoint.
+          required: false
+          schema:
+            type: string
+        - name: recordingId
+          in: query
+          description: >
+            Report activity for recording with this `name`. Multiple
+            agents can hit any single recording.
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Activity object
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Activity"
+        default:
+          description: Unspecified error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+components:
+  schemas:
+    Activity:
+      description: >
+        Activity information for an agent/endpoint/recording or their
+        sums/combinations.
+      type: object
+      properties:
+        name:
+          type: string
+        first_hit:
+          type: integer
+        last_hit:
+          type: integer
+        get:
+          $ref: "#/components/schemas/Counters"
+        set:
+          $ref: "#/components/schemas/Counters"
+        getnext:
+          $ref: "#/components/schemas/Counters"
+        getbulk:
+          $ref: "#/components/schemas/Counters"
+
+    Counters:
+      description: >
+        Activity counters since system initialization.
+      type: object
+      properties:
+        total:
+          description: >
+            Total number of requests.
+          type: integer
+          format: int64
+        protocol_errors:
+          description: >
+            Number of protocol-level failures.
+          type: integer
+          format: int64
+        routing_errors:
+          description: >
+            Number of requests that can't be routed to a recording.
+          type: integer
+          format: int64
+        data_errors:
+          description: >
+            Number of requests that failed on recording data accommodation
+            including variation modules failures.
+          type: integer
+          format: int64
+
+    Process:
+      description: >
+        SNMP simulator system is composed of many running processes.
+        This object describes common properties of a process.
+      type: object
+      properties:
+        cmdline:
+          description: >
+            Path to process executable and its command-line parameters.
+          type: string
+        uptime:
+          description: >
+            How long this process has been up (in seconds).
+          type: integer
+        owner:
+          description: >
+            OS user:group owning this process.
+          type: string
+        memory:
+          description: >
+            How much virtual memory this process is consuming.
+          type: integer
+        cpu:
+          description: >
+            How much CPU this process is putting on CPU (last 1, 5, and
+            15 minutes).
+          type: integer
+        files:
+          description: >
+            How many open files this process has.
+          type: integer
+        health:
+          description: >
+            How healthy this process has been lately in terms of the number
+            of internal events occurred since process start. Warning-level
+            expire automatically over time.
+          type: object
+          properties:
+            fatal:
+              type: integer
+            critical:
+              type: integer
+            warning:
+              type: integer
+            info:
+              type: integer
+
+    Processes:
+      description: >
+        An array of process information.
+      type: array
+      items:
+        $ref: "#/components/schemas/Process"
+
+    Error:
+      type: object
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: integer
+          format: int32
+        message:
+          type: string

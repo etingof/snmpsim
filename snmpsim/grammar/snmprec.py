@@ -4,7 +4,8 @@
 # Copyright (c) 2010-2019, Ilya Etingof <etingof@gmail.com>
 # License: http://snmplabs.com/snmpsim/license.html
 #
-from string import digits, ascii_letters
+from string import ascii_letters
+from string import digits
 
 from pyasn1.compat.octets import octs2str, str2octs, octs2ints
 from pyasn1.type import univ

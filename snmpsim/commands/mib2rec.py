@@ -67,6 +67,8 @@ Usage: %s [--help]
                               'dsp', 'acl')]),
        '|'.join(RECORD_TYPES))
 
+PROGRAM_NAME = os.path.basename(sys.argv[0])
+
 
 def main():
     # Defaults

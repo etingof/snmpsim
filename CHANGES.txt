@@ -13,6 +13,9 @@ Revision 1.0.0, released XX-12-2019
 
 - Python 2.4-2.6 support has been dropped.
 
+- Converted integration tests from depending on @snmplabs.com to local,
+  autonomous test suite.
+
 Revision 0.4.8, released XX-08-2019
 -----------------------------------
 

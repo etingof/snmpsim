@@ -4,8 +4,6 @@
 # Copyright (c) 2010-2019, Ilya Etingof <etingof@gmail.com>
 # License: http://snmplabs.com/snmpsim/license.html
 #
-import sys
-
 from pyasn1.error import PyAsn1Error
 from pyasn1.type import univ
 

@@ -5,6 +5,8 @@
 # License: http://snmplabs.com/snmpsim/license.html
 #
 
+import os
+import sys
 if sys.version_info[0] < 3:
     import anydbm as dbm
     from whichdb import whichdb
@@ -12,8 +14,6 @@ if sys.version_info[0] < 3:
 else:
     import dbm
     whichdb = dbm.whichdb
-import os
-import sys
 
 from snmpsim import confdir, log, error
 from snmpsim.record.search.file import getRecord

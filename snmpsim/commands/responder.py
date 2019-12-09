@@ -20,18 +20,12 @@ from pyasn1.compat.octets import null
 from pyasn1.compat.octets import str2octs
 from pyasn1.error import PyAsn1Error
 from pyasn1.type import univ
-try:
-    from pysnmp.carrier.asynsock.dgram import udp6
-except ImportError:
-    udp6 = None
-try:
-    from pysnmp.carrier.asynsock.dgram import unix
-except ImportError:
-    unix = None
 from pysnmp import debug as pysnmp_debug
 from pysnmp import error
-from pysnmp.carrier.asynsock.dgram import udp
-from pysnmp.carrier.asynsock.dispatch import AsynsockDispatcher
+from pysnmp.carrier.asyncore.dgram import udp
+from pysnmp.carrier.asyncore.dgram import udp6
+from pysnmp.carrier.asyncore.dgram import unix
+from pysnmp.carrier.asyncore.dispatch import AsyncoreDispatcher
 from pysnmp.entity import config
 from pysnmp.entity import engine
 from pysnmp.entity.rfc3413 import cmdrsp
@@ -56,7 +50,7 @@ from snmpsim.record.search.database import RecordIndex
 from snmpsim.record.search.file import getRecord
 from snmpsim.record.search.file import searchRecordByOid
 
-PROGRAM_NAME = 'snmp-command-responder'
+PROGRAM_NAME = os.path.basename(sys.argv[0])
 
 AUTH_PROTOCOLS = {
     'MD5': config.usmHMACMD5AuthProtocol,
@@ -1454,7 +1448,7 @@ Software documentation and support at http://snmplabs.com/snmpsim
 
     # Start configuring SNMP engine(s)
 
-    transportDispatcher = AsynsockDispatcher()
+    transportDispatcher = AsyncoreDispatcher()
 
     if v2cArch:
         # Configure access to data index

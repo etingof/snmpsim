@@ -7,7 +7,8 @@
 import re
 
 from pyasn1.codec.ber import encoder
-from pyasn1.compat.octets import octs2str, ints2octs
+from pyasn1.compat.octets import ints2octs
+from pyasn1.compat.octets import octs2str
 from pyasn1.type import univ
 from pysnmp.proto import rfc1902
 
