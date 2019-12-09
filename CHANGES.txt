@@ -11,6 +11,9 @@ Revision 1.0.0, released XX-10-2019
   * pcap2dev.py -> snmpsim-record-traffic
   * datafile.py -> snmpsim-manage-records
 
+- Converted integration tests from depending on @snmplabs.com to local,
+  autonomous test suite.
+
 Revision 0.4.8, released XX-08-2019
 -----------------------------------
 
