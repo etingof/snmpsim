@@ -6,7 +6,8 @@
 #
 # SNMP Snapshot Data Recorder
 #
-import getopt
+import argparse
+import functools
 import os
 import socket
 import sys
@@ -18,7 +19,6 @@ from pyasn1.type import univ
 from pysnmp import debug as pysnmp_debug
 from pysnmp.carrier.asyncore.dgram import udp
 from pysnmp.carrier.asyncore.dgram import udp6
-from pysnmp.carrier.asyncore.dgram import unix
 from pysnmp.entity import engine, config
 from pysnmp.entity.rfc3413 import cmdgen
 from pysnmp.error import PySnmpError
@@ -31,6 +31,7 @@ from pysnmp.smi.rfc1902 import ObjectIdentity
 from snmpsim import confdir
 from snmpsim import error
 from snmpsim import log
+from snmpsim import utils
 from snmpsim.record import dump
 from snmpsim.record import mvc
 from snmpsim.record import sap
@@ -59,6 +60,12 @@ PRIV_PROTOCOLS = {
     'NONE': config.usmNoPrivProtocol
 }
 
+VERSION_MAP = {
+    '1': 0,
+    '2c': 1,
+    '3': 3
+}
+
 RECORD_TYPES = {
     dump.DumpRecord.ext: dump.DumpRecord(),
     mvc.MvcRecord.ext: mvc.MvcRecord(),
@@ -67,50 +74,6 @@ RECORD_TYPES = {
     snmprec.SnmprecRecord.ext: snmprec.SnmprecRecord(),
     snmprec.CompressedSnmprecRecord.ext: snmprec.CompressedSnmprecRecord()
 }
-
-HELP_MESSAGE = """\
-Usage: %s [--help]
-    [--version]
-    [--debug=<%s>]
-    [--debug-asn1=<%s>]
-    [--logging-method=<%s[:args>]>]
-    [--log-level=<%s>]
-    [--protocol-version=<1|2c|3>]
-    [--community=<string>]
-    [--v3-user=<username>]
-    [--v3-auth-key=<key>]
-    [--v3-auth-proto=<%s>]
-    [--v3-priv-key=<key>]
-    [--v3-priv-proto=<%s>]
-    [--v3-context-engine-id=<[0x]string>]
-    [--v3-context-name=<[0x]string>]
-    [--use-getbulk]
-    [--getbulk-repetitions=<number>]
-    [--agent-udpv4-endpoint=<X.X.X.X:NNNNN>]
-    [--agent-udpv6-endpoint=<[X:X:..X]:NNNNN>]
-    [--agent-unix-endpoint=</path/to/named/pipe>]
-    [--timeout=<seconds>] [--retries=<count>]
-    [--mib-source=<url>]
-    [--start-object=<MIB-NAME::[symbol-name]|OID>]
-    [--stop-object=<MIB-NAME::[symbol-name]|OID>]
-    [--destination-record-type=<%s>]
-    [--output-file=<filename>]
-    [--variation-modules-dir=<dir>]
-    [--variation-module=<module>]
-    [--variation-module-options=<args>]
-    [--continue-on-errors=<max-sustained-errors>]""" % (
-    sys.argv[0],
-    '|'.join([x for x in getattr(pysnmp_debug, 'FLAG_MAP',
-                                 getattr(pysnmp_debug, 'flagMap', ()))
-              if x != 'mibview']),
-    '|'.join([x for x in getattr(pyasn1_debug, 'FLAG_MAP',
-                                 getattr(pyasn1_debug, 'flagMap', ()))]),
-    '|'.join(log.METHODS_MAP),
-    '|'.join(log.LEVELS_MAP),
-    '|'.join(sorted([x for x in AUTH_PROTOCOLS if x != 'NONE'])),
-    '|'.join(sorted([x for x in PRIV_PROTOCOLS if x != 'NONE'])),
-    '|'.join(RECORD_TYPES)
-)
 
 
 class SnmprecRecordMixIn(object):
@@ -156,357 +119,226 @@ class CompressedSnmprecRecord(
 
 RECORD_TYPES[CompressedSnmprecRecord.ext] = CompressedSnmprecRecord()
 
-PROGRAM_NAME = os.path.basename(sys.argv[0])
+DESCRIPTION = ('SNMP simulation data recorder. Pull simulation data from '
+               'SNMP agent')
+
+
+def _parse_endpoint(arg, ipv6=False):
+    address = arg
+
+    # IPv6 notation
+    if ipv6 and address.startswith('['):
+        address = address.replace('[', '').replace(']', '')
+
+    try:
+        if ':' in address:
+            address, port = address.split(':', 1)
+            port = int(port)
+
+        else:
+            port = 161
+
+    except Exception as exc:
+        raise error.SnmpsimError(
+            'Malformed network endpoint address %s: %s' % (arg, exc))
+
+    try:
+        address, port = socket.getaddrinfo(
+            address, port,
+            socket.AF_INET6 if ipv6 else socket.AF_INET,
+            socket.SOCK_DGRAM,
+            socket.IPPROTO_UDP)[0][4][:2]
+
+    except socket.gaierror as exc:
+        raise error.SnmpsimError(
+            'Unknown hostname %s: %s' % (address, exc))
+
+    return address, port
+
+
+def _parse_mib_object(arg, last=False):
+    if '::' in arg:
+        return ObjectIdentity(*arg.split('::', 1), last=last)
+
+    else:
+        return univ.ObjectIdentifier(arg)
 
 
 def main():
-    getBulkFlag = False
-    continueOnErrors = 0
-    getBulkRepetitions = 25
-    snmpVersion = 1
-    snmpCommunity = 'public'
-    v3User = None
-    v3AuthKey = None
-    v3PrivKey = None
-    v3AuthProto = 'NONE'
-    v3PrivProto = 'NONE'
-    v3ContextEngineId = None
-    v3Context = ''
-    agentUDPv4Address = (None, 161)  # obsolete
-    agentUDPv4Endpoint = None
-    agentUDPv6Endpoint = None
-    agentUNIXEndpoint = None
-    timeout = 300  # 1/100 sec
-    retryCount = 3
-    startOID = univ.ObjectIdentifier('1.3.6')
-    stopOID = None
-    mibSources = []
-    defaultMibSources = ['http://mibs.snmplabs.com/asn1/@mib@']
-    dstRecordType = 'snmprec'
-    outputFile = None
-    loggingMethod = ['stderr']
-    loggingLevel = None
-    variationModuleOptions = ""
-    variationModuleName = variationModule = None
-
-    try:
-        opts, params = getopt.getopt(
-            sys.argv[1:], 'hv',
-            ['help', 'version', 'debug=', 'debug-asn1=', 'logging-method=',
-             'log-level=', 'quiet',
-             'v1', 'v2c', 'v3', 'protocol-version=', 'community=',
-             'v3-user=', 'v3-auth-key=', 'v3-priv-key=', 'v3-auth-proto=',
-             'v3-priv-proto=',
-             'context-engine-id=', 'v3-context-engine-id=',
-             'context=', 'v3-context-name=',
-             'use-getbulk', 'getbulk-repetitions=', 'agent-address=',
-             'agent-port=',
-             'agent-udpv4-endpoint=', 'agent-udpv6-endpoint=',
-             'agent-unix-endpoint=', 'timeout=', 'retries=',
-             'start-oid=', 'stop-oid=',
-             'mib-source=',
-             'start-object=', 'stop-object=',
-             'destination-record-type=',
-             'output-file=',
-             'variation-modules-dir=', 'variation-module=',
-             'variation-module-options=', 'continue-on-errors='])
-
-    except Exception as exc:
-        sys.stderr.write(
-            'ERROR: %s\r\n%s\r\n' % (exc, HELP_MESSAGE))
-        return 1
-
-    if params:
-        sys.stderr.write(
-            'ERROR: extra arguments supplied %s\r\n'
-            '%s\r\n' % (params, HELP_MESSAGE))
-        return 1
-
-    for opt in opts:
-        if opt[0] == '-h' or opt[0] == '--help':
-            sys.stderr.write("""\
-Synopsis:
-  SNMP Agents Recording tool. Queries specified Agent, stores response
-  data in data files for subsequent playback by SNMP Simulation tool.
-  Can store a series of recordings for a more dynamic playback.
-
-Documentation:
-  http://snmplabs.com/snmpsim/snapshotting.html
-%s
-""" % HELP_MESSAGE)
-            return 1
-
-        if opt[0] == '-v' or opt[0] == '--version':
-            import snmpsim
-            import pysnmp
-            import pysmi
-            import pyasn1
-
-            sys.stderr.write("""\
-SNMP Simulator version %s, written by Ilya Etingof <etingof@gmail.com>
-Using foundation libraries: pysmi %s, pysnmp %s, pyasn1 %s.
-Python interpreter: %s
-Software documentation and support at http://snmplabs.com/snmpsim
-%s
-""" % (snmpsim.__version__,
-           getattr(pysmi, '__version__', 'unknown'),
-           getattr(pysnmp, '__version__', 'unknown'),
-           getattr(pyasn1, '__version__', 'unknown'),
-           sys.version, HELP_MESSAGE))
-            return 1
-
-        elif opt[0] in ('--debug', '--debug-snmp'):
-            pysnmp_debug.setLogger(
-                pysnmp_debug.Debug(
-                    *opt[1].split(','),
-                    **dict(loggerName='%s.pysnmp' % PROGRAM_NAME)))
-
-        elif opt[0] == '--debug-asn1':
-            pyasn1_debug.setLogger(
-                pyasn1_debug.Debug(
-                    *opt[1].split(','),
-                    **dict(loggerName='%s.pyasn1' % PROGRAM_NAME)))
+    variation_module = None
+
+    parser = argparse.ArgumentParser(description=DESCRIPTION)
 
-        elif opt[0] == '--logging-method':
-            loggingMethod = opt[1].split(':')
-
-        elif opt[0] == '--log-level':
-            loggingLevel = opt[1]
-
-        elif opt[0] == '--quiet':
-            log.setLogger('snmprec', 'null', force=True)
-
-        elif opt[0] == '--v1':
-            snmpVersion = 0
-
-        elif opt[0] == '--v2c':
-            snmpVersion = 1
-
-        elif opt[0] == '--v3':
-            snmpVersion = 3
-
-        elif opt[0] == '--protocol-version':
-            if opt[1] in ('1', 'v1'):
-                snmpVersion = 0
-
-            elif opt[1] in ('2', '2c', 'v2c'):
-                snmpVersion = 1
-
-            elif opt[1] in ('3', 'v3'):
-                snmpVersion = 3
-
-            else:
-                sys.stderr.write(
-                    'ERROR: unknown SNMP version %s\r\n'
-                    '%s\r\n' % (opt[1], HELP_MESSAGE))
-                return 1
-
-        elif opt[0] == '--community':
-            snmpCommunity = opt[1]
-
-        elif opt[0] == '--v3-user':
-            v3User = opt[1]
-
-        elif opt[0] == '--v3-auth-key':
-            v3AuthKey = opt[1]
-
-        elif opt[0] == '--v3-auth-proto':
-            v3AuthProto = opt[1].upper()
-            if v3AuthProto not in AUTH_PROTOCOLS:
-                sys.stderr.write(
-                    'ERROR: bad v3 auth protocol %s\r\n'
-                    '%s\r\n' % (v3AuthProto, HELP_MESSAGE))
-                return 1
-
-        elif opt[0] == '--v3-priv-key':
-            v3PrivKey = opt[1]
-
-        elif opt[0] == '--v3-priv-proto':
-            v3PrivProto = opt[1].upper()
-            if v3PrivProto not in PRIV_PROTOCOLS:
-                sys.stderr.write(
-                    'ERROR: bad v3 privacy protocol %s\r\n'
-                    '%s\r\n' % (v3PrivProto, HELP_MESSAGE))
-                return 1
-
-        elif opt[0] in ('--v3-context-engine-id', '--context-engine-id'):
-            if opt[1][:2] == '0x':
-                v3ContextEngineId = univ.OctetString(hexValue=opt[1][2:])
-
-            else:
-                v3ContextEngineId = univ.OctetString(opt[1])
-
-        elif opt[0] in ('--v3-context-name', '--context'):
-            if opt[1][:2] == '0x':
-                v3Context = univ.OctetString(hexValue=opt[1][2:])
-
-            else:
-                v3Context = univ.OctetString(opt[1])
-
-        elif opt[0] == '--use-getbulk':
-            getBulkFlag = True
-
-        elif opt[0] == '--getbulk-repetitions':
-            getBulkRepetitions = int(opt[1])
-
-        elif opt[0] == '--agent-address':
-            agentUDPv4Address = (opt[1], agentUDPv4Address[1])
-
-        elif opt[0] == '--agent-port':
-            agentUDPv4Address = (agentUDPv4Address[0], int(opt[1]))
-
-        elif opt[0] == '--agent-udpv4-endpoint':
-            f = lambda h, p=161: (h, int(p))
-            try:
-                agentUDPv4Endpoint = f(*opt[1].split(':'))
-
-            except Exception:
-                sys.stderr.write(
-                    'ERROR: improper IPv4/UDP endpoint %s\r\n'
-                    '%s\r\n' % (opt[1], HELP_MESSAGE))
-                return 1
-
-            try:
-                agentUDPv4Endpoint = socket.getaddrinfo(
-                        agentUDPv4Endpoint[0],
-                        agentUDPv4Endpoint[1],
-                        socket.AF_INET, socket.SOCK_DGRAM,
-                        socket.IPPROTO_UDP)[0][4][:2]
-
-            except socket.gaierror:
-                sys.stderr.write(
-                    'ERROR: unknown hostname %s\r\n'
-                    '%s\r\n' % (agentUDPv4Endpoint[0], HELP_MESSAGE))
-                return 1
-
-        elif opt[0] == '--agent-udpv6-endpoint':
-            if not udp6:
-                sys.stderr.write(
-                    'This system does not support UDP/IP6\r\n')
-                return 1
-
-            if opt[1].find(']:') != -1 and opt[1][0] == '[':
-                h, p = opt[1].split(']:')
-
-                try:
-                    agentUDPv6Endpoint = h[1:], int(p)
-
-                except Exception:
-                    sys.stderr.write(
-                        'ERROR: improper IPv6/UDP endpoint %s\r\n'
-                        '%s\r\n' % (opt[1], HELP_MESSAGE))
-                    return 1
-
-            elif opt[1][0] == '[' and opt[1][-1] == ']':
-                agentUDPv6Endpoint = opt[1][1:-1], 161
-
-            else:
-                agentUDPv6Endpoint = opt[1], 161
-
-            try:
-                agentUDPv6Endpoint = socket.getaddrinfo(
-                    agentUDPv6Endpoint[0],
-                    agentUDPv6Endpoint[1],
-                    socket.AF_INET6, socket.SOCK_DGRAM,
-                    socket.IPPROTO_UDP)[0][4][:2]
-
-            except socket.gaierror:
-                sys.stderr.write(
-                    'ERROR: unknown hostname %s\r\n'
-                    '%s\r\n' % (agentUDPv6Endpoint[0], HELP_MESSAGE))
-                return 1
-
-        elif opt[0] == '--agent-unix-endpoint':
-            if not unix:
-                sys.stderr.write(
-                    'This system does not support UNIX domain sockets\r\n')
-                return 1
-
-            agentUNIXEndpoint = opt[1]
-
-        elif opt[0] == '--timeout':
-            try:
-                timeout = float(opt[1]) * 100
-
-            except Exception:
-                sys.stderr.write(
-                    'ERROR: improper --timeout value %s\r\n'
-                    '%s\r\n' % (opt[1], HELP_MESSAGE))
-                return 1
-
-        elif opt[0] == '--retries':
-            try:
-                retryCount = int(opt[1])
-
-            except Exception:
-                sys.stderr.write(
-                    'ERROR: improper --retries value %s\r\n'
-                    '%s\r\n' % (opt[1], HELP_MESSAGE))
-                return 1
-
-        # obsolete begin
-        elif opt[0] == '--start-oid':
-            startOID = univ.ObjectIdentifier(opt[1])
-
-        elif opt[0] == '--stop-oid':
-            stopOID = univ.ObjectIdentifier(opt[1])
-
-        # obsolete end
-        elif opt[0] == '--mib-source':
-            mibSources.append(opt[1])
-
-        elif opt[0] == '--start-object':
-            startOID = ObjectIdentity(*opt[1].split('::', 1))
-
-        elif opt[0] == '--stop-object':
-            stopOID = ObjectIdentity(*opt[1].split('::', 1), **dict(last=True))
-
-        if opt[0] == '--destination-record-type':
-            if opt[1] not in RECORD_TYPES:
-                sys.stderr.write(
-                    'ERROR: unknown record type <%s> (known types are %s)\r\n%s'
-                    '\r\n' % (opt[1], ', '.join(RECORD_TYPES),
-                              HELP_MESSAGE))
-                return 1
-
-            dstRecordType = opt[1]
-
-        elif opt[0] == '--output-file':
-            outputFile = opt[1]
-
-        elif opt[0] == '--variation-modules-dir':
-            confdir.variation.insert(0, opt[1])
-
-        elif opt[0] == '--variation-module':
-            variationModuleName = opt[1]
-
-        elif opt[0] == '--variation-module-options':
-            variationModuleOptions = opt[1]
-
-        elif opt[0] == '--continue-on-errors':
-            try:
-                continueOnErrors = int(opt[1])
-
-            except Exception:
-                sys.stderr.write(
-                    'ERROR: improper --continue-on-errors retries count %s\r\n'
-                    '%s\r\n' % (opt[1], HELP_MESSAGE))
-                return 1
-
-    if outputFile:
-        ext = os.path.extsep + RECORD_TYPES[dstRecordType].ext
-
-        if not outputFile.endswith(ext):
-            outputFile += ext
-
-        outputFile = RECORD_TYPES[dstRecordType].open(outputFile, 'wb')
+    parser.add_argument(
+        '-v', '--version', action='version',
+        version=utils.TITLE)
+
+    parser.add_argument(
+        '--quiet', action='store_true',
+        help='Do not print out informational messages')
+
+    parser.add_argument(
+        '--debug', choices=pysnmp_debug.flagMap,
+        action='append', type=str, default=[],
+        help='Enable one or more categories of SNMP debugging.')
+
+    parser.add_argument(
+        '--debug-asn1', choices=pyasn1_debug.FLAG_MAP,
+        action='append', type=str, default=[],
+        help='Enable one or more categories of ASN.1 debugging.')
+
+    parser.add_argument(
+        '--logging-method', type=lambda x: x.split(':'),
+        metavar='=<%s[:args]>]' % '|'.join(log.METHODS_MAP),
+        default='stderr', help='Logging method.')
+
+    parser.add_argument(
+        '--log-level', choices=log.LEVELS_MAP,
+        type=str, default='info', help='Logging level.')
+
+    v1arch_group = parser.add_argument_group('SNMPv1/v2c parameters')
+
+    v1arch_group.add_argument(
+        '--protocol-version', choices=['1', '2c'],
+        default='2c', help='SNMPv1/v2c protocol version')
+
+    v1arch_group.add_argument(
+        '--community', type=str, default='public',
+        help='SNMP community name')
+
+    v3arch_group = parser.add_argument_group('SNMPv3 parameters')
+
+    v3arch_group.add_argument(
+        '--v3-user', type=str,
+        help='SNMPv3 USM user (security) name')
+
+    v3arch_group.add_argument(
+        '--v3-auth-key', type=str,
+        help='SNMPv3 USM authentication key (must be > 8 chars)')
+
+    v3arch_group.add_argument(
+        '--v3-auth-proto', choices=AUTH_PROTOCOLS, default='NONE',
+        help='SNMPv3 USM authentication protocol')
+
+    v3arch_group.add_argument(
+        '--v3-priv-key', type=str,
+        help='SNMPv3 USM privacy (encryption) key (must be > 8 chars)')
+
+    v3arch_group.add_argument(
+        '--v3-priv-proto', choices=PRIV_PROTOCOLS, default='NONE',
+        help='SNMPv3 USM privacy (encryption) protocol')
+
+    v3arch_group.add_argument(
+        '--v3-context-engine-id',
+        type=lambda x: univ.OctetString(hexValue=x[2:]),
+        help='SNMPv3 context engine ID')
+
+    v3arch_group.add_argument(
+        '--v3-context-name', type=str, default='',
+        help='SNMPv3 context engine ID')
+
+    parser.add_argument(
+        '--use-getbulk', action='store_true',
+        help='Use SNMP GETBULK PDU for mass SNMP managed objects retrieval')
+
+    parser.add_argument(
+        '--getbulk-repetitions', type=int, default=25,
+        help='Use SNMP GETBULK PDU for mass SNMP managed objects retrieval')
+
+    endpoint_group = parser.add_mutually_exclusive_group(required=True)
+
+    endpoint_group.add_argument(
+        '--agent-udpv4-endpoint', type=_parse_endpoint,
+        metavar='<[X.X.X.X]:NNNNN>',
+        help='SNMP agent UDP/IPv4 address to pull simulation data '
+             'from (name:port)')
+
+    endpoint_group.add_argument(
+        '--agent-udpv6-endpoint',
+        type=functools.partial(_parse_endpoint, ipv6=True),
+        metavar='<[X:X:..X]:NNNNN>',
+        help='SNMP agent UDP/IPv6 address to pull simulation data '
+             'from ([name]:port)')
+
+    parser.add_argument(
+        '--timeout', type=int, default=3,
+        help='SNMP command response timeout (in seconds)')
+
+    parser.add_argument(
+        '--retries', type=int, default=3,
+        help='SNMP command retries')
+
+    parser.add_argument(
+        '--start-object', metavar='<MIB::Object|OID>', type=_parse_mib_object,
+        default=univ.ObjectIdentifier('1.3.6'),
+        help='Drop all simulation data records prior to this OID specified '
+             'as MIB object (MIB::Object) or OID (1.3.6.)')
+
+    parser.add_argument(
+        '--stop-object', metavar='<MIB::Object|OID>',
+        type=functools.partial(_parse_mib_object, last=True),
+        help='Drop all simulation data records after this OID specified '
+             'as MIB object (MIB::Object) or OID (1.3.6.)')
+
+    parser.add_argument(
+        '--mib-source', dest='mib_sources', metavar='<URI|PATH>',
+        action='append', type=str,
+        default=['http://mibs.snmplabs.com/asn1/@mib@'],
+        help='One or more URIs pointing to a collection of ASN.1 MIB files.'
+             'Optional "@mib@" token gets replaced with desired MIB module '
+             'name during MIB search.')
+
+    parser.add_argument(
+        '--destination-record-type', choices=RECORD_TYPES, default='snmprec',
+        help='Produce simulation data with record of this type')
+
+    parser.add_argument(
+        '--output-file', metavar='<FILE>', type=str,
+        help='SNMP simulation data file to write records to')
+
+    parser.add_argument(
+        '--continue-on-errors', metavar='<tolerance-level>',
+        type=int, default=0,
+        help='Keep on pulling SNMP data even if intermittent errors occur')
+
+    variation_group = parser.add_argument_group(
+        'Simulation data variation options')
+
+    parser.add_argument(
+        '--variation-modules-dir', action='append', type=str,
+        help='Search variation module by this path')
+
+    variation_group.add_argument(
+        '--variation-module', type=str,
+        help='Pass gathered simulation data through this variation module')
+
+    variation_group.add_argument(
+        '--variation-module-options', type=str, default='',
+        help='Variation module options')
+
+    args = parser.parse_args()
+
+    if args.debug:
+        pysnmp_debug.setLogger(pysnmp_debug.Debug(*args.debug))
+
+    if args.debug_asn1:
+        pyasn1_debug.setLogger(pyasn1_debug.Debug(*args.debug_asn1))
+
+    if args.output_file:
+        ext = os.path.extsep + RECORD_TYPES[args.destination_record_type].ext
+
+        if not args.output_file.endswith(ext):
+            args.output_file += ext
+
+        args.output_file = RECORD_TYPES[args.destination_record_type].open(
+            args.output_file, 'wb')
 
     else:
-        outputFile = sys.stdout
+        args.output_file = sys.stdout
 
         if sys.version_info >= (3, 0, 0):
             # binary mode write
-            outputFile = sys.stdout.buffer
+            args.output_file = sys.stdout.buffer
 
         elif sys.platform == "win32":
             import msvcrt
@@ -515,84 +347,67 @@ Software documentation and support at http://snmplabs.com/snmpsim
 
     # Catch missing params
 
-    if not agentUDPv4Endpoint and not agentUDPv6Endpoint and not agentUNIXEndpoint:
-        if agentUDPv4Address[0] is None:
-            sys.stderr.write(
-                'ERROR: agent endpoint address not specified\r\n'
-                '%s\r\n' % HELP_MESSAGE)
+    if args.protocol_version == '3':
+        if not args.v3_user:
+            sys.stderr.write('ERROR: --v3-user is missing\r\n')
+            parser.print_usage(sys.stderr)
             return 1
+
+        if args.v3_priv_key and not args.v3_auth_key:
+            sys.stderr.write('ERROR: --v3-auth-key is missing\r\n')
+            parser.print_usage(sys.stderr)
+            return 1
+
+        if AUTH_PROTOCOLS[args.v3_auth_proto] == config.usmNoAuthProtocol:
+            if args.v3_auth_key:
+                args.v3_auth_proto = 'MD5'
 
         else:
-            agentUDPv4Endpoint = agentUDPv4Address
-
-    if snmpVersion == 3:
-        if v3User is None:
-            sys.stderr.write(
-                'ERROR: --v3-user is missing\r\n'
-                '%s\r\n' % HELP_MESSAGE)
-            return 1
-
-        if v3PrivKey and not v3AuthKey:
-            sys.stderr.write(
-                'ERROR: --v3-auth-key is missing\r\n'
-                '%s\r\n' % HELP_MESSAGE)
-            return 1
-
-        if AUTH_PROTOCOLS[v3AuthProto] == config.usmNoAuthProtocol:
-            if v3AuthKey is not None:
-                v3AuthProto = 'MD5'
-
-        else:
-            if v3AuthKey is None:
-                sys.stderr.write(
-                    'ERROR: --v3-auth-key is missing\r\n'
-                    '%s\r\n' % HELP_MESSAGE)
+            if not args.v3_auth_key:
+                sys.stderr.write('ERROR: --v3-auth-key is missing\r\n')
+                parser.print_usage(sys.stderr)
                 return 1
 
-        if PRIV_PROTOCOLS[v3PrivProto] == config.usmNoPrivProtocol:
-            if v3PrivKey is not None:
-                v3PrivProto = 'DES'
+        if PRIV_PROTOCOLS[args.v3_priv_proto] == config.usmNoPrivProtocol:
+            if args.v3_priv_key:
+                args.v3_priv_proto = 'DES'
 
         else:
-            if v3PrivKey is None:
-                sys.stderr.write(
-                    'ERROR: --v3-priv-key is missing\r\n'
-                    '%s\r\n' % HELP_MESSAGE)
+            if not args.v3_priv_key:
+                sys.stderr.write('ERROR: --v3-priv-key is missing\r\n')
+                parser.print_usage(sys.stderr)
                 return 1
-
-    else:
-        v3ContextEngineId = None
-        v3ContextName = ''
 
     try:
-        log.setLogger(PROGRAM_NAME, *loggingMethod, force=True)
+        log.setLogger(__name__, *args.logging_method, force=True)
 
-        if loggingLevel:
-            log.setLevel(loggingLevel)
+        if args.log_level:
+            log.setLevel(args.log_level)
 
     except error.SnmpsimError as exc:
-        sys.stderr.write(
-            '%s\r\n%s\r\n' % (exc, HELP_MESSAGE))
+        sys.stderr.write('%s\r\n' % exc)
+        parser.print_usage(sys.stderr)
         return 1
 
-    if getBulkFlag and not snmpVersion:
+    if args.use_getbulk and args.protocol_version == '1':
         log.info('will be using GETNEXT with SNMPv1!')
-        getBulkFlag = False
+        args.use_getbulk = False
 
     # Load variation module
 
-    if variationModuleName:
+    if args.variation_module:
 
-        for variationModulesDir in confdir.variation:
+        for variation_modules_dir in (
+                args.variation_modules_dir or confdir.variation):
             log.info(
                 'Scanning "%s" directory for variation '
-                'modules...' % variationModulesDir)
+                'modules...' % variation_modules_dir)
 
-            if not os.path.exists(variationModulesDir):
-                log.info('Directory "%s" does not exist' % variationModulesDir)
+            if not os.path.exists(variation_modules_dir):
+                log.info('Directory "%s" does not exist' % variation_modules_dir)
                 continue
 
-            mod = os.path.join(variationModulesDir, variationModuleName + '.py')
+            mod = os.path.join(variation_modules_dir, args.variation_module + '.py')
             if not os.path.exists(mod):
                 log.info('Variation module "%s" not found' % mod)
                 continue
@@ -612,109 +427,98 @@ Software documentation and support at http://snmplabs.com/snmpsim
                 return 1
 
             else:
-                variationModule = ctx
-                log.info('Variation module "%s" loaded' % variationModuleName)
+                variation_module = ctx
+                log.info('Variation module "%s" loaded' % args.variation_module)
                 break
 
         else:
-            log.error('variation module "%s" not found' % variationModuleName)
+            log.error('variation module "%s" not found' % args.variation_module)
             return 1
 
     # SNMP configuration
 
-    snmpEngine = engine.SnmpEngine()
+    snmp_engine = engine.SnmpEngine()
 
-    if snmpVersion == 3:
+    if args.protocol_version == '3':
 
-        if v3PrivKey is None and v3AuthKey is None:
+        if args.v3_priv_key is None and args.v3_auth_key is None:
             secLevel = 'noAuthNoPriv'
 
-        elif v3PrivKey is None:
+        elif args.v3_priv_key is None:
             secLevel = 'authNoPriv'
 
         else:
             secLevel = 'authPriv'
 
         config.addV3User(
-            snmpEngine, v3User,
-            AUTH_PROTOCOLS[v3AuthProto], v3AuthKey,
-            PRIV_PROTOCOLS[v3PrivProto], v3PrivKey)
+            snmp_engine, args.v3_user,
+            AUTH_PROTOCOLS[args.v3_auth_proto], args.v3_auth_key,
+            PRIV_PROTOCOLS[args.v3_priv_proto], args.v3_priv_key)
 
         log.info(
             'SNMP version 3, Context EngineID: %s Context name: %s, SecurityName: %s, '
             'SecurityLevel: %s, Authentication key/protocol: %s/%s, Encryption '
             '(privacy) key/protocol: '
             '%s/%s' % (
-                v3ContextEngineId and v3ContextEngineId.prettyPrint() or '<default>',
-                v3Context and v3Context.prettyPrint() or '<default>', v3User,
-                secLevel, v3AuthKey is None and '<NONE>' or v3AuthKey,
-                v3AuthProto,
-                v3PrivKey is None and '<NONE>' or v3PrivKey, v3PrivProto))
+                args.v3_context_engine_id and args.v3_context_engine_id.prettyPrint() or '<default>',
+                args.v3_context_name and args.v3_context_name.prettyPrint() or '<default>', args.v3_user,
+                secLevel, args.v3_auth_key is None and '<NONE>' or args.v3_auth_key,
+                args.v3_auth_proto,
+                args.v3_priv_key is None and '<NONE>' or args.v3_priv_key, args.v3_priv_proto))
 
     else:
 
-        v3User = 'agt'
+        args.v3_user = 'agt'
         secLevel = 'noAuthNoPriv'
 
-        config.addV1System(snmpEngine, v3User, snmpCommunity)
+        config.addV1System(snmp_engine, args.v3_user, args.community)
 
         log.info(
             'SNMP version %s, Community name: '
-            '%s' % (snmpVersion == 0 and '1' or '2c', snmpCommunity))
+            '%s' % (args.protocol_version, args.community))
 
-    config.addTargetParams(snmpEngine, 'pms', v3User, secLevel, snmpVersion)
+    config.addTargetParams(
+        snmp_engine, 'pms', args.v3_user, secLevel, VERSION_MAP[args.protocol_version])
 
-    if agentUDPv6Endpoint:
+    if args.agent_udpv6_endpoint:
         config.addSocketTransport(
-            snmpEngine, udp6.domainName,
+            snmp_engine, udp6.domainName,
             udp6.Udp6SocketTransport().openClientMode())
 
         config.addTargetAddr(
-            snmpEngine, 'tgt', udp6.domainName, agentUDPv6Endpoint, 'pms',
-            timeout, retryCount)
+            snmp_engine, 'tgt', udp6.domainName, args.agent_udpv6_endpoint, 'pms',
+            args.timeout * 100, args.retries)
 
-        log.info('Querying UDP/IPv6 agent at [%s]:%s' % agentUDPv6Endpoint)
+        log.info('Querying UDP/IPv6 agent at [%s]:%s' % args.agent_udpv6_endpoint)
 
-    elif agentUNIXEndpoint:
+    elif args.agent_udpv4_endpoint:
         config.addSocketTransport(
-            snmpEngine, unix.domainName,
-            unix.UnixSocketTransport().openClientMode())
-
-        config.addTargetAddr(
-            snmpEngine, 'tgt', unix.domainName, agentUNIXEndpoint, 'pms',
-            timeout, retryCount)
-
-        log.info('Querying UNIX named pipe agent at %s' % agentUNIXEndpoint)
-
-    elif agentUDPv4Endpoint:
-        config.addSocketTransport(
-            snmpEngine, udp.domainName,
+            snmp_engine, udp.domainName,
             udp.UdpSocketTransport().openClientMode())
 
         config.addTargetAddr(
-            snmpEngine, 'tgt', udp.domainName, agentUDPv4Endpoint, 'pms',
-            timeout, retryCount)
+            snmp_engine, 'tgt', udp.domainName, args.agent_udpv4_endpoint, 'pms',
+            args.timeout * 100, args.retries)
 
-        log.info('Querying UDP/IPv4 agent at %s:%s' % agentUDPv4Endpoint)
+        log.info('Querying UDP/IPv4 agent at %s:%s' % args.agent_udpv4_endpoint)
 
-    log.info('Agent response timeout: %.2f secs, retries: '
-             '%s' % (timeout / 100, retryCount))
+    log.info('Agent response timeout: %d secs, retries: '
+             '%s' % (args.timeout, args.retries))
 
-    if (isinstance(startOID, ObjectIdentity) or
-            isinstance(stopOID, ObjectIdentity)):
+    if (isinstance(args.start_object, ObjectIdentity) or
+            isinstance(args.stop_object, ObjectIdentity)):
 
         compiler.addMibCompiler(
-            snmpEngine.getMibBuilder(),
-            sources=mibSources or defaultMibSources)
+            snmp_engine.getMibBuilder(), sources=args.mib_sources)
 
-        mibViewController = view.MibViewController(snmpEngine.getMibBuilder())
+        mibViewController = view.MibViewController(snmp_engine.getMibBuilder())
 
         try:
-            if isinstance(startOID, ObjectIdentity):
-                startOID.resolveWithMib(mibViewController)
+            if isinstance(args.start_object, ObjectIdentity):
+                args.start_object.resolveWithMib(mibViewController)
 
-            if isinstance(stopOID, ObjectIdentity):
-                stopOID.resolveWithMib(mibViewController)
+            if isinstance(args.stop_object, ObjectIdentity):
+                args.stop_object.resolveWithMib(mibViewController)
 
         except PySnmpError as exc:
             sys.stderr.write('ERROR: %s\r\n' % exc)
@@ -722,31 +526,31 @@ Software documentation and support at http://snmplabs.com/snmpsim
 
     # Variation module initialization
 
-    if variationModule:
+    if variation_module:
         log.info('Initializing variation module...')
 
         for x in ('init', 'record', 'shutdown'):
-            if x not in variationModule:
+            if x not in variation_module:
                 log.error('missing "%s" handler at variation module '
-                          '"%s"' % (x, variationModuleName))
+                          '"%s"' % (x, args.variation_module))
                 return 1
 
         try:
-            handler = variationModule['init']
+            handler = variation_module['init']
 
-            handler(snmpEngine=snmpEngine, options=variationModuleOptions,
-                    mode='recording', startOID=startOID, stopOID=stopOID)
+            handler(snmpEngine=snmp_engine, options=args.variation_module_options,
+                    mode='recording', startOID=args.start_object, stopOID=args.stop_object)
 
         except Exception as exc:
             log.error(
                 'Variation module "%s" initialization FAILED: '
-                '%s' % (variationModuleName, exc))
+                '%s' % (args.variation_module, exc))
 
         else:
             log.info(
-                'Variation module "%s" initialization OK' % variationModuleName)
+                'Variation module "%s" initialization OK' % args.variation_module)
 
-    dataFileHandler = RECORD_TYPES[dstRecordType]
+    data_file_handler = RECORD_TYPES[args.destination_record_type]
 
 
     # SNMP worker
@@ -780,7 +584,7 @@ Software documentation and support at http://snmplabs.com/snmpsim
                 if len(nextOID) < 4:
                     pass
 
-                elif (continueOnErrors - cbCtx['retries']) * 10 / continueOnErrors > 5:
+                elif (args.continue_on_errors - cbCtx['retries']) * 10 / args.continue_on_errors > 5:
                     nextOID = nextOID[:-2] + (nextOID[-2] + 1,)
 
                 elif nextOID[-1]:
@@ -797,12 +601,12 @@ Software documentation and support at http://snmplabs.com/snmpsim
                     '...' % (nextOID, cbCtx['retries']))
 
                 # initiate another SNMP walk iteration
-                if getBulkFlag:
+                if args.use_getbulk:
                     cmdGen.sendVarBinds(
                         snmpEngine,
                         'tgt',
-                        v3ContextEngineId, v3Context,
-                        0, getBulkRepetitions,
+                        args.v3_context_engine_id, args.v3_context_name,
+                        0, args.getbulk_repetitions,
                         [(nextOID, None)],
                         cbFun, cbCtx)
 
@@ -810,7 +614,7 @@ Software documentation and support at http://snmplabs.com/snmpsim
                     cmdGen.sendVarBinds(
                         snmpEngine,
                         'tgt',
-                        v3ContextEngineId, v3Context,
+                        args.v3_context_engine_id, args.v3_context_name,
                         [(nextOID, None)],
                         cbFun, cbCtx)
 
@@ -818,27 +622,27 @@ Software documentation and support at http://snmplabs.com/snmpsim
 
             return
 
-        if continueOnErrors != cbCtx['retries']:
+        if args.continue_on_errors != cbCtx['retries']:
             cbCtx['retries'] += 1
 
         if varBindTable and varBindTable[-1] and varBindTable[-1][0]:
             cbCtx['lastOID'] = varBindTable[-1][0][0]
 
-        stopFlag = False
+        stop_flag = False
 
         # Walk var-binds
         for varBindRow in varBindTable:
             for oid, value in varBindRow:
 
                 # EOM
-                if stopOID and oid >= stopOID:
-                    stopFlag = True  # stop on out of range condition
+                if args.stop_object and oid >= args.stop_object:
+                    stop_flag = True  # stop on out of range condition
 
                 elif (value is None or
                           value.tagSet in (rfc1905.NoSuchObject.tagSet,
                                            rfc1905.NoSuchInstance.tagSet,
                                            rfc1905.EndOfMibView.tagSet)):
-                    stopFlag = True
+                    stop_flag = True
 
                 # remove value enumeration
                 if value.tagSet == rfc1902.Integer32.tagSet:
@@ -859,14 +663,14 @@ Software documentation and support at http://snmplabs.com/snmpsim
                     'total': cbCtx['total'],
                     'iteration': cbCtx['iteration'],
                     'reqTime': cbCtx['reqTime'],
-                    'startOID': startOID,
-                    'stopOID': stopOID,
-                    'stopFlag': stopFlag,
-                    'variationModule': variationModule
+                    'args.start_object': args.start_object,
+                    'stopOID': args.stop_object,
+                    'stopFlag': stop_flag,
+                    'variationModule': variation_module
                 }
 
                 try:
-                    line = dataFileHandler.format(oid, value, **context)
+                    line = data_file_handler.format(oid, value, **context)
 
                 except error.MoreDataNotification as exc:
                     cbCtx['count'] = 0
@@ -883,24 +687,24 @@ Software documentation and support at http://snmplabs.com/snmpsim
                         time.sleep(moreDataNotification['period'])
 
                     # initiate another SNMP walk iteration
-                    if getBulkFlag:
+                    if args.use_getbulk:
                         cmdGen.sendVarBinds(
                             snmpEngine,
                             'tgt',
-                            v3ContextEngineId, v3Context,
-                            0, getBulkRepetitions,
-                            [(startOID, None)],
+                            args.v3_context_engine_id, args.v3_context_name,
+                            0, args.getbulk_repetitions,
+                            [(args.start_object, None)],
                             cbFun, cbCtx)
 
                     else:
                         cmdGen.sendVarBinds(
                             snmpEngine,
                             'tgt',
-                            v3ContextEngineId, v3Context,
-                            [(startOID, None)],
+                            args.v3_context_engine_id, args.v3_context_name,
+                            [(args.start_object, None)],
                             cbFun, cbCtx)
 
-                    stopFlag = True  # stop current iteration
+                    stop_flag = True  # stop current iteration
 
                 except error.NoDataNotification:
                     pass
@@ -910,7 +714,7 @@ Software documentation and support at http://snmplabs.com/snmpsim
                     continue
 
                 else:
-                    outputFile.write(line)
+                    args.output_file.write(line)
 
                     cbCtx['count'] += 1
                     cbCtx['total'] += 1
@@ -923,7 +727,7 @@ Software documentation and support at http://snmplabs.com/snmpsim
         cbCtx['reqTime'] = time.time()
 
         # Continue walking
-        return not stopFlag
+        return not stop_flag
 
     cbCtx = {
         'total': 0,
@@ -931,66 +735,66 @@ Software documentation and support at http://snmplabs.com/snmpsim
         'errors': 0,
         'iteration': 0,
         'reqTime': time.time(),
-        'retries': continueOnErrors,
-        'lastOID': startOID
+        'retries': args.continue_on_errors,
+        'lastOID': args.start_object
     }
 
-    if getBulkFlag:
+    if args.use_getbulk:
         cmdGen = cmdgen.BulkCommandGenerator()
 
         cmdGen.sendVarBinds(
-            snmpEngine,
+            snmp_engine,
             'tgt',
-            v3ContextEngineId, v3Context,
-            0, getBulkRepetitions,
-            [(startOID, None)],
+            args.v3_context_engine_id, args.v3_context_name,
+            0, args.getbulk_repetitions,
+            [(args.start_object, rfc1902.Null(''))],
             cbFun, cbCtx)
 
     else:
         cmdGen = cmdgen.NextCommandGenerator()
 
         cmdGen.sendVarBinds(
-            snmpEngine,
+            snmp_engine,
             'tgt',
-            v3ContextEngineId, v3Context,
-            [(startOID, None)],
+            args.v3_context_engine_id, args.v3_context_name,
+            [(args.start_object, rfc1902.Null(''))],
             cbFun, cbCtx)
 
     log.info(
         'Sending initial %s request for %s (stop at %s)'
-        '....' % (getBulkFlag and 'GETBULK' or 'GETNEXT',
-                  startOID, stopOID or '<end-of-mib>'))
+        '....' % (args.use_getbulk and 'GETBULK' or 'GETNEXT',
+                  args.start_object, args.stop_object or '<end-of-mib>'))
 
     started = time.time()
 
     try:
-        snmpEngine.transportDispatcher.runDispatcher()
+        snmp_engine.transportDispatcher.runDispatcher()
 
     except KeyboardInterrupt:
         log.info('Shutting down process...')
 
     finally:
-        if variationModule:
+        if variation_module:
             log.info('Shutting down variation module '
-                     '%s...' % variationModuleName)
+                     '%s...' % args.variation_module)
 
             try:
-                handler = variationModule['shutdown']
+                handler = variation_module['shutdown']
 
-                handler(snmpEngine=snmpEngine,
-                        options=variationModuleOptions,
+                handler(snmpEngine=snmp_engine,
+                        options=args.variation_module_options,
                         mode='recording')
 
             except Exception as exc:
                 log.error(
                     'Variation module %s shutdown FAILED: '
-                    '%s' % (variationModuleName, exc))
+                    '%s' % (args.variation_module, exc))
 
             else:
                 log.info(
-                    'Variation module %s shutdown OK' % variationModuleName)
+                    'Variation module %s shutdown OK' % args.variation_module)
 
-        snmpEngine.transportDispatcher.closeDispatcher()
+        snmp_engine.transportDispatcher.closeDispatcher()
 
         started = time.time() - started
 
@@ -1002,8 +806,8 @@ Software documentation and support at http://snmplabs.com/snmpsim
                     started and cbCtx['count'] // started or 0,
                     cbCtx['errors']))
 
-        outputFile.flush()
-        outputFile.close()
+        args.output_file.flush()
+        args.output_file.close()
 
         return 0
 

@@ -6,7 +6,7 @@
 #
 # SNMP Agent Simulator
 #
-import getopt
+import argparse
 import os
 import stat
 import sys
@@ -39,6 +39,7 @@ from pysnmp.smi.error import MibOperationError
 from snmpsim import confdir
 from snmpsim import daemon
 from snmpsim import log
+from snmpsim import utils
 from snmpsim.error import NoDataNotification
 from snmpsim.error import SnmpsimError
 from snmpsim.record import dump
@@ -49,8 +50,6 @@ from snmpsim.record import walk
 from snmpsim.record.search.database import RecordIndex
 from snmpsim.record.search.file import getRecord
 from snmpsim.record.search.file import searchRecordByOid
-
-PROGRAM_NAME = os.path.basename(sys.argv[0])
 
 AUTH_PROTOCOLS = {
     'MD5': config.usmHMACMD5AuthProtocol,
@@ -81,48 +80,20 @@ RECORD_TYPES = {
     walk.WalkRecord.ext: walk.WalkRecord(),
 }
 
+# Poor man's v2c->v1 translation
+SNMP_ERROR_MAP = {
+    rfc1902.Counter64.tagSet: 5,
+    rfc1905.NoSuchObject.tagSet: 2,
+    rfc1905.NoSuchInstance.tagSet: 2,
+    rfc1905.EndOfMibView.tagSet: 2
+}
+
 SELF_LABEL = 'self'
 
-HELP_MESSAGE = """\
-Usage: %s [--help]
-    [--version ]
-    [--debug=<%s>]
-    [--debug-asn1=<%s>]
-    [--daemonize]
-    [--process-user=<uname>] [--process-group=<gname>]
-    [--pid-file=<file>]
-    [--logging-method=<%s[:args>]>]
-    [--log-level=<%s>]
-    [--cache-dir=<dir>]
-    [--variation-modules-dir=<dir>]
-    [--variation-module-options=<module[=alias][:args]>] 
-    [--force-index-rebuild]
-    [--validate-data]
-    [--args-from-file=<file>]
-    [--transport-id-offset=<number>]
-    [--v2c-arch]
-    [--v3-only]
-    [--v3-engine-id=<hexvalue>]
-    [--v3-context-engine-id=<hexvalue>]
-    [--v3-user=<username>]
-    [--v3-auth-key=<key>]
-    [--v3-auth-proto=<%s>]
-    [--v3-priv-key=<key>]
-    [--v3-priv-proto=<%s>]
-    [--data-dir=<dir>]
-    [--max-varbinds=<number>]
-    [--agent-udpv4-endpoint=<X.X.X.X:NNNNN>]
-    [--agent-udpv6-endpoint=<[X:X:..X]:NNNNN>]
-    [--agent-unix-endpoint=</path/to/named/pipe>]""" % (
-    sys.argv[0],
-    '|'.join([x for x in getattr(pysnmp_debug, 'FLAG_MAP', getattr(pysnmp_debug, 'flagMap', ()))
-              if x != 'mibview']),
-    '|'.join([x for x in getattr(pyasn1_debug, 'FLAG_MAP', getattr(pyasn1_debug, 'flagMap', ()))]),
-    '|'.join(log.METHODS_MAP),
-    '|'.join(log.LEVELS_MAP),
-    '|'.join(sorted([x for x in AUTH_PROTOCOLS if x != 'NONE'])),
-    '|'.join(sorted([x for x in PRIV_PROTOCOLS if x != 'NONE']))
-)
+DESCRIPTION = (
+    'SNMP agent simulator: responds to SNMP requests, variate responses '
+    'based on transport addresses, SNMP community name, SNMPv3 context '
+    'or via variation modules.')
 
 
 class TransportEndpointsBase:
@@ -177,15 +148,6 @@ class IPv6TransportEndpoints(TransportEndpointsBase):
             h, p = addr, 161
 
         return udp6.Udp6Transport().openServerMode((h, p)), addr
-
-
-class UnixTransportEndpoints(TransportEndpointsBase):
-    def _addEndpoint(self, addr):
-        if not unix:
-            raise SnmpsimError(
-                'This system does not support UNIX domain sockets')
-
-        return unix.UnixTransport().openServerMode(addr), addr
 
 
 # Extended snmprec record handler
@@ -297,8 +259,8 @@ class SnmprecRecord(SnmprecRecordMixIn, snmprec.SnmprecRecord):
 RECORD_TYPES[SnmprecRecord.ext] = SnmprecRecord()
 
 
-class CompressedSnmprecRecord(SnmprecRecordMixIn,
-                              snmprec.CompressedSnmprecRecord):
+class CompressedSnmprecRecord(
+    SnmprecRecordMixIn, snmprec.CompressedSnmprecRecord):
     pass
 
 
@@ -506,9 +468,7 @@ class DataFile(AbstractLayout):
         return '%s controller' % self.__textFile
 
 
-# Collect data files
-
-def getDataFiles(tgtDir, topLen=None):
+def get_data_files(tgtDir, topLen=None):
     if topLen is None:
         topLen = len(tgtDir.split(os.path.sep))
 
@@ -532,7 +492,7 @@ def getDataFiles(tgtDir, topLen=None):
             relPath = fullPath.split(os.path.sep)[topLen:]
 
         if stat.S_ISDIR(inode.st_mode):
-            dirContent += getDataFiles(fullPath, topLen)
+            dirContent += get_data_files(fullPath, topLen)
             continue
 
         if not stat.S_ISREG(inode.st_mode):
@@ -565,16 +525,15 @@ def getDataFiles(tgtDir, topLen=None):
     return dirContent
 
 
-# Lightweight MIB instrumentation (API-compatible with pysnmp's)
-
-class MibInstrumController:
+class MibInstrumController(object):
+    """Lightweight MIB instrumentation (API-compatible with pysnmp's)"""
     def __init__(self, dataFile):
         self.__dataFile = dataFile
 
     def __str__(self):
         return str(self.__dataFile)
 
-    def __getCallContext(self, acInfo, nextFlag=False, setFlag=False):
+    def _get_call_context(self, acInfo, nextFlag=False, setFlag=False):
         if acInfo is None:
             return {'nextFlag': nextFlag,
                     'setFlag': setFlag}
@@ -619,20 +578,20 @@ class MibInstrumController:
 
     def readVars(self, varBinds, acInfo=None):
         return self.__dataFile.processVarBinds(
-                varBinds, **self.__getCallContext(acInfo, False))
+                varBinds, **self._get_call_context(acInfo, False))
 
     def readNextVars(self, varBinds, acInfo=None):
         return self.__dataFile.processVarBinds(
-                varBinds, **self.__getCallContext(acInfo, True))
+                varBinds, **self._get_call_context(acInfo, True))
 
     def writeVars(self, varBinds, acInfo=None):
         return self.__dataFile.processVarBinds(
-                varBinds, **self.__getCallContext(acInfo, False, True))
+                varBinds, **self._get_call_context(acInfo, False, True))
 
-
-# Data files index as a MIB instrumentation in a dedicated SNMP context
 
 class DataIndexInstrumController:
+    """Data files index as a MIB instrumentation in a dedicated SNMP context"""
+
     indexSubOid = (1,)
 
     def __init__(self, baseOid=(1, 3, 6, 1, 4, 1, 20408, 999)):
@@ -673,14 +632,14 @@ class DataIndexInstrumController:
         self.__idx += 1
 
 
-mibInstrumControllerSet = {
+mib_instrum_controller_set = {
     DataFile.layout: MibInstrumController
 }
 
 
 # Suggest variations of context name based on request data
-def probeContext(transportDomain, transportAddress,
-                 contextEngineId, contextName):
+def probe_context(transportDomain, transportAddress,
+                  contextEngineId, contextName):
     if contextEngineId:
         candidate = [
             contextEngineId, contextName, '.'.join(
@@ -711,319 +670,360 @@ def probeContext(transportDomain, transportAddress,
 
     # try legacy layout w/o contextEnginId in the path
     if contextEngineId:
-        for candidate in probeContext(
+        for candidate in probe_context(
                 transportDomain, transportAddress, None, contextName):
             yield candidate
- 
 
-def main():
-    forceIndexBuild = False
-    validateData = False
-    maxVarBinds = 64
-    transportIdOffset = 0
-    v2cArch = False
-    v3Only = False
-    pidFile = '/var/run/snmpsim/%s.pid' % PROGRAM_NAME
-    foregroundFlag = True
-    procUser = procGroup = None
-    loggingMethod = ['stderr']
-    loggingLevel = None
-    variationModulesOptions = {}
-    variationModules = {}
 
-    try:
-        opts, params = getopt.getopt(
-            sys.argv[1:], 'hv',
-            ['help', 'version', 'debug=', 'debug-snmp=', 'debug-asn1=',
-             'daemonize', 'process-user=', 'process-group=', 'pid-file=',
-             'logging-method=', 'log-level=', 'device-dir=', 'cache-dir=',
-             'variation-modules-dir=', 'force-index-rebuild',
-             'validate-device-data', 'validate-data', 'v2c-arch', 'v3-only',
-             'transport-id-offset=', 'variation-module-options=',
-             'args-from-file=',
-             # this option starts new SNMPv3 engine configuration
-             'v3-engine-id=', 'v3-context-engine-id=', 'v3-user=',
-             'v3-auth-key=', 'v3-auth-proto=',  'v3-priv-key=', 'v3-priv-proto=',
-             'data-dir=', 'max-varbinds=', 'agent-udpv4-endpoint=',
-             'agent-udpv6-endpoint=', 'agent-unix-endpoint='])
+def probeHashContext(self, snmpEngine):
+    """v3arch SNMP context name searcher"""
+    # this API is first introduced in pysnmp 4.2.6
+    execCtx = snmpEngine.observer.getExecutionContext(
+        'rfc3412.receiveMessage:request')
 
-    except Exception as exc:
-        sys.stderr.write('ERROR: %s\r\n%s\r\n' % (exc, HELP_MESSAGE))
-        return 1
+    (transportDomain,
+     transportAddress,
+     contextEngineId,
+     contextName) = (
+        execCtx['transportDomain'],
+        execCtx['transportAddress'],
+        execCtx['contextEngineId'],
+        execCtx['contextName'].prettyPrint()
+    )
 
-    if params:
-        sys.stderr.write(
-            'ERROR: extra arguments supplied %s\r\n'
-            '%s\r\n' % (params, HELP_MESSAGE))
-        return 1
-
-    v3Args = []
-
-    for opt in opts:
-        if opt[0] == '-h' or opt[0] == '--help':
-            sys.stderr.write("""\
-Synopsis:
-  SNMP Agents Simulation tool. Responds to SNMP requests, variate responses
-  based on transport addresses, SNMP community name or SNMPv3 context name.
-  Can implement highly complex behavior through variation modules.
-
-Documentation:
-  http://snmplabs.com/snmpsim/simulating-agents.html
-%s
-""" % HELP_MESSAGE)
-            return 1
-
-        if opt[0] == '-v' or opt[0] == '--version':
-            import snmpsim
-            import pysnmp
-            import pyasn1
-
-            sys.stderr.write("""\
-SNMP Simulator version %s, written by Ilya Etingof <etingof@gmail.com>
-Using foundation libraries: pysnmp %s, pyasn1 %s.
-Python interpreter: %s
-Software documentation and support at http://snmplabs.com/snmpsim
-%s
-""" % (snmpsim.__version__,
-       getattr(pysnmp, '__version__', 'unknown'),
-       getattr(pyasn1, '__version__', 'unknown'),
-       sys.version, HELP_MESSAGE))
-            return 1
-
-        elif opt[0] in ('--debug', '--debug-snmp'):
-            pysnmp_debug.setLogger(
-                pysnmp_debug.Debug(
-                    *opt[1].split(','),
-                    **dict(loggerName='%s.pysnmp' % PROGRAM_NAME)))
-
-        elif opt[0] == '--debug-asn1':
-            pyasn1_debug.setLogger(
-                pyasn1_debug.Debug(
-                    *opt[1].split(','),
-                    **dict(loggerName='%s.pyasn1' % PROGRAM_NAME)))
-
-        elif opt[0] == '--daemonize':
-            foregroundFlag = False
-
-        elif opt[0] == '--process-user':
-            procUser = opt[1]
-
-        elif opt[0] == '--process-group':
-            procGroup = opt[1]
-
-        elif opt[0] == '--pid-file':
-            pidFile = opt[1]
-
-        elif opt[0] == '--logging-method':
-            loggingMethod = opt[1].split(':')
-
-        elif opt[0] == '--log-level':
-            loggingLevel = opt[1]
-
-        elif opt[0] in ('--device-dir', '--data-dir'):
-            if [x for x in v3Args if x[0] in (
-                    '--v3-engine-id', '--v3-context-engine-id')]:
-                v3Args.append(opt)
-
-            else:
-                confdir.data.insert(0, opt[1])
-
-        elif opt[0] == '--cache-dir':
-            confdir.cache = opt[1]
-
-        elif opt[0] == '--variation-modules-dir':
-            confdir.variation.insert(0, opt[1])
-
-        elif opt[0] == '--variation-module-options':
-            args = opt[1].split(':', 1)
-
-            try:
-                modName, args = args[0], args[1]
-
-            except Exception:
-                sys.stderr.write(
-                    'ERROR: improper variation module options: %s\r\n'
-                    '%s\r\n' % (opt[1], HELP_MESSAGE))
-                return 1
-
-            if '=' in modName:
-                modName, alias = modName.split('=', 1)
-
-            else:
-                alias = os.path.splitext(os.path.basename(modName))[0]
-
-            if modName not in variationModulesOptions:
-                variationModulesOptions[modName] = []
-
-            variationModulesOptions[modName].append((alias, args))
-
-        elif opt[0] == '--force-index-rebuild':
-            forceIndexBuild = True
-
-        elif opt[0] in ('--validate-device-data', '--validate-data'):
-            validateData = True
-
-        elif opt[0] == '--v2c-arch':
-            v2cArch = True
-
-        elif opt[0] == '--v3-only':
-            v3Only = True
-
-        elif opt[0] == '--transport-id-offset':
-            try:
-                transportIdOffset = max(0, int(opt[1]))
-
-            except Exception as exc:
-                sys.stderr.write(
-                    'ERROR: %s\r\n%s\r\n' % (exc, HELP_MESSAGE))
-                return 1
-
-        # processing of the following args is postponed till SNMP engine startup
-
-        elif opt[0] in ('--agent-udpv4-endpoint',
-                        '--agent-udpv6-endpoint',
-                        '--agent-unix-endpoint'):
-            v3Args.append(opt)
-
-        elif opt[0] in ('--agent-udpv4-endpoints-list',
-                        '--agent-udpv6-endpoints-list',
-                        '--agent-unix-endpoints-list'):
-            sys.stderr.write(
-                'ERROR: use --args-from-file=<file> option to list many '
-                'endpoints\r\n%s\r\n' % HELP_MESSAGE)
-            return 1
-
-        elif opt[0] in ('--v3-engine-id', '--v3-context-engine-id',
-                        '--v3-user', '--v3-auth-key', '--v3-auth-proto',
-                        '--v3-priv-key', '--v3-priv-proto'):
-            v3Args.append(opt)
-
-        elif opt[0] == '--max-varbinds':
-            try:
-                if '--v3-engine-id' in [x[0] for x in v3Args]:
-                    v3Args.append((opt[0], max(1, int(opt[1]))))
-
-                else:
-                    maxVarBinds = max(1, int(opt[1]))
-
-            except Exception as exc:
-                sys.stderr.write(
-                    'ERROR: %s\r\n%s\r\n' % (exc, HELP_MESSAGE))
-                return 1
-
-        elif opt[0] == '--args-from-file':
-            try:
-                v3Args.extend(
-                    [x.split('=', 1) for x in open(opt[1]).read().split()])
-
-            except Exception as exc:
-                sys.stderr.write(
-                    'ERROR: file %s opening failure: %s\r\n'
-                    '%s\r\n' % (opt[1], exc, HELP_MESSAGE))
-                return 1
-
-    if v2cArch and (
-            v3Only or [x for x in v3Args if x[0][:4] == '--v3']):
-        sys.stderr.write(
-            'ERROR: either of --v2c-arch or --v3-* options should be used\r\n'
-            '%s\r\n' % HELP_MESSAGE)
-        return 1
-
-    for opt in tuple(v3Args):
-        if opt[0] == '--agent-udpv4-endpoint':
-            try:
-                v3Args.append((opt[0], IPv4TransportEndpoints().add(opt[1])))
-
-            except Exception as exc:
-                sys.stderr.write(
-                    'ERROR: %s\r\n%s\r\n' % (exc, HELP_MESSAGE))
-                return 1
-
-        elif opt[0] == '--agent-udpv6-endpoint':
-            try:
-                v3Args.append((opt[0], IPv6TransportEndpoints().add(opt[1])))
-
-            except Exception as exc:
-                sys.stderr.write(
-                    'ERROR: %s\r\n%s\r\n' % (exc, HELP_MESSAGE))
-                return 1
-
-        elif opt[0] == '--agent-unix-endpoint':
-            try:
-                v3Args.append((opt[0], UnixTransportEndpoints().add(opt[1])))
-
-            except Exception as exc:
-                sys.stderr.write(
-                    'ERROR: %s\r\n%s\r\n' % (exc, HELP_MESSAGE))
-                return 1
-
-        else:
-            v3Args.append(opt)
-
-    if v3Args[:len(v3Args)//2] == v3Args[len(v3Args)//2:]:
-        sys.stderr.write(
-            'ERROR: agent endpoint address(es) not specified\r\n'
-            '%s\r\n' % HELP_MESSAGE)
-        return 1
+    if contextEngineId == snmpEngine.snmpEngineID:
+        contextEngineId = SELF_LABEL
 
     else:
-        v3Args = v3Args[len(v3Args)//2:]
+        contextEngineId = contextEngineId.prettyPrint()
 
-    with daemon.PrivilegesOf(procUser, procGroup):
+    for candidate in probe_context(
+            transportDomain, transportAddress,
+            contextEngineId, contextName):
+
+        if len(candidate) > 32:
+            probedContextName = md5(candidate).hexdigest()
+
+        else:
+            probedContextName = candidate
 
         try:
-            log.setLogger(PROGRAM_NAME, *loggingMethod, force=True)
+            mibInstrum = self.snmpContext.getMibInstrum(probedContextName)
 
-            if loggingLevel:
-                log.setLevel(loggingLevel)
+        except error.PySnmpError:
+            pass
 
-        except SnmpsimError as exc:
-            sys.stderr.write('%s\r\n%s\r\n' % (exc, HELP_MESSAGE))
-            return 1
+        else:
+            log.info(
+                'Using %s selected by candidate %s; transport ID %s, '
+                'source address %s, context engine ID %s, '
+                'community name '
+                '"%s"' % (mibInstrum, candidate,
+                          univ.ObjectIdentifier(transportDomain),
+                          transportAddress[0], contextEngineId,
+                          probedContextName))
+            contextName = probedContextName
+            break
+    else:
+        mibInstrum = self.snmpContext.getMibInstrum(contextName)
+        log.info(
+            'Using %s selected by contextName "%s", transport ID %s, '
+            'source address %s' % (mibInstrum, contextName,
+                                   univ.ObjectIdentifier(transportDomain),
+                                   transportAddress[0]))
 
-    if not foregroundFlag:
+    if not isinstance(mibInstrum, (MibInstrumController, DataIndexInstrumController)):
+        log.error(
+            'LCD access denied (contextName does not match any data file)')
+        raise NoDataNotification()
+
+    return contextName
+
+
+class GetCommandResponder(cmdrsp.GetCommandResponder):
+    """v3arch GET command handler"""
+
+    def handleMgmtOperation(self, snmpEngine, stateReference, contextName, PDU, acInfo):
         try:
-            daemon.daemonize(pidFile)
+            cmdrsp.GetCommandResponder.handleMgmtOperation(
+                self, snmpEngine, stateReference,
+                probeHashContext(self, snmpEngine),
+                PDU, (None, snmpEngine)  # custom acInfo
+            )
+
+        except NoDataNotification:
+            self.releaseStateInformation(stateReference)
+
+
+class SetCommandResponder(cmdrsp.SetCommandResponder):
+    """v3arch SET command handler"""
+
+    def handleMgmtOperation(self, snmpEngine, stateReference, contextName, PDU, acInfo):
+        try:
+            cmdrsp.SetCommandResponder.handleMgmtOperation(
+                self, snmpEngine, stateReference,
+                probeHashContext(self, snmpEngine),
+                PDU, (None, snmpEngine)  # custom acInfo
+            )
+
+        except NoDataNotification:
+            self.releaseStateInformation(stateReference)
+
+
+class NextCommandResponder(cmdrsp.NextCommandResponder):
+    """v3arch GETNEXT command handler"""
+
+    def handleMgmtOperation(self, snmpEngine, stateReference, contextName, PDU, acInfo):
+        try:
+            cmdrsp.NextCommandResponder.handleMgmtOperation(
+                self, snmpEngine, stateReference,
+                probeHashContext(self, snmpEngine),
+                PDU, (None, snmpEngine)  # custom acInfo
+            )
+
+        except NoDataNotification:
+            self.releaseStateInformation(stateReference)
+
+
+class BulkCommandResponder(cmdrsp.BulkCommandResponder):
+    """v3arch GETBULK command handler"""
+
+    def handleMgmtOperation(self, snmpEngine, stateReference, contextName, PDU, acInfo):
+        try:
+            cmdrsp.BulkCommandResponder.handleMgmtOperation(
+                self, snmpEngine, stateReference,
+                probeHashContext(self, snmpEngine),
+                PDU, (None, snmpEngine)  # custom acInfo
+            )
+
+        except NoDataNotification:
+            self.releaseStateInformation(stateReference)
+
+
+def main():
+
+    variation_modules_options = {}
+    variation_modules = {}
+
+    parser = argparse.ArgumentParser(description=DESCRIPTION)
+
+    parser.add_argument(
+        '-v', '--version', action='version',
+        version=utils.TITLE)
+
+    parser.add_argument(
+        '--quiet', action='store_true',
+        help='Do not print out informational messages')
+
+    parser.add_argument(
+        '--debug', choices=pysnmp_debug.flagMap,
+        action='append', type=str, default=[],
+        help='Enable one or more categories of SNMP debugging.')
+
+    parser.add_argument(
+        '--debug-asn1', choices=pyasn1_debug.FLAG_MAP,
+        action='append', type=str, default=[],
+        help='Enable one or more categories of ASN.1 debugging.')
+
+    parser.add_argument(
+        '--logging-method', type=lambda x: x.split(':'),
+        metavar='=<%s[:args]>]' % '|'.join(log.METHODS_MAP),
+        default='stderr', help='Logging method.')
+
+    parser.add_argument(
+        '--log-level', choices=log.LEVELS_MAP,
+        type=str, default='info', help='Logging level.')
+
+    parser.add_argument(
+        '--daemonize', action='store_true',
+        help='Disengage from controlling terminal and become a daemon')
+
+    parser.add_argument(
+        '--process-user', type=str,
+        help='If run as root, switch simulator daemon to this user right '
+             'upon binding privileged ports')
+
+    parser.add_argument(
+        '--process-group', type=str,
+        help='If run as root, switch simulator daemon to this group right '
+             'upon binding privileged ports')
+
+    parser.add_argument(
+        '--pid-file', metavar='<FILE>', type=str,
+        default='/var/run/%s/%s.pid' % (__name__, os.getpid()),
+        help='SNMP simulation data file to write records to')
+
+    parser.add_argument(
+        '--cache-dir', metavar='<DIR>', type=str,
+        help='SNMP simulation data file to write records to')
+
+    parser.add_argument(
+        '--force-index-rebuild', action='store_true',
+        help='Rebuild simulation data files indices even if they seem '
+             'up to date')
+
+    parser.add_argument(
+        '--validate-data', action='store_true',
+        help='Validate simulation data files on daemon start-up')
+
+    parser.add_argument(
+        '--variation-modules-dir', metavar='<DIR>', type=str,
+        action='append', default=[],
+        help='Variation modules search path(s)')
+
+    parser.add_argument(
+        '--variation-module-options', metavar='<module[=alias][:args]>',
+        type=str, action='append', default=[],
+        help='Options for a specific variation module')
+
+    parser.add_argument(
+        '--v2c-arch', action='store_true',
+        help='Use lightweight, legacy SNMP architecture capable to support '
+             'v1/v2c versions of SNMP')
+
+    parser.add_argument(
+        '--v3-only', action='store_true',
+        help='Trip legacy SNMP v1/v2c support to gain a little lesser memory '
+             'footprint')
+
+    parser.add_argument(
+        '--transport-id-offset', type=int, default=0,
+        help='Start numbering the last sub-OID of transport endpoint OIDs '
+             'starting from this ID')
+
+    parser.add_argument(
+        '--max-var-binds', type=int, default=64,
+        help='Maximum number of variable bindings to include in a single '
+             'response')
+
+    args, unparsed_args = parser.parse_known_args()
+
+    # Reformat unparsed args into a list of (option, value) tuples
+    snmp_args = []
+    name = None
+
+    for opt in unparsed_args:
+        if '=' in opt:
+            snmp_args.append(opt.split('='))
+
+        elif name:
+            snmp_args.append((name, opt))
+            name = None
+
+        else:
+            name = opt
+
+    if name:
+        sys.stderr.write(
+            'ERROR: Unmatched command-line parameter %s\r\n' % name)
+        parser.print_usage(sys.stderr)
+        return 1
+
+    if args.cache_dir:
+        confdir.cache = args.cache_dir
+
+    if args.variation_modules_dir:
+        confdir.variation = args.variation_modules_dir
+
+    for option in args.variation_module_options:
+        args = option.split(':', 1)
+
+        try:
+            mod_name, args = args[0], args[1]
 
         except Exception as exc:
             sys.stderr.write(
-                'ERROR: cant daemonize process: %s\r\n'
-                '%s\r\n' % (exc, HELP_MESSAGE))
+                'ERROR: improper variation module options: %s\r\n')
+            parser.print_usage(sys.stderr)
             return 1
+
+        if '=' in mod_name:
+            mod_name, alias = mod_name.split('=', 1)
+
+        else:
+            alias = os.path.splitext(os.path.basename(mod_name))[0]
+
+        if mod_name not in variation_modules_options:
+            variation_modules_options[mod_name] = []
+
+        variation_modules_options[mod_name].append((alias, args))
+
+        if args.args_from_file:
+            try:
+                with open(args.args_from_file) as fl:
+                    snmp_args.extend([x.split('=', 1) for x in fl.read().split()])
+
+            except Exception as exc:
+                sys.stderr.write(
+                    'ERROR: file %s opening failure: '
+                    '%s\r\n' % (args.args_from_file, exc))
+                parser.print_usage(sys.stderr)
+                return 1
+
+    with daemon.PrivilegesOf(args.process_user, args.process_group):
+
+        try:
+            log.setLogger(__name__, *args.logging_method, force=True)
+
+            if args.log_level:
+                log.setLevel(args.log_level)
+
+        except SnmpsimError as exc:
+            sys.stderr.write('%s\r\n' % exc)
+            parser.print_usage(sys.stderr)
+            return 1
+
+    if args.daemonize:
+        try:
+            daemon.daemonize(args.pid_file)
+
+        except Exception as exc:
+            sys.stderr.write(
+                'ERROR: cant daemonize process: %s\r\n' % exc)
+            parser.print_usage(sys.stderr)
+            return 1
+
+    if args.v2c_arch and (
+            args.v3_only or any(x for x in snmp_args
+                                if x[0].startswith('--v3'))):
+        sys.stderr.write(
+            'ERROR: either of --v2c-arch or --v3-* options should be used\r\n')
+        parser.print_usage(sys.stderr)
+        return 1
 
     # hook up variation modules
 
-    for variationModulesDir in confdir.variation:
+    for variation_modules_dir in confdir.variation:
         log.info(
             'Scanning "%s" directory for variation '
-            'modules...' % variationModulesDir)
+            'modules...' % variation_modules_dir)
 
-        if not os.path.exists(variationModulesDir):
-            log.info('Directory "%s" does not exist' % variationModulesDir)
+        if not os.path.exists(variation_modules_dir):
+            log.info('Directory "%s" does not exist' % variation_modules_dir)
             continue
 
-        for dFile in os.listdir(variationModulesDir):
-            if dFile[-3:] != '.py':
+        for d_file in os.listdir(variation_modules_dir):
+            if d_file[-3:] != '.py':
                 continue
 
-            _toLoad = []
+            _to_load = []
 
-            modName = os.path.splitext(os.path.basename(dFile))[0]
+            mod_name = os.path.splitext(os.path.basename(d_file))[0]
 
-            if modName in variationModulesOptions:
-                while variationModulesOptions[modName]:
-                    alias, args = variationModulesOptions[modName].pop()
-                    _toLoad.append((alias, args))
+            if mod_name in variation_modules_options:
+                while variation_modules_options[mod_name]:
+                    alias, params = variation_modules_options[mod_name].pop()
+                    _to_load.append((alias, params))
 
-                del variationModulesOptions[modName]
+                del variation_modules_options[mod_name]
 
             else:
-                _toLoad.append((modName, ''))
+                _to_load.append((mod_name, ''))
 
-            mod = os.path.abspath(os.path.join(variationModulesDir, dFile))
+            mod = os.path.abspath(os.path.join(variation_modules_dir, d_file))
 
-            for alias, args in _toLoad:
-                if alias in variationModules:
+            for alias, params in _to_load:
+                if alias in variation_modules:
                     log.error(
                         'ignoring duplicate variation module "%s" at '
                         '"%s"' % (alias, mod))
@@ -1032,7 +1032,7 @@ Software documentation and support at http://snmplabs.com/snmpsim
                 ctx = {
                     'path': mod,
                     'alias': alias,
-                    'args': args,
+                    'args': params,
                     'moduleContext': {}
                 }
 
@@ -1051,19 +1051,18 @@ Software documentation and support at http://snmplabs.com/snmpsim
 
                 else:
                     # moduleContext, agentContexts, recordContexts
-                    variationModules[alias] = ctx, {}, {}
+                    variation_modules[alias] = ctx, {}, {}
 
         log.info('A total of %s modules found in '
-                 '%s' % (len(variationModules), variationModulesDir))
+                 '%s' % (len(variation_modules), variation_modules_dir))
 
-    if variationModulesOptions:
+    if variation_modules_options:
         log.msg('WARNING: unused options for variation modules: '
-                '%s' % ', '.join(variationModulesOptions))
+                '%s' % ', '.join(variation_modules_options))
 
     if not os.path.exists(confdir.cache):
-
         try:
-            with daemon.PrivilegesOf(procUser, procGroup):
+            with daemon.PrivilegesOf(args.process_user, args.process_group):
                 os.makedirs(confdir.cache)
 
         except OSError as exc:
@@ -1074,12 +1073,12 @@ Software documentation and support at http://snmplabs.com/snmpsim
         else:
             log.info('Cache directory "%s" created' % confdir.cache)
 
-    if variationModules:
+    if variation_modules:
         log.info('Initializing variation modules...')
 
-        for name, modulesContexts in variationModules.items():
+        for name, modules_contexts in variation_modules.items():
 
-            body = modulesContexts[0]
+            body = modules_contexts[0]
 
             for x in ('init', 'variate', 'shutdown'):
                 if x not in body:
@@ -1088,7 +1087,7 @@ Software documentation and support at http://snmplabs.com/snmpsim
                     return 1
 
             try:
-                with daemon.PrivilegesOf(procUser, procGroup):
+                with daemon.PrivilegesOf(args.process_user, args.process_group):
                     body['init'](options=body['args'], mode='variating')
 
             except Exception as exc:
@@ -1101,16 +1100,23 @@ Software documentation and support at http://snmplabs.com/snmpsim
                     'Variation module "%s" from "%s" '
                     'loaded OK' % (body['alias'], body['path']))
 
-    # Build pysnmp Managed Objects base from data files information
+    # Bind transport endpoints
+    for idx, opt in enumerate(snmp_args):
+        if opt[0] == '--agent-udpv4-endpoint':
+            snmp_args[idx] = (opt[0], IPv4TransportEndpoints().add(opt[1]))
 
-    def configureManagedObjects(
-            dataDirs, dataIndexInstrumController, snmpEngine=None,
-            snmpContext=None):
+        elif opt[0] == '--agent-udpv6-endpoint':
+            snmp_args[idx] = (opt[0], IPv6TransportEndpoints().add(opt[1]))
 
-        _mibInstrums = {}
-        _dataFiles = {}
+    def configure_managed_objects(
+            data_dirs, data_index_instrum_controller, snmp_engine=None,
+            snmp_context=None):
+        """Build pysnmp Managed Objects base from data files information"""
 
-        for dataDir in dataDirs:
+        _mib_instrums = {}
+        _data_files = {}
+
+        for dataDir in data_dirs:
 
             log.info(
                 'Scanning "%s" directory for %s data '
@@ -1123,531 +1129,370 @@ Software documentation and support at http://snmplabs.com/snmpsim
 
             log.msg.incIdent()
 
-            for fullPath, textParser, communityName in getDataFiles(dataDir):
-                if communityName in _dataFiles:
+            for full_path, text_parser, community_name in get_data_files(dataDir):
+                if community_name in _data_files:
                     log.error(
                         'ignoring duplicate Community/ContextName "%s" for data '
-                        'file %s (%s already loaded)' % (communityName, fullPath,
-                                                         _dataFiles[communityName]))
+                        'file %s (%s already loaded)' % (community_name, full_path,
+                                                         _data_files[community_name]))
                     continue
 
-                elif fullPath in _mibInstrums:
-                    mibInstrum = _mibInstrums[fullPath]
-                    log.info('Configuring *shared* %s' % (mibInstrum,))
+                elif full_path in _mib_instrums:
+                    mib_instrum = _mib_instrums[full_path]
+                    log.info('Configuring *shared* %s' % (mib_instrum,))
 
                 else:
-                    dataFile = DataFile(fullPath, textParser, variationModules)
-                    dataFile.indexText(forceIndexBuild, validateData)
+                    data_file = DataFile(full_path, text_parser, variation_modules)
+                    data_file.indexText(args.force_index_rebuild, args.validate_data)
 
-                    mibInstrum = mibInstrumControllerSet[dataFile.layout](dataFile)
+                    mib_instrum = mib_instrum_controller_set[data_file.layout](data_file)
 
-                    _mibInstrums[fullPath] = mibInstrum
-                    _dataFiles[communityName] = fullPath
+                    _mib_instrums[full_path] = mib_instrum
+                    _data_files[community_name] = full_path
 
-                    log.info('Configuring %s' % (mibInstrum,))
+                    log.info('Configuring %s' % (mib_instrum,))
 
-                log.info('SNMPv1/2c community name: %s' % (communityName,))
+                log.info('SNMPv1/2c community name: %s' % (community_name,))
 
-                if v2cArch:
-                    contexts[univ.OctetString(communityName)] = mibInstrum
+                if args.v2c_arch:
+                    contexts[univ.OctetString(community_name)] = mib_instrum
 
-                    dataIndexInstrumController.addDataFile(
-                        fullPath, communityName
+                    data_index_instrum_controller.addDataFile(
+                        full_path, community_name
                     )
 
                 else:
-                    agentName = md5(
-                        univ.OctetString(communityName).asOctets()).hexdigest()
+                    agent_name = md5(
+                        univ.OctetString(community_name).asOctets()).hexdigest()
 
-                    contextName = agentName
+                    contextName = agent_name
 
-                    if not v3Only:
+                    if not args.v3_only:
                         # snmpCommunityTable::snmpCommunityIndex can't be > 32
                         config.addV1System(
-                            snmpEngine, agentName, communityName,
+                            snmp_engine, agent_name, community_name,
                             contextName=contextName)
 
-                    snmpContext.registerContextName(contextName, mibInstrum)
+                    snmp_context.registerContextName(contextName, mib_instrum)
 
-                    if len(communityName) <= 32:
-                        snmpContext.registerContextName(communityName, mibInstrum)
+                    if len(community_name) <= 32:
+                        snmp_context.registerContextName(community_name, mib_instrum)
 
-                    dataIndexInstrumController.addDataFile(
-                        fullPath, communityName, contextName)
+                    data_index_instrum_controller.addDataFile(
+                        full_path, community_name, contextName)
 
                     log.info(
                         'SNMPv3 Context Name: %s'
-                        '%s' % (contextName, len(communityName) <= 32 and
-                                ' or %s' % communityName or ''))
+                        '%s' % (contextName, len(community_name) <= 32 and
+                                ' or %s' % community_name or ''))
 
             log.msg.decIdent()
 
-        del _mibInstrums
-        del _dataFiles
+        del _mib_instrums
+        del _data_files
 
-    if v2cArch:
+    # Start configuring SNMP engine(s)
 
-        def getBulkHandler(
-                reqVarBinds, nonRepeaters, maxRepetitions, readNextVars):
+    transport_dispatcher = AsyncoreDispatcher()
 
-            N = min(int(nonRepeaters), len(reqVarBinds))
-            M = int(maxRepetitions)
-            R = max(len(reqVarBinds)-N, 0)
+    if args.v2c_arch:
+
+        def get_bulk_handler(
+                req_var_binds, non_repeaters, max_repetitions, read_next_vars):
+            """Only v2c arch GETBULK handler"""
+            N = min(int(non_repeaters), len(req_var_binds))
+            M = int(max_repetitions)
+            R = max(len(req_var_binds) - N, 0)
 
             if R:
-                M = min(M, maxVarBinds/R)
+                M = min(M, args.max_var_binds / R)
 
             if N:
-                rspVarBinds = readNextVars(reqVarBinds[:N])
+                rsp_var_binds = read_next_vars(req_var_binds[:N])
 
             else:
-                rspVarBinds = []
+                rsp_var_binds = []
 
-            varBinds = reqVarBinds[-R:]
+            var_binds = req_var_binds[-R:]
 
             while M and R:
-                rspVarBinds.extend(readNextVars(varBinds))
-                varBinds = rspVarBinds[-R:]
+                rsp_var_binds.extend(read_next_vars(var_binds))
+                var_binds = rsp_var_binds[-R:]
                 M -= 1
 
-            return rspVarBinds
+            return rsp_var_binds
 
         def commandResponderCbFun(
-                transportDispatcher, transportDomain, transportAddress,
-                wholeMsg):
+                transport_dispatcher, transport_domain, transport_address,
+                whole_msg):
+            """v2c arch command responder request handling callback"""
+            while whole_msg:
+                msg_ver = api.decodeMessageVersion(whole_msg)
 
-            while wholeMsg:
-                msgVer = api.decodeMessageVersion(wholeMsg)
-
-                if msgVer in api.protoModules:
-                    pMod = api.protoModules[msgVer]
+                if msg_ver in api.protoModules:
+                    p_mod = api.protoModules[msg_ver]
 
                 else:
-                    log.error('Unsupported SNMP version %s' % (msgVer,))
+                    log.error('Unsupported SNMP version %s' % (msg_ver,))
                     return
 
-                reqMsg, wholeMsg = decoder.decode(wholeMsg, asn1Spec=pMod.Message())
+                req_msg, whole_msg = decoder.decode(whole_msg, asn1Spec=p_mod.Message())
 
-                communityName = reqMsg.getComponentByPosition(1)
+                community_name = req_msg.getComponentByPosition(1)
 
-                for candidate in probeContext(transportDomain, transportAddress,
-                                              contextEngineId=SELF_LABEL,
-                                              contextName=communityName):
+                for candidate in probe_context(transport_domain, transport_address,
+                                               contextEngineId=SELF_LABEL,
+                                               contextName=community_name):
                     if candidate in contexts:
                         log.info(
                             'Using %s selected by candidate %s; transport ID %s, '
                             'source address %s, context engine ID <empty>, '
                             'community name '
                             '"%s"' % (contexts[candidate], candidate,
-                                      univ.ObjectIdentifier(transportDomain),
-                                      transportAddress[0], communityName))
-                        communityName = candidate
+                                      univ.ObjectIdentifier(transport_domain),
+                                      transport_address[0], community_name))
+                        community_name = candidate
                         break
 
                 else:
                     log.error(
                         'No data file selected for transport ID %s, source '
                         'address %s, community name '
-                        '"%s"' % (univ.ObjectIdentifier(transportDomain),
-                                  transportAddress[0], communityName))
-                    return wholeMsg
+                        '"%s"' % (univ.ObjectIdentifier(transport_domain),
+                                  transport_address[0], community_name))
+                    return whole_msg
 
-                rspMsg = pMod.apiMessage.getResponse(reqMsg)
-                rspPDU = pMod.apiMessage.getPDU(rspMsg)
-                reqPDU = pMod.apiMessage.getPDU(reqMsg)
+                rsp_msg = p_mod.apiMessage.getResponse(req_msg)
+                rsp_pdu = p_mod.apiMessage.getPDU(rsp_msg)
+                req_pdu = p_mod.apiMessage.getPDU(req_msg)
 
-                if reqPDU.isSameTypeWith(pMod.GetRequestPDU()):
-                    backendFun = contexts[communityName].readVars
+                if req_pdu.isSameTypeWith(p_mod.GetRequestPDU()):
+                    backend_fun = contexts[community_name].readVars
 
-                elif reqPDU.isSameTypeWith(pMod.SetRequestPDU()):
-                    backendFun = contexts[communityName].writeVars
+                elif req_pdu.isSameTypeWith(p_mod.SetRequestPDU()):
+                    backend_fun = contexts[community_name].writeVars
 
-                elif reqPDU.isSameTypeWith(pMod.GetNextRequestPDU()):
-                    backendFun = contexts[communityName].readNextVars
+                elif req_pdu.isSameTypeWith(p_mod.GetNextRequestPDU()):
+                    backend_fun = contexts[community_name].readNextVars
 
-                elif (hasattr(pMod, 'GetBulkRequestPDU') and
-                        reqPDU.isSameTypeWith(pMod.GetBulkRequestPDU())):
+                elif (hasattr(p_mod, 'GetBulkRequestPDU') and
+                      req_pdu.isSameTypeWith(p_mod.GetBulkRequestPDU())):
 
-                    if not msgVer:
+                    if not msg_ver:
                         log.info(
                             'GETBULK over SNMPv1 from %s:%s' % (
-                                transportDomain, transportAddress))
-                        return wholeMsg
+                                transport_domain, transport_address))
+                        return whole_msg
 
-                    def backendFun(varBinds):
-                        return getBulkHandler(
-                            varBinds, pMod.apiBulkPDU.getNonRepeaters(reqPDU),
-                            pMod.apiBulkPDU.getMaxRepetitions(reqPDU),
-                            contexts[communityName].readNextVars
+                    def backend_fun(var_binds):
+                        return get_bulk_handler(
+                            var_binds, p_mod.apiBulkPDU.getNonRepeaters(req_pdu),
+                            p_mod.apiBulkPDU.getMaxRepetitions(req_pdu),
+                            contexts[community_name].readNextVars
                         )
 
                 else:
                     log.error(
                         'Unsupported PDU type %s from '
-                        '%s:%s' % (reqPDU.__class__.__name__, transportDomain,
-                                   transportAddress))
-                    return wholeMsg
+                        '%s:%s' % (req_pdu.__class__.__name__, transport_domain,
+                                   transport_address))
+                    return whole_msg
 
                 try:
-                    varBinds = backendFun(pMod.apiPDU.getVarBinds(reqPDU))
+                    var_binds = backend_fun(p_mod.apiPDU.getVarBinds(req_pdu))
 
                 except NoDataNotification:
-                    return wholeMsg
+                    return whole_msg
 
                 except Exception as exc:
                     log.error('Ignoring SNMP engine failure: %s' % exc)
-                    return wholeMsg
+                    return whole_msg
 
-                # Poor man's v2c->v1 translation
-                errorMap = {
-                    rfc1902.Counter64.tagSet: 5,
-                    rfc1905.NoSuchObject.tagSet: 2,
-                    rfc1905.NoSuchInstance.tagSet: 2,
-                    rfc1905.EndOfMibView.tagSet: 2
-                }
+                if not msg_ver:
 
-                if not msgVer:
+                    for idx in range(len(var_binds)):
 
-                    for idx in range(len(varBinds)):
+                        oid, val = var_binds[idx]
 
-                        oid, val = varBinds[idx]
+                        if val.tagSet in SNMP_ERROR_MAP:
+                            var_binds = p_mod.apiPDU.getVarBinds(req_pdu)
 
-                        if val.tagSet in errorMap:
-                            varBinds = pMod.apiPDU.getVarBinds(reqPDU)
-
-                            pMod.apiPDU.setErrorStatus(
-                                rspPDU, errorMap[val.tagSet])
-                            pMod.apiPDU.setErrorIndex(
-                                rspPDU, idx + 1)
+                            p_mod.apiPDU.setErrorStatus(
+                                rsp_pdu, SNMP_ERROR_MAP[val.tagSet])
+                            p_mod.apiPDU.setErrorIndex(
+                                rsp_pdu, idx + 1)
 
                             break
 
-                pMod.apiPDU.setVarBinds(rspPDU, varBinds)
+                p_mod.apiPDU.setVarBinds(rsp_pdu, var_binds)
 
-                transportDispatcher.sendMessage(
-                    encoder.encode(rspMsg), transportDomain, transportAddress)
+                transport_dispatcher.sendMessage(
+                    encoder.encode(rsp_msg), transport_domain, transport_address)
 
-            return wholeMsg
+            return whole_msg
 
-    else:  # v3arch
-
-        def probeHashContext(self, snmpEngine):
-            # this API is first introduced in pysnmp 4.2.6
-            execCtx = snmpEngine.observer.getExecutionContext(
-                'rfc3412.receiveMessage:request')
-
-            (transportDomain,
-             transportAddress,
-             contextEngineId,
-             contextName) = (
-                execCtx['transportDomain'],
-                execCtx['transportAddress'],
-                execCtx['contextEngineId'],
-                execCtx['contextName'].prettyPrint()
-            )
-
-            if contextEngineId == snmpEngine.snmpEngineID:
-                contextEngineId = SELF_LABEL
-
-            else:
-                contextEngineId = contextEngineId.prettyPrint()
-
-            for candidate in probeContext(
-                    transportDomain, transportAddress,
-                    contextEngineId, contextName):
-
-                if len(candidate) > 32:
-                    probedContextName = md5(candidate).hexdigest()
-
-                else:
-                    probedContextName = candidate
-
-                try:
-                    mibInstrum = self.snmpContext.getMibInstrum(probedContextName)
-
-                except error.PySnmpError:
-                    pass
-
-                else:
-                    log.info(
-                        'Using %s selected by candidate %s; transport ID %s, '
-                        'source address %s, context engine ID %s, '
-                        'community name '
-                        '"%s"' % (mibInstrum, candidate,
-                                  univ.ObjectIdentifier(transportDomain),
-                                  transportAddress[0], contextEngineId,
-                                  probedContextName))
-                    contextName = probedContextName
-                    break
-            else:
-                mibInstrum = self.snmpContext.getMibInstrum(contextName)
-                log.info(
-                    'Using %s selected by contextName "%s", transport ID %s, '
-                    'source address %s' % (mibInstrum, contextName,
-                                           univ.ObjectIdentifier(transportDomain),
-                                           transportAddress[0]))
-
-            if not isinstance(mibInstrum, (MibInstrumController, DataIndexInstrumController)):
-                log.error(
-                    'LCD access denied (contextName does not match any data file)')
-                raise NoDataNotification()
-
-            return contextName
-
-        class GetCommandResponder(cmdrsp.GetCommandResponder):
-
-            def handleMgmtOperation(self, snmpEngine, stateReference, contextName, PDU, acInfo):
-                try:
-                    cmdrsp.GetCommandResponder.handleMgmtOperation(
-                        self, snmpEngine, stateReference,
-                        probeHashContext(self, snmpEngine),
-                        PDU, (None, snmpEngine)  # custom acInfo
-                    )
-
-                except NoDataNotification:
-                    self.releaseStateInformation(stateReference)
-
-        class SetCommandResponder(cmdrsp.SetCommandResponder):
-
-            def handleMgmtOperation(self, snmpEngine, stateReference, contextName, PDU, acInfo):
-                try:
-                    cmdrsp.SetCommandResponder.handleMgmtOperation(
-                        self, snmpEngine, stateReference,
-                        probeHashContext(self, snmpEngine),
-                        PDU, (None, snmpEngine)  # custom acInfo
-                    )
-
-                except NoDataNotification:
-                    self.releaseStateInformation(stateReference)
-
-        class NextCommandResponder(cmdrsp.NextCommandResponder):
-
-            def handleMgmtOperation(self, snmpEngine, stateReference, contextName, PDU, acInfo):
-                try:
-                    cmdrsp.NextCommandResponder.handleMgmtOperation(
-                        self, snmpEngine, stateReference,
-                        probeHashContext(self, snmpEngine),
-                        PDU, (None, snmpEngine)  # custom acInfo
-                    )
-
-                except NoDataNotification:
-                    self.releaseStateInformation(stateReference)
-
-        class BulkCommandResponder(cmdrsp.BulkCommandResponder):
-
-            def handleMgmtOperation(self, snmpEngine, stateReference, contextName, PDU, acInfo):
-                try:
-                    cmdrsp.BulkCommandResponder.handleMgmtOperation(
-                        self, snmpEngine, stateReference,
-                        probeHashContext(self, snmpEngine),
-                        PDU, (None, snmpEngine)  # custom acInfo
-                    )
-
-                except NoDataNotification:
-                    self.releaseStateInformation(stateReference)
-
-    # Start configuring SNMP engine(s)
-
-    transportDispatcher = AsyncoreDispatcher()
-
-    if v2cArch:
         # Configure access to data index
 
-        dataIndexInstrumController = DataIndexInstrumController()
+        agent_udpv4_endpoints = []
+        agent_udpv6_endpoints = []
+        data_dirs = []
 
-        contexts = {univ.OctetString('index'): dataIndexInstrumController}
+        for opt in snmp_args:
+            if opt[0] == '--data-dir':
+                data_dirs.append(opt[1])
 
-        with daemon.PrivilegesOf(procUser, procGroup):
-            configureManagedObjects(confdir.data, dataIndexInstrumController)
-
-        contexts['index'] = dataIndexInstrumController
-
-        agentUDPv4Endpoints = []
-        agentUDPv6Endpoints = []
-        agentUnixEndpoints = []
-
-        for opt in v3Args:
             if opt[0] == '--agent-udpv4-endpoint':
-                agentUDPv4Endpoints.append(opt[1])
+                agent_udpv4_endpoints.append(opt[1])
 
             elif opt[0] == '--agent-udpv6-endpoint':
-                agentUDPv6Endpoints.append(opt[1])
+                agent_udpv6_endpoints.append(opt[1])
 
-            elif opt[0] == '--agent-unix-endpoint':
-                agentUnixEndpoints.append(opt[1])
-
-        if (not agentUDPv4Endpoints and
-                not agentUDPv6Endpoints and
-                not agentUnixEndpoints):
+        if not agent_udpv4_endpoints and not agent_udpv6_endpoints:
             log.error('agent endpoint address(es) not specified')
             return 1
 
         log.info('Maximum number of variable bindings in SNMP '
-                 'response: %s' % maxVarBinds)
+                 'response: %s' % args.max_var_binds)
+
+        data_index_instrum_controller = DataIndexInstrumController()
+
+        contexts = {univ.OctetString('index'): data_index_instrum_controller}
+
+        with daemon.PrivilegesOf(args.process_user, args.process_group):
+            configure_managed_objects(
+                data_dirs or confdir.data, data_index_instrum_controller)
+
+        contexts['index'] = data_index_instrum_controller
 
         # Configure socket server
 
-        transportIndex = transportIdOffset
-        for agentUDPv4Endpoint in agentUDPv4Endpoints:
-            transportDomain = udp.domainName + (transportIndex,)
-            transportIndex += 1
+        transport_index = args.transport_id_offset
+        for agent_udpv4_endpoint in agent_udpv4_endpoints:
+            transport_domain = udp.domainName + (transport_index,)
+            transport_index += 1
 
-            transportDispatcher.registerTransport(
-                transportDomain, agentUDPv4Endpoint[0])
+            transport_dispatcher.registerTransport(
+                transport_domain, agent_udpv4_endpoint[0])
 
             log.info('Listening at UDP/IPv4 endpoint %s, transport ID '
-                     '%s' % (agentUDPv4Endpoint[1],
-                             '.'.join([str(x) for x in transportDomain])))
+                     '%s' % (agent_udpv4_endpoint[1],
+                             '.'.join([str(x) for x in transport_domain])))
 
-        transportIndex = transportIdOffset
+        transport_index = args.transport_id_offset
 
-        for agentUDPv6Endpoint in agentUDPv6Endpoints:
-            transportDomain = udp6.domainName + (transportIndex,)
-            transportIndex += 1
+        for agent_udpv6_endpoint in agent_udpv6_endpoints:
+            transport_domain = udp6.domainName + (transport_index,)
+            transport_index += 1
 
-            transportDispatcher.registerTransport(
-                    transportDomain, agentUDPv6Endpoint[0])
+            transport_dispatcher.registerTransport(
+                    transport_domain, agent_udpv6_endpoint[0])
 
             log.info('Listening at UDP/IPv6 endpoint %s, transport ID '
-                     '%s' % (agentUDPv6Endpoint[1],
-                             '.'.join([str(x) for x in transportDomain])))
+                     '%s' % (agent_udpv6_endpoint[1],
+                             '.'.join([str(x) for x in transport_domain])))
 
-        transportIndex = transportIdOffset
+        transport_dispatcher.registerRecvCbFun(commandResponderCbFun)
 
-        for agentUnixEndpoint in agentUnixEndpoints:
-            transportDomain = unix.domainName + (transportIndex,)
-            transportIndex += 1
+    else:  # v3 arch
 
-            transportDispatcher.registerTransport(
-                    transportDomain, agentUnixEndpoint[0])
+        transport_dispatcher.registerRoutingCbFun(lambda td, t, d: td)
 
-            log.info('Listening at UNIX domain socket endpoint %s, transport ID '
-                     '%s' % (agentUnixEndpoint[1],
-                             '.'.join([str(x) for x in transportDomain])))
+        if snmp_args and snmp_args[0][0] != '--v3-engine-id':
+            snmp_args.insert(0, ('--v3-engine-id', 'auto'))
 
-        transportDispatcher.registerRecvCbFun(commandResponderCbFun)
+        snmp_args.append(('end-of-options', ''))
 
-    else:  # v3 mode
+        snmp_engine = None
 
-        if hasattr(transportDispatcher, 'registerRoutingCbFun'):
-            transportDispatcher.registerRoutingCbFun(lambda td, t, d: td)
-
-        else:
-            log.info(
-                'WARNING: upgrade pysnmp to 4.2.5 or later get multi-engine '
-                'ID feature working!')
-
-        if v3Args and v3Args[0][0] != '--v3-engine-id':
-            v3Args.insert(0, ('--v3-engine-id', 'auto'))
-
-        v3Args.append(('end-of-options', ''))
-
-        def registerTransportDispatcher(snmpEngine, transportDispatcher,
-                                        transportDomain):
-            if hasattr(transportDispatcher, 'registerRoutingCbFun'):
-                snmpEngine.registerTransportDispatcher(
-                    transportDispatcher, transportDomain)
-
-            else:
-                try:
-                    snmpEngine.registerTransportDispatcher(transportDispatcher)
-
-                except error.PySnmpError:
-                    log.msg('WARNING: upgrade pysnmp to 4.2.5 or later get '
-                            'multi-engine ID feature working!')
-                    raise
-
-        snmpEngine = None
-
-        transportIndex = {
-            'udpv4': transportIdOffset,
-            'udpv6': transportIdOffset,
-            'unix': transportIdOffset
+        transport_index = {
+            'udpv4': args.transport_id_offset,
+            'udpv6': args.transport_id_offset,
         }
 
-        for opt in v3Args:
+        for opt in snmp_args:
 
             if opt[0] in ('--v3-engine-id', 'end-of-options'):
 
-                if snmpEngine:
+                if snmp_engine:
+
                     log.info('--- SNMP Engine configuration')
 
                     log.info(
                         'SNMPv3 EngineID: '
-                        '%s' % (hasattr(snmpEngine, 'snmpEngineID')
-                                and snmpEngine.snmpEngineID.prettyPrint() or '<unknown>',))
+                        '%s' % (hasattr(snmp_engine, 'snmpEngineID')
+                                and snmp_engine.snmpEngineID.prettyPrint() or '<unknown>',))
 
-                    if not v3ContextEngineIds:
-                        v3ContextEngineIds.append((None, []))
+                    if not v3_context_engine_ids:
+                        v3_context_engine_ids.append((None, []))
 
                     log.msg.incIdent()
 
                     log.info('--- Data directories configuration')
 
-                    for v3ContextEngineId, ctxDataDirs in v3ContextEngineIds:
-                        snmpContext = context.SnmpContext(snmpEngine, v3ContextEngineId)
+                    for v3_context_engine_id, ctx_data_dirs in v3_context_engine_ids:
+                        snmp_context = context.SnmpContext(snmp_engine, v3_context_engine_id)
                         # unregister default context
-                        snmpContext.unregisterContextName(null)
+                        snmp_context.unregisterContextName(null)
 
                         log.msg(
                             'SNMPv3 Context Engine ID: '
-                            '%s' % snmpContext.contextEngineId.prettyPrint())
+                            '%s' % snmp_context.contextEngineId.prettyPrint())
 
-                        dataIndexInstrumController = DataIndexInstrumController()
+                        data_index_instrum_controller = DataIndexInstrumController()
 
-                        with daemon.PrivilegesOf(procUser, procGroup):
-                            configureManagedObjects(
-                                ctxDataDirs or dataDirs or confdir.data,
-                                dataIndexInstrumController,
-                                snmpEngine,
-                                snmpContext
+                        with daemon.PrivilegesOf(args.process_user, args.process_group):
+                            configure_managed_objects(
+                                ctx_data_dirs or data_dirs or confdir.data,
+                                data_index_instrum_controller,
+                                snmp_engine,
+                                snmp_context
                             )
 
                     # Configure access to data index
 
-                    config.addV1System(snmpEngine, 'index',
+                    config.addV1System(snmp_engine, 'index',
                                        'index', contextName='index')
 
                     log.info('--- SNMPv3 USM configuration')
 
-                    if not v3Users:
-                        v3Users = ['simulator']
-                        v3AuthKeys[v3Users[0]] = 'auctoritas'
-                        v3AuthProtos[v3Users[0]] = 'MD5'
-                        v3PrivKeys[v3Users[0]] = 'privatus'
-                        v3PrivProtos[v3Users[0]] = 'DES'
+                    if not v3_users:
+                        v3_users = ['simulator']
+                        v3_auth_keys[v3_users[0]] = 'auctoritas'
+                        v3_auth_protos[v3_users[0]] = 'MD5'
+                        v3_priv_keys[v3_users[0]] = 'privatus'
+                        v3_priv_protos[v3_users[0]] = 'DES'
 
-                    for v3User in v3Users:
-                        if v3User in v3AuthKeys:
-                            if v3User not in v3AuthProtos:
-                                v3AuthProtos[v3User] = 'MD5'
+                    for v3User in v3_users:
+                        if v3User in v3_auth_keys:
+                            if v3User not in v3_auth_protos:
+                                v3_auth_protos[v3User] = 'MD5'
 
-                        elif v3User in v3AuthProtos:
+                        elif v3User in v3_auth_protos:
                             log.error(
                                 'auth protocol configured without key for user '
                                 '%s' % v3User)
                             return 1
 
                         else:
-                            v3AuthKeys[v3User] = None
-                            v3AuthProtos[v3User] = 'NONE'
+                            v3_auth_keys[v3User] = None
+                            v3_auth_protos[v3User] = 'NONE'
 
-                        if v3User in v3PrivKeys:
-                            if v3User not in v3PrivProtos:
-                                v3PrivProtos[v3User] = 'DES'
+                        if v3User in v3_priv_keys:
+                            if v3User not in v3_priv_protos:
+                                v3_priv_protos[v3User] = 'DES'
 
-                        elif v3User in v3PrivProtos:
+                        elif v3User in v3_priv_protos:
                             log.error(
                                 'privacy protocol configured without key for user '
                                 '%s' % v3User)
                             return 1
 
                         else:
-                            v3PrivKeys[v3User] = None
-                            v3PrivProtos[v3User] = 'NONE'
+                            v3_priv_keys[v3User] = None
+                            v3_priv_protos[v3User] = 'NONE'
 
-                        if (AUTH_PROTOCOLS[v3AuthProtos[v3User]] == config.usmNoAuthProtocol and
-                                PRIV_PROTOCOLS[v3PrivProtos[v3User]] != config.usmNoPrivProtocol):
+                        if (AUTH_PROTOCOLS[v3_auth_protos[v3User]] == config.usmNoAuthProtocol and
+                                PRIV_PROTOCOLS[v3_priv_protos[v3User]] != config.usmNoPrivProtocol):
                             log.error(
                                 'privacy impossible without authentication for USM user '
                                 '%s' % v3User)
@@ -1655,12 +1500,12 @@ Software documentation and support at http://snmplabs.com/snmpsim
 
                         try:
                             config.addV3User(
-                                snmpEngine,
+                                snmp_engine,
                                 v3User,
-                                AUTH_PROTOCOLS[v3AuthProtos[v3User]],
-                                v3AuthKeys[v3User],
-                                PRIV_PROTOCOLS[v3PrivProtos[v3User]],
-                                v3PrivKeys[v3User])
+                                AUTH_PROTOCOLS[v3_auth_protos[v3User]],
+                                v3_auth_keys[v3User],
+                                PRIV_PROTOCOLS[v3_priv_protos[v3User]],
+                                v3_priv_keys[v3User])
 
                         except error.PySnmpError as exc:
                             log.error(
@@ -1670,156 +1515,137 @@ Software documentation and support at http://snmplabs.com/snmpsim
 
                         log.info('SNMPv3 USM SecurityName: %s' % v3User)
 
-                        if AUTH_PROTOCOLS[v3AuthProtos[v3User]] != config.usmNoAuthProtocol:
+                        if AUTH_PROTOCOLS[v3_auth_protos[v3User]] != config.usmNoAuthProtocol:
                             log.info(
                                 'SNMPv3 USM authentication key: %s, '
                                 'authentication protocol: '
-                                '%s' % (v3AuthKeys[v3User], v3AuthProtos[v3User]))
+                                '%s' % (v3_auth_keys[v3User], v3_auth_protos[v3User]))
 
-                        if PRIV_PROTOCOLS[v3PrivProtos[v3User]] != config.usmNoPrivProtocol:
+                        if PRIV_PROTOCOLS[v3_priv_protos[v3User]] != config.usmNoPrivProtocol:
                             log.info(
                                 'SNMPv3 USM encryption (privacy) key: %s, '
                                 'encryption protocol: '
-                                '%s' % (v3PrivKeys[v3User], v3PrivProtos[v3User]))
+                                '%s' % (v3_priv_keys[v3User], v3_priv_protos[v3User]))
 
-                    snmpContext.registerContextName('index', dataIndexInstrumController)
+                    snmp_context.registerContextName('index', data_index_instrum_controller)
 
                     log.info(
                         'Maximum number of variable bindings in SNMP response: '
-                        '%s' % localMaxVarBinds)
+                        '%s' % local_max_var_binds)
 
                     log.info('--- Transport configuration')
 
-                    if (not agentUDPv4Endpoints and
-                            not agentUDPv6Endpoints and
-                            not agentUnixEndpoints):
+                    if not agent_udpv4_endpoints and not agent_udpv6_endpoints:
                         log.error(
                             'agent endpoint address(es) not specified for SNMP '
-                            'engine ID %s' % v3EngineId)
+                            'engine ID %s' % v3_engine_id)
                         return 1
 
-                    for agentUDPv4Endpoint in agentUDPv4Endpoints:
-                        transportDomain = udp.domainName + (transportIndex['udpv4'],)
-                        transportIndex['udpv4'] += 1
+                    for agent_udpv4_endpoint in agent_udpv4_endpoints:
+                        transport_domain = udp.domainName + (transport_index['udpv4'],)
+                        transport_index['udpv4'] += 1
 
-                        registerTransportDispatcher(
-                            snmpEngine, transportDispatcher, transportDomain)
+                        snmp_engine.registerTransportDispatcher(
+                            transport_dispatcher, transport_domain)
 
                         config.addSocketTransport(
-                            snmpEngine, transportDomain, agentUDPv4Endpoint[0])
+                            snmp_engine, transport_domain, agent_udpv4_endpoint[0])
 
                         log.info(
                             'Listening at UDP/IPv4 endpoint %s, transport ID '
-                            '%s' % (agentUDPv4Endpoint[1],
-                                    '.'.join([str(x) for x in transportDomain])))
+                            '%s' % (agent_udpv4_endpoint[1],
+                                    '.'.join([str(x) for x in transport_domain])))
 
-                    for agentUDPv6Endpoint in agentUDPv6Endpoints:
-                        transportDomain = udp6.domainName + (transportIndex['udpv6'],)
-                        transportIndex['udpv6'] += 1
+                    for agent_udpv6_endpoint in agent_udpv6_endpoints:
+                        transport_domain = udp6.domainName + (transport_index['udpv6'],)
+                        transport_index['udpv6'] += 1
 
-                        registerTransportDispatcher(
-                            snmpEngine, transportDispatcher, transportDomain)
+                        snmp_engine.registerTransportDispatcher(
+                            transport_dispatcher, transport_domain)
 
                         config.addSocketTransport(
-                            snmpEngine,
-                            transportDomain, agentUDPv6Endpoint[0])
+                            snmp_engine,
+                            transport_domain, agent_udpv6_endpoint[0])
 
                         log.info(
                             'Listening at UDP/IPv6 endpoint %s, transport ID '
-                            '%s' % (agentUDPv6Endpoint[1],
-                                    '.'.join([str(x) for x in transportDomain])))
-
-                    for agentUnixEndpoint in agentUnixEndpoints:
-                        transportDomain = unix.domainName + (transportIndex['unix'],)
-                        transportIndex['unix'] += 1
-
-                        registerTransportDispatcher(
-                            snmpEngine, transportDispatcher, transportDomain)
-
-                        config.addSocketTransport(
-                            snmpEngine, transportDomain, agentUnixEndpoint[0])
-
-                        log.info(
-                            'Listening at UNIX domain socket endpoint '
-                            '%s, transport ID '
-                            '%s' % (agentUnixEndpoint[1], '.'.join(
-                                [str(x) for x in transportDomain])))
+                            '%s' % (agent_udpv6_endpoint[1],
+                                    '.'.join([str(x) for x in transport_domain])))
 
                     # SNMP applications
-                    GetCommandResponder(snmpEngine, snmpContext)
-                    SetCommandResponder(snmpEngine, snmpContext)
-                    NextCommandResponder(snmpEngine, snmpContext)
+                    GetCommandResponder(snmp_engine, snmp_context)
+                    SetCommandResponder(snmp_engine, snmp_context)
+                    NextCommandResponder(snmp_engine, snmp_context)
                     BulkCommandResponder(
-                        snmpEngine, snmpContext).maxVarBinds = localMaxVarBinds
+                        snmp_engine, snmp_context).maxVarBinds = local_max_var_binds
 
                     log.msg.decIdent()
 
-                if opt[0] == 'end-of-options':
-                    # Load up the rest of MIBs while running privileged
-                    (snmpEngine
-                     .msgAndPduDsp
-                     .mibInstrumController
-                     .mibBuilder.loadModules())
-                    break
+                    if opt[0] == 'end-of-options':
+                        # Load up the rest of MIBs while running privileged
+                        (snmp_engine
+                         .msgAndPduDsp
+                         .mibInstrumController
+                         .mibBuilder.loadModules())
+                        break
 
                 # Prepare for next engine ID configuration
 
-                v3ContextEngineIds = []
-                dataDirs = []
-                localMaxVarBinds = maxVarBinds
-                v3Users = []
-                v3AuthKeys = {}
-                v3AuthProtos = {}
-                v3PrivKeys = {}
-                v3PrivProtos = {}
-                agentUDPv4Endpoints = []
-                agentUDPv6Endpoints = []
-                agentUnixEndpoints = []
+                v3_context_engine_ids = []
+                data_dirs = []
+                local_max_var_binds = args.max_var_binds
+                v3_users = []
+                v3_auth_keys = {}
+                v3_auth_protos = {}
+                v3_priv_keys = {}
+                v3_priv_protos = {}
+                agent_udpv4_endpoints = []
+                agent_udpv6_endpoints = []
 
                 try:
-                    v3EngineId = opt[1]
-                    if v3EngineId.lower() == 'auto':
-                        snmpEngine = engine.SnmpEngine()
+                    v3_engine_id = opt[1]
+                    if v3_engine_id.lower() == 'auto':
+                        snmp_engine = engine.SnmpEngine()
 
                     else:
-                        snmpEngine = engine.SnmpEngine(
-                            snmpEngineID=univ.OctetString(hexValue=v3EngineId))
+                        snmp_engine = engine.SnmpEngine(
+                            snmpEngineID=univ.OctetString(hexValue=v3_engine_id))
 
                 except Exception as exc:
                     log.error(
                         'SNMPv3 Engine initialization failed, EngineID "%s": '
-                        '%s' % (v3EngineId, exc))
+                        '%s' % (v3_engine_id, exc))
                     return 1
 
-                config.addContext(snmpEngine, '')
+                config.addContext(snmp_engine, '')
 
             elif opt[0] == '--v3-context-engine-id':
-                v3ContextEngineIds.append((univ.OctetString(hexValue=opt[1]), []))
+                v3_context_engine_ids.append((univ.OctetString(hexValue=opt[1]), []))
 
             elif opt[0] == '--data-dir':
-                if v3ContextEngineIds:
-                    v3ContextEngineIds[-1][1].append(opt[1])
+                if v3_context_engine_ids:
+                    v3_context_engine_ids[-1][1].append(opt[1])
 
                 else:
-                    dataDirs.append(opt[1])
+                    data_dirs.append(opt[1])
 
             elif opt[0] == '--max-varbinds':
-                localMaxVarBinds = opt[1]
+                local_max_var_binds = opt[1]
 
             elif opt[0] == '--v3-user':
-                v3Users.append(opt[1])
+                v3_users.append(opt[1])
 
             elif opt[0] == '--v3-auth-key':
-                if not v3Users:
+                if not v3_users:
                     log.error('--v3-user should precede %s' % opt[0])
                     return 1
 
-                if v3Users[-1] in v3AuthKeys:
+                if v3_users[-1] in v3_auth_keys:
                     log.error(
-                        'repetitive %s option for user %s' % (opt[0], v3Users[-1]))
+                        'repetitive %s option for user %s' % (opt[0], v3_users[-1]))
                     return 1
 
-                v3AuthKeys[v3Users[-1]] = opt[1]
+                v3_auth_keys[v3_users[-1]] = opt[1]
 
             elif opt[0] == '--v3-auth-proto':
                 if opt[1].upper() not in AUTH_PROTOCOLS:
@@ -1827,28 +1653,28 @@ Software documentation and support at http://snmplabs.com/snmpsim
                     return 1
 
                 else:
-                    if not v3Users:
+                    if not v3_users:
                         log.error('--v3-user should precede %s' % opt[0])
                         return 1
 
-                    if v3Users[-1] in v3AuthProtos:
+                    if v3_users[-1] in v3_auth_protos:
                         log.error(
-                            'repetitive %s option for user %s' % (opt[0], v3Users[-1]))
+                            'repetitive %s option for user %s' % (opt[0], v3_users[-1]))
                         return 1
 
-                    v3AuthProtos[v3Users[-1]] = opt[1].upper()
+                    v3_auth_protos[v3_users[-1]] = opt[1].upper()
 
             elif opt[0] == '--v3-priv-key':
-                if not v3Users:
+                if not v3_users:
                     log.error('--v3-user should precede %s' % opt[0])
                     return 1
 
-                if v3Users[-1] in v3PrivKeys:
+                if v3_users[-1] in v3_priv_keys:
                     log.error(
-                        'repetitive %s option for user %s' % (opt[0], v3Users[-1]))
+                        'repetitive %s option for user %s' % (opt[0], v3_users[-1]))
                     return 1
 
-                v3PrivKeys[v3Users[-1]] = opt[1]
+                v3_priv_keys[v3_users[-1]] = opt[1]
 
             elif opt[0] == '--v3-priv-proto':
                 if opt[1].upper() not in PRIV_PROTOCOLS:
@@ -1856,43 +1682,38 @@ Software documentation and support at http://snmplabs.com/snmpsim
                     return 1
 
                 else:
-                    if not v3Users:
+                    if not v3_users:
                         log.error('--v3-user should precede %s' % opt[0])
                         return 1
 
-                    if v3Users[-1] in v3PrivProtos:
+                    if v3_users[-1] in v3_priv_protos:
                         log.error(
-                            'repetitive %s option for user %s' % (opt[0], v3Users[-1]))
+                            'repetitive %s option for user %s' % (opt[0], v3_users[-1]))
                         return 1
 
-                    v3PrivProtos[v3Users[-1]] = opt[1].upper()
+                    v3_priv_protos[v3_users[-1]] = opt[1].upper()
 
             elif opt[0] == '--agent-udpv4-endpoint':
-                agentUDPv4Endpoints.append(opt[1])
+                agent_udpv4_endpoints.append(opt[1])
 
             elif opt[0] == '--agent-udpv6-endpoint':
-                agentUDPv6Endpoints.append(opt[1])
+                agent_udpv6_endpoints.append(opt[1])
 
-            elif opt[0] == '--agent-unix-endpoint':
-                agentUnixEndpoints.append(opt[1])
+    transport_dispatcher.jobStarted(1)  # server job would never finish
 
-    # Run mainloop
-
-    transportDispatcher.jobStarted(1)  # server job would never finish
-
-    with daemon.PrivilegesOf(procUser, procGroup, final=True):
+    with daemon.PrivilegesOf(args.process_user, args.process_group, final=True):
 
         try:
-            transportDispatcher.runDispatcher()
+            transport_dispatcher.runDispatcher()
 
         except KeyboardInterrupt:
             log.info('Shutting down process...')
 
         finally:
-            if variationModules:
+            if variation_modules:
                 log.info('Shutting down variation modules:')
 
-                for name, contexts in variationModules.items():
+                for name, contexts in variation_modules.items():
                     body = contexts[0]
                     try:
                         body['shutdown'](options=body['args'], mode='variation')
@@ -1905,7 +1726,7 @@ Software documentation and support at http://snmplabs.com/snmpsim
                     else:
                         log.info('Variation module "%s" shutdown OK' % name)
 
-            transportDispatcher.closeDispatcher()
+            transport_dispatcher.closeDispatcher()
 
             log.info('Process terminated')
 

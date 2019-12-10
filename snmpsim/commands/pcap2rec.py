@@ -6,20 +6,15 @@
 #
 # SNMP Simulator MIB to data file converter
 #
+import argparse
 import bisect
-import getopt
+import functools
 import os
 import socket
 import struct
 import sys
 import time
 import traceback
-
-try:
-    import pcap
-
-except ImportError:
-    pcap = None
 
 from pyasn1 import debug as pyasn1_debug
 from pyasn1.codec.ber import decoder
@@ -29,11 +24,11 @@ from pysnmp import debug as pysnmp_debug
 from pysnmp.carrier.asyncore.dgram import udp
 from pysnmp.error import PySnmpError
 from pysnmp.proto import api
+from pysnmp.proto import rfc1905
 from pysnmp.proto.rfc1902 import Bits
+from pysnmp.proto.rfc1902 import Integer32
 from pysnmp.proto.rfc1902 import OctetString
 from pysnmp.proto.rfc1902 import Unsigned32
-from pysnmp.proto.rfc1902 import Integer32
-from pysnmp.proto import rfc1905
 from pysnmp.smi import builder
 from pysnmp.smi import compiler
 from pysnmp.smi import rfc1902
@@ -42,13 +37,14 @@ from pysnmp.smi import view
 from snmpsim import confdir
 from snmpsim import error
 from snmpsim import log
+from snmpsim import utils
 from snmpsim.record import dump
 from snmpsim.record import mvc
 from snmpsim.record import sap
 from snmpsim.record import snmprec
 from snmpsim.record import walk
 
-PROGRAM_NAME = os.path.basename(sys.argv[0])
+pcap = utils.try_load('pcap')
 
 RECORD_TYPES = {
     dump.DumpRecord.ext: dump.DumpRecord(),
@@ -59,36 +55,9 @@ RECORD_TYPES = {
     snmprec.CompressedSnmprecRecord.ext: snmprec.CompressedSnmprecRecord()
 }
 
-HELP_MESSAGE = """\
-Usage: %s [--help]
-    [--version]
-    [--debug=<%s>]
-    [--debug-asn1=<%s>]
-    [--quiet]
-    [--logging-method=<%s[:args]>]
-    [--log-level=<%s>]
-    [--mib-source=<url>]
-    [--start-object=<MIB-NAME::[symbol-name]|OID>]
-    [--stop-object=<MIB-NAME::[symbol-name]|OID>]
-    [--destination-record-type=<%s>]
-    [--output-dir=<directory>]
-    [--transport-id-offset=<number>]
-    [--capture-file=<filename.pcap>]
-    [--listen-interface=<device>]
-    [--promiscuous-mode]
-    [--packet-filter=<ruleset>]
-    [--variation-modules-dir=<dir>]
-    [--variation-module=<module>]
-    [--variation-module-options=<args>]\
-""" % (sys.argv[0],
-       '|'.join([x for x in getattr(pysnmp_debug, 'FLAG_MAP',
-                                    getattr(pysnmp_debug, 'flagMap', ()))
-                 if x != 'mibview']),
-       '|'.join([x for x in getattr(pyasn1_debug, 'FLAG_MAP',
-                                    getattr(pyasn1_debug, 'flagMap', ()))]),
-       '|'.join(log.METHODS_MAP),
-       '|'.join(log.LEVELS_MAP),
-       '|'.join(RECORD_TYPES))
+DESCRIPTION = (
+    'Snoops network traffic for SNMP responses, builds SNMP Simulator '
+    'data files. Can read capture files or listen live network interface.')
 
 
 class SnmprecRecord(snmprec.SnmprecRecord):
@@ -118,23 +87,16 @@ class SnmprecRecord(snmprec.SnmprecRecord):
         return textOid, textTag, textValue
 
 
-def main():
-    verboseFlag = True
-    mibSources = []
-    defaultMibSources = ['http://mibs.snmplabs.com/asn1/@mib@']
-    startOID = univ.ObjectIdentifier('1.3.6')
-    stopOID = None
-    promiscuousMode = False
-    dstRecordType = 'snmprec'
-    outputDir = '.'
-    transportIdOffset = 0
-    loggingMethod = ['stderr']
-    loggingLevel = None
-    variationModuleOptions = ""
-    variationModuleName = variationModule = None
-    listenInterface = captureFile = None
-    packetFilter = 'udp and src port 161'
+def _parse_mib_object(arg, last=False):
+    if '::' in arg:
+        return rfc1902.ObjectIdentity(*arg.split('::', 1), last=last)
 
+    else:
+        return univ.ObjectIdentifier(arg)
+
+
+def main():
+    variation_module = None
     endpoints = {}
     contexts = {}
 
@@ -153,177 +115,148 @@ def main():
         'OIDs seen': 0
     }
 
-    try:
-        opts, params = getopt.getopt(
-            sys.argv[1:], 'hv',
-            ['help', 'version', 'debug=', 'debug-snmp=', 'debug-asn1=',
-             'quiet', 'logging-method=', 'log-level=', 'start-oid=', 'stop-oid=',
-             'start-object=', 'stop-object=', 'mib-source=',
-             'destination-record-type=',
-             'output-dir=', 'transport-id-offset=',
-             'capture-file=', 'listen-interface=', 'promiscuous-mode',
-             'packet-filter=',
-             'variation-modules-dir=', 'variation-module=',
-             'variation-module-options='])
+    parser = argparse.ArgumentParser(description=DESCRIPTION)
 
-    except Exception as exc:
-        sys.stderr.write(
-            'ERROR: %s\r\n%s\r\n' % (exc, HELP_MESSAGE))
-        return 1
+    parser.add_argument(
+        '-v', '--version', action='version',
+        version=utils.TITLE)
 
-    if params:
-        sys.stderr.write(
-            'ERROR: extra arguments supplied %s\r\n'
-            '%s\r\n' % (params, HELP_MESSAGE))
-        return 1
+    parser.add_argument(
+        '--quiet', action='store_true',
+        help='Do not print out informational messages')
 
-    for opt in opts:
-        if opt[0] == '-h' or opt[0] == '--help':
-            sys.stderr.write("""\
-Synopsis:
-  Snoops network traffic for SNMP responses, builds SNMP Simulator
-  data files.
-  Can read capture files or listen live network interface.
+    parser.add_argument(
+        '--debug', choices=pysnmp_debug.flagMap,
+        action='append', type=str, default=[],
+        help='Enable one or more categories of SNMP debugging.')
 
-Documentation:
-  http://snmplabs.com/snmpsim/
-%s
-""" % HELP_MESSAGE)
-            return 1
+    parser.add_argument(
+        '--debug-asn1', choices=pyasn1_debug.FLAG_MAP,
+        action='append', type=str, default=[],
+        help='Enable one or more categories of ASN.1 debugging.')
 
-        if opt[0] == '-v' or opt[0] == '--version':
-            import snmpsim
-            import pysmi
-            import pysnmp
-            import pyasn1
+    parser.add_argument(
+        '--logging-method', type=lambda x: x.split(':'),
+        metavar='=<%s[:args]>]' % '|'.join(log.METHODS_MAP),
+        default='stderr', help='Logging method.')
 
-            sys.stderr.write("""\
-SNMP Simulator version %s, written by Ilya Etingof <etingof@gmail.com>
-Using foundation libraries: pysmi %s, pysnmp %s, pyasn1 %s.
-Python interpreter: %s
-Software documentation and support at http://snmplabs.com/snmpsim
-%s
-""" % (snmpsim.__version__,
-       getattr(pysmi, '__version__', 'unknown'),
-       getattr(pysnmp, '__version__', 'unknown'),
-       getattr(pyasn1, '__version__', 'unknown'),
-       sys.version, HELP_MESSAGE))
-            return 1
+    parser.add_argument(
+        '--log-level', choices=log.LEVELS_MAP,
+        type=str, default='info', help='Logging level.')
 
-        elif opt[0] in ('--debug', '--debug-snmp'):
-            pysnmp_debug.setLogger(
-                pysnmp_debug.Debug(
-                    *opt[1].split(','),
-                    **dict(loggerName='%s.pysnmp' % PROGRAM_NAME)))
+    parser.add_argument(
+        '--start-object', metavar='<MIB::Object|OID>', type=_parse_mib_object,
+        default=univ.ObjectIdentifier('1.3.6'),
+        help='Drop all simulation data records prior to this OID specified '
+             'as MIB object (MIB::Object) or OID (1.3.6.)')
 
-        elif opt[0] == '--debug-asn1':
-            pyasn1_debug.setLogger(
-                pyasn1_debug.Debug(
-                    *opt[1].split(','),
-                    **dict(loggerName='%s.pyasn1' % PROGRAM_NAME)))
+    parser.add_argument(
+        '--stop-object', metavar='<MIB::Object|OID>',
+        type=functools.partial(_parse_mib_object, last=True),
+        help='Drop all simulation data records after this OID specified '
+             'as MIB object (MIB::Object) or OID (1.3.6.)')
 
-        elif opt[0] == '--logging-method':
-            loggingMethod = opt[1].split(':')
+    parser.add_argument(
+        '--mib-source', dest='mib_sources', metavar='<URI|PATH>',
+        action='append', type=str,
+        default=['http://mibs.snmplabs.com/asn1/@mib@'],
+        help='One or more URIs pointing to a collection of ASN.1 MIB files.'
+             'Optional "@mib@" token gets replaced with desired MIB module '
+             'name during MIB search.')
 
-        elif opt[0] == '--log-level':
-            loggingLevel = opt[1]
+    parser.add_argument(
+        '--destination-record-type', choices=RECORD_TYPES, default='snmprec',
+        help='Produce simulation data with record of this type')
 
-        if opt[0] == '--quiet':
-            verboseFlag = False
+    parser.add_argument(
+        '--output-file', metavar='<FILE>', type=str,
+        help='SNMP simulation data file to write records to')
 
-        # obsolete begin
-        elif opt[0] == '--start-oid':
-            startOID = univ.ObjectIdentifier(opt[1])
+    variation_group = parser.add_argument_group(
+        'Simulation data variation options')
 
-        elif opt[0] == '--stop-oid':
-            stopOID = univ.ObjectIdentifier(opt[1])
-        # obsolete end
+    variation_group.add_argument(
+        '--variation-modules-dir', action='append', type=str,
+        help='Search variation module by this path')
 
-        if opt[0] == '--mib-source':
-            mibSources.append(opt[1])
+    variation_group.add_argument(
+        '--variation-module', type=str,
+        help='Pass gathered simulation data through this variation module')
 
-        if opt[0] == '--start-object':
-            startOID = rfc1902.ObjectIdentity(*opt[1].split('::', 1))
+    variation_group.add_argument(
+        '--variation-module-options', type=str, default='',
+        help='Variation module options')
 
-        if opt[0] == '--stop-object':
-            stopOID = rfc1902.ObjectIdentity(
-                *opt[1].split('::', 1), **dict(last=True))
+    parser.add_argument(
+        '--output-dir', metavar='<FILE>', type=str, default='.',
+        help='SNMP simulation data directory to place captured traffic in '
+             'form of simulation records. File names reflect traffic sources '
+             'on the network.')
 
-        if opt[0] == '--destination-record-type':
-            if opt[1] not in RECORD_TYPES:
-                sys.stderr.write(
-                    'ERROR: unknown record type <%s> (known types are %s)\r\n%s'
-                    '\r\n' % (opt[1], ', '.join(RECORD_TYPES),
-                              HELP_MESSAGE))
-                return 1
+    variation_group.add_argument(
+        '--transport-id-offset', type=int, default=0,
+        help='When arranging simulation data files, start enumerating '
+             'receiving transport endpoints from this number.')
 
-            dstRecordType = opt[1]
+    traffic_group = parser.add_argument_group('Traffic capturing options')
 
-        elif opt[0] == '--output-dir':
-            outputDir = opt[1]
+    traffic_group.add_argument(
+        '--packet-filter', type=str, default='udp and src port 161',
+        help='Traffic filter (in tcpdump syntax) to use for picking SNMP '
+             'packets out of the rest of the traffic.')
 
-        elif opt[0] == '--transport-id-offset':
-            try:
-                transportIdOffset = max(0, int(opt[1]))
+    variation_group.add_argument(
+        '--listen-interface', type=str,
+        help='Listen on this network interface.')
 
-            except Exception as exc:
-                sys.stderr.write(
-                    'ERROR: %s\r\n%s\r\n' % (exc, HELP_MESSAGE))
-                return 1
+    parser.add_argument(
+        '--promiscuous-mode', action='store_true',
+        help='Attempt to switch NIC to promiscuous mode. Depending on the '
+             'network, this may make traffic of surrounding machines visible. '
+             'Might require superuser privileges.')
 
-        elif opt[0] == '--listen-interface':
-            listenInterface = opt[1]
+    parser.add_argument(
+        '--capture-file', metavar='<FILE>', type=str,
+        help='PCAP file with SNMP simulation data file to read from '
+             'instead of listening on a NIC.')
 
-        elif opt[0] == '--promiscuous-mode':
-            promiscuousMode = True
-
-        elif opt[0] == '--capture-file':
-            captureFile = opt[1]
-
-        elif opt[0] == '--packet-filter':
-            packetFilter = opt[1]
-
-        elif opt[0] == '--variation-modules-dir':
-            confdir.variation.insert(0, opt[1])
-
-        elif opt[0] == '--variation-module':
-            variationModuleName = opt[1]
-
-        elif opt[0] == '--variation-module-options':
-            variationModuleOptions = opt[1]
+    args = parser.parse_args()
 
     if not pcap:
         sys.stderr.write(
-            'ERROR: pylibpcap package is missing!\r\nGet it by running `pip install '
-            'https://downloads.sourceforge.net/project/pylibpcap/pylibpcap/0.6.4/pylibpcap-0.6.4.tar.gz`'
-            '\r\n%s\r\n' % HELP_MESSAGE)
+            'ERROR: pylibpcap package is missing!\r\nGet it by running '
+            '`pip install '
+            'https://downloads.sourceforge.net/project/pylibpcap/pylibpcap'
+            '/0.6.4/pylibpcap-0.6.4.tar.gz`'
+            '\r\n')
+        parser.print_usage(sys.stderr)
         return 1
 
     try:
-        log.setLogger(PROGRAM_NAME, *loggingMethod, force=True)
+        log.setLogger(__name__, *args.logging_method, force=True)
 
-        if loggingLevel:
-            log.setLevel(loggingLevel)
+        if args.log_level:
+            log.setLevel(args.log_level)
 
     except error.SnmpsimError as exc:
-        sys.stderr.write('%s\r\n%s\r\n' % (exc, HELP_MESSAGE))
+        sys.stderr.write('%s\r\n%s\r\n' % exc)
+        parser.print_usage(sys.stderr)
         sys.exit(1)
 
-    if (isinstance(startOID, rfc1902.ObjectIdentity) or
-            isinstance(stopOID, rfc1902.ObjectIdentity)):
+    if (isinstance(args.start_object, rfc1902.ObjectIdentity) or
+            isinstance(args.stop_object, rfc1902.ObjectIdentity)):
         mibBuilder = builder.MibBuilder()
 
         mibViewController = view.MibViewController(mibBuilder)
 
-        compiler.addMibCompiler(
-            mibBuilder, sources=mibSources or defaultMibSources)
+        compiler.addMibCompiler(mibBuilder, sources=args.mib_sources)
 
         try:
-            if isinstance(startOID, rfc1902.ObjectIdentity):
-                startOID.resolveWithMib(mibViewController)
+            if isinstance(args.start_object, rfc1902.ObjectIdentity):
+                args.start_object.resolveWithMib(mibViewController)
 
-            if isinstance(stopOID, rfc1902.ObjectIdentity):
-                stopOID.resolveWithMib(mibViewController)
+            if isinstance(args.stop_object, rfc1902.ObjectIdentity):
+                args.stop_object.resolveWithMib(mibViewController)
 
         except PySnmpError as exc:
             sys.stderr.write('ERROR: %s\r\n' % exc)
@@ -331,17 +264,18 @@ Software documentation and support at http://snmplabs.com/snmpsim
 
     # Load variation module
 
-    if variationModuleName:
+    if args.variation_module:
 
-        for variationModulesDir in confdir.variation:
+        for variation_modules_dir in (
+                args.variation_modules_dir or confdir.variation):
             log.info('Scanning "%s" directory for variation '
-                     'modules...' % variationModulesDir)
+                     'modules...' % variation_modules_dir)
 
-            if not os.path.exists(variationModulesDir):
-                log.info('Directory "%s" does not exist' % variationModulesDir)
+            if not os.path.exists(variation_modules_dir):
+                log.info('Directory "%s" does not exist' % variation_modules_dir)
                 continue
 
-            mod = os.path.join(variationModulesDir, variationModuleName + '.py')
+            mod = os.path.join(variation_modules_dir, args.variation_module + '.py')
             if not os.path.exists(mod):
                 log.info('Variation module "%s" not found' % mod)
                 continue
@@ -361,83 +295,88 @@ Software documentation and support at http://snmplabs.com/snmpsim
                 return 1
 
             else:
-                variationModule = ctx
-                log.info('Variation module "%s" loaded' % variationModuleName)
+                variation_module = ctx
+                log.info('Variation module "%s" loaded' % args.variation_module)
                 break
 
         else:
-            log.error('variation module "%s" not found' % variationModuleName)
+            log.error('variation module "%s" not found' % args.variation_module)
             return 1
 
     # Variation module initialization
 
-    if variationModule:
+    if variation_module:
         log.info('Initializing variation module...')
 
         for handler in ('init', 'record', 'shutdown'):
-            if handler not in variationModule:
+            if handler not in variation_module:
                 log.error('missing "%s" handler at variation module '
-                          '"%s"' % (handler, variationModuleName))
+                          '"%s"' % (handler, args.variation_module))
                 return 1
 
-        handler = variationModule['init']
+        handler = variation_module['init']
 
         try:
-            handler(options=variationModuleOptions, mode='recording',
-                    startOID=startOID, stopOID=stopOID)
+            handler(options=args.variation_module_options, mode='recording',
+                    startOID=args.start_object, stopOID=args.stop_object)
 
         except Exception as exc:
             log.error('Variation module "%s" initialization '
-                      'FAILED: %s' % (variationModuleName, exc))
+                      'FAILED: %s' % (args.variation_module, exc))
 
         else:
             log.info('Variation module "%s" '
-                     'initialization OK' % variationModuleName)
+                     'initialization OK' % args.variation_module)
 
     pcapObj = pcap.pcapObject()
 
-    if listenInterface:
-        if verboseFlag:
+    if args.listen_interface:
+        if not args.quiet:
             log.info(
                 'Listening on interface %s in %spromiscuous '
-                'mode' % (listenInterface, promiscuousMode is False and 'non-' or ''))
+                'mode' % (args.listen_interface,
+                          '' if args.promiscuous_mode else 'non-'))
 
         try:
-            pcapObj.open_live(listenInterface, 65536, promiscuousMode, 1000)
+            pcapObj.open_live(
+                args.listen_interface, 65536, args.promiscuous_mode, 1000)
 
         except Exception as exc:
             log.error(
                 'Error opening interface %s for snooping: '
-                '%s' % (listenInterface, exc))
+                '%s' % (args.listen_interface, exc))
             return 1
 
-    elif captureFile:
-        if verboseFlag:
-            log.info('Opening capture file %s' % captureFile)
+    elif args.capture_file:
+        if not args.quiet:
+            log.info('Opening capture file %s' % args.capture_file)
 
         try:
-            pcapObj.open_offline(captureFile)
+            pcapObj.open_offline(args.capture_file)
 
         except Exception as exc:
             log.error('Error opening capture file %s for reading: '
-                      '%s' % (captureFile, exc))
+                      '%s' % (args.capture_file, exc))
             return 1
 
     else:
         sys.stderr.write(
-            'ERROR: no capture file or live interface specified\r\n%s'
-            '\r\n' % HELP_MESSAGE)
+            'ERROR: no capture file or live interface specified\r\n')
+        parser.print_usage(sys.stderr)
         return 1
 
-    if packetFilter:
-        if verboseFlag:
-            log.info('Applying packet filter \"%s\"' % packetFilter)
+    if args.packet_filter:
+        if not args.quiet:
+            log.info('Applying packet filter \"%s\"' % args.packet_filter)
 
-        pcapObj.setfilter(packetFilter, 0, 0)
+        pcapObj.setfilter(args.packet_filter, 0, 0)
 
-    if verboseFlag:
-        log.info('Processing records from %s till '
-                 '%s' % (startOID or 'the beginning', stopOID or 'the end'))
+    if not args.quiet:
+        log.info('Processing records from %still '
+                 '%s' % ('the beginning ' if args.start_object
+                                          else args.start_object,
+                         args.stop_object if args.stop_object
+                         else 'the end'))
 
     def parsePacket(raw):
         pkt = {}
@@ -526,7 +465,7 @@ Software documentation and support at http://snmplabs.com/snmpsim
 
                 if endpoint not in endpoints:
                     endpoints[endpoint] = udp.domainName + (
-                        transportIdOffset + len(endpoints),)
+                        args.transport_id_offset + len(endpoints),)
                     stats['agents seen'] += 1
 
                 context = '%s/%s' % (
@@ -547,10 +486,10 @@ Software documentation and support at http://snmplabs.com/snmpsim
                     private['basetime'] = t
 
                 for oid, value in pMod.apiPDU.getVarBinds(rspPDU):
-                    if oid < startOID:
+                    if oid < args.start_object:
                         continue
 
-                    if stopOID and oid >= stopOID:
+                    if args.stop_object and oid >= args.stop_object:
                         continue
 
                     if oid in contexts[context]:
@@ -573,16 +512,16 @@ Software documentation and support at http://snmplabs.com/snmpsim
         handleSnmpMessage(parsePacket(data), timestamp)
 
     try:
-        if listenInterface:
+        if args.listen_interface:
             log.info(
                 'Listening on interface "%s", kill me when you '
-                'are done.' % listenInterface)
+                'are done.' % args.listen_interface)
 
             while True:
                 pcapObj.dispatch(1, handlePacket)
 
-        elif captureFile:
-            log.info('Processing capture file "%s"....' % captureFile)
+        elif args.capture_file:
+            log.info('Processing capture file "%s"....' % args.capture_file)
 
             args = pcapObj.next()
 
@@ -597,11 +536,11 @@ Software documentation and support at http://snmplabs.com/snmpsim
         dataFileHandler = SnmprecRecord()
 
         for context in contexts:
-            ext = os.path.extsep + RECORD_TYPES[dstRecordType].ext
+            ext = os.path.extsep + RECORD_TYPES[args.destination_record_type].ext
 
-            filename = os.path.join(outputDir, context + ext)
+            filename = os.path.join(args.output_dir, context + ext)
 
-            if verboseFlag:
+            if not args.quiet:
                 log.info(
                     'Creating simulation context %s at '
                     '%s' % (context, filename))
@@ -613,7 +552,7 @@ Software documentation and support at http://snmplabs.com/snmpsim
                 pass
 
             try:
-                outputFile = RECORD_TYPES[dstRecordType].open(filename, 'wb')
+                outputFile = RECORD_TYPES[args.destination_record_type].open(filename, 'wb')
 
             except IOError as exc:
                 log.error('writing %s: %s' % (filename, exc))
@@ -662,10 +601,10 @@ Software documentation and support at http://snmplabs.com/snmpsim
                         'total': total,
                         'iteration': iteration,
                         'reqTime': reqTime,
-                        'startOID': startOID,
-                        'stopOID': stopOID,
+                        'startOID': args.start_object,
+                        'stopOID': args.stop_object,
                         'stopFlag': oids.index(oid) == len(oids) - 1,
-                        'variationModule': variationModule
+                        'variationModule': variation_module
                     }
 
                     try:
@@ -702,32 +641,32 @@ Software documentation and support at http://snmplabs.com/snmpsim
             outputFile.flush()
             outputFile.close()
 
-        if variationModule:
+        if variation_module:
             log.info('Shutting down variation module '
-                     '"%s"...' % variationModuleName)
+                     '"%s"...' % args.variation_module)
 
-            handler = variationModule['shutdown']
+            handler = variation_module['shutdown']
 
             try:
-                handler(options=variationModuleOptions, mode='recording')
+                handler(options=args.variation_module_options, mode='recording')
 
             except Exception as exc:
                 log.error('Variation module "%s" shutdown FAILED: '
-                          '%s' % (variationModuleName, exc))
+                          '%s' % (args.variation_module, exc))
 
             else:
-                log.info('Variation module "%s" shutdown OK' % variationModuleName)
+                log.info('Variation module "%s" shutdown OK' % args.variation_module)
 
         log.info("""\
-    PCap statistics:
-        packets snooped: %s
-        packets dropped: %s
-        packets dropped: by interface %s\
+PCap statistics:
+    packets snooped: %s
+    packets dropped: %s
+    packets dropped: by interface %s\
     """ % pcapObj.stats())
 
         log.info("""\
-    SNMP statistics:
-        %s\
+SNMP statistics:
+    %s\
     """ % '    '.join(['%s: %s\r\n' % kv for kv in stats.items()]))
 
     return 0

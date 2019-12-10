@@ -6,7 +6,8 @@
 #
 # SNMP Simulator data file management tool
 #
-import getopt
+import argparse
+import functools
 import os
 import sys
 import traceback
@@ -19,6 +20,7 @@ from pysnmp.smi import rfc1902
 from pysnmp.smi import view
 
 from snmpsim import error
+from snmpsim import utils
 from snmpsim.record import dump
 from snmpsim.record import mvc
 from snmpsim.record import sap
@@ -66,196 +68,135 @@ RECORD_TYPES = {
     CompressedSnmprecRecord.ext: CompressedSnmprecRecord(),
 }
 
-HELP_MESSAGE = """\
-Usage: %s [--help]
-    [--version]
-    [--quiet]
-    [--sort-records]
-    [--ignore-broken-records]
-    [--deduplicate-records]
-    [--escaped-strings]
-    [--mib-source=<url>]
-    [--start-object=<MIB-NAME::[symbol-name]|OID>]
-    [--stop-object=<MIB-NAME::[symbol-name]|OID>]
-    [--source-record-type=<%s>]
-    [--destination-record-type=<%s>]
-    [--input-file=<filename>]
-    [--output-file=<filename>]\
-""" % (sys.argv[0],
-       '|'.join(RECORD_TYPES),
-       '|'.join(RECORD_TYPES))
+DESCRIPTION = 'SNMP simulation data management and repair tool. Online ' \
+              'documentation at http://snmplabs.com/snmpsim'
 
-PROGRAM_NAME = os.path.basename(sys.argv[0])
+
+def _parse_mib_object(arg, last=False):
+    if '::' in arg:
+        return rfc1902.ObjectIdentity(*arg.split('::', 1), last=last)
+
+    else:
+        return univ.ObjectIdentifier(arg)
 
 
 def main():
-    verboseFlag = True
-    mibSources = []
-    defaultMibSources = ['http://mibs.snmplabs.com/asn1/@mib@']
-    sortRecords = ignoreBrokenRecords = deduplicateRecords = lostComments = False
-    startOID = stopOID = None
-    srcRecordType = dstRecordType = 'snmprec'
-    inputFiles = []
-    outputFile = None
-    escapedStrings = False
 
-    writtenCount = skippedCount = duplicateCount = brokenCount = variationCount = 0
+    lost_comments = False
+    written_count = skipped_count = duplicate_count = 0
+    broken_count = variation_count = 0
 
-    try:
-        opts, params = getopt.getopt(
-            sys.argv[1:], 'hv',
-            ['help', 'version', 'quiet', 'sort-records',
-             'ignore-broken-records',
-             'deduplicate-records',
-             'escaped-strings',
-             'start-oid=', 'stop-oid=', 'start-object=',
-             'stop-object=',
-             'mib-source=', 'source-record-type=',
-             'destination-record-type=',
-             'input-file=', 'output-file='])
+    parser = argparse.ArgumentParser(description=DESCRIPTION)
 
-    except Exception as exc:
-        if verboseFlag:
-            sys.stderr.write('ERROR: %s\r\n%s\r\n' % (exc, HELP_MESSAGE))
-        return 1
+    parser.add_argument(
+        '-v', '--version', action='version',
+        version=utils.TITLE)
 
-    if params:
-        if verboseFlag:
-            sys.stderr.write('ERROR: extra arguments supplied %s\r\n'
-                             '%s\r\n' % (params, HELP_MESSAGE))
-        return 1
+    parser.add_argument(
+        '--quiet', action='store_true',
+        help='Do not print out informational messages')
 
-    for opt in opts:
-        if opt[0] == '-h' or opt[0] == '--help':
-            sys.stderr.write("""\
-Synopsis:
-  SNMP Simulator data files management and repair tool.
-Documentation:
-  http://snmplabs.com/snmpsim/managing-data-files.html
-%s
-""" % HELP_MESSAGE)
-            return 1
+    parser.add_argument(
+        '--sort-records', action='store_true',
+        help='Order simulation data records by OID')
 
-        if opt[0] == '-v' or opt[0] == '--version':
-            import snmpsim
-            import pysmi
-            import pysnmp
-            import pyasn1
+    parser.add_argument(
+        '--ignore-broken-records', action='store_true',
+        help='Drop malformed simulation data records rather than bailing out')
 
-            sys.stderr.write("""\
-SNMP Simulator version %s, written by Ilya Etingof <etingof@gmail.com>
-Using foundation libraries: pysmi %s, pysnmp %s, pyasn1 %s.
-Python interpreter: %s
-Software documentation and support at http://snmplabs.com/snmpsim
-%s
-""" % (snmpsim.__version__,
-           getattr(pysmi, '__version__', 'unknown'),
-           getattr(pysnmp, '__version__', 'unknown'),
-           getattr(pyasn1, '__version__', 'unknown'),
-           sys.version, HELP_MESSAGE))
-            return 1
+    parser.add_argument(
+        '--deduplicate-records', action='store_true',
+        help='Drop duplicate simulation data records')
 
-        if opt[0] == '--quiet':
-            verboseFlag = False
+    parser.add_argument(
+        '--escaped-strings', action='store_true',
+        help='Produce Python-style escaped strings (e.g. "\x00") in '
+             'simulation data values rather than hexify such non-ASCII '
+             'values')
 
-        if opt[0] == '--sort-records':
-            sortRecords = True
+    parser.add_argument(
+        '--start-object', metavar='<MIB::Object|OID>', type=_parse_mib_object,
+        help='Drop all simulation data records prior to this OID specified '
+             'as MIB object (MIB::Object) or OID (1.3.6.)')
 
-        if opt[0] == '--ignore-broken-records':
-            ignoreBrokenRecords = True
+    parser.add_argument(
+        '--stop-object', metavar='<MIB::Object|OID>',
+        type=functools.partial(_parse_mib_object, last=True),
+        help='Drop all simulation data records after this OID specified '
+             'as MIB object (MIB::Object) or OID (1.3.6.)')
 
-        if opt[0] == '--deduplicate-records':
-            deduplicateRecords = True
+    parser.add_argument(
+        '--mib-source', dest='mib_sources', metavar='<URI|PATH>',
+        action='append', type=str,
+        help='One or more URIs pointing to a collection of ASN.1 MIB files.'
+             'Optional "@mib@" token gets replaced with desired MIB module '
+             'name during MIB search.')
 
-        if opt[0] == '--escaped-strings':
-            escapedStrings = True
+    parser.add_argument(
+        '--source-record-type', choices=RECORD_TYPES, default='snmprec',
+        help='Treat input as simulation data of this record type')
 
-        # obsolete begin
-        if opt[0] == '--start-oid':
-            startOID = univ.ObjectIdentifier(opt[1])
+    parser.add_argument(
+        '--destination-record-type', choices=RECORD_TYPES, default='snmprec',
+        help='Produce simulation data with record of this type')
 
-        if opt[0] == '--stop-oid':
-            stopOID = univ.ObjectIdentifier(opt[1])
-        # obsolete end
+    parser.add_argument(
+        '--input-file', dest='input_files', metavar='<FILE>',
+        action='append', type=str, required=True,
+        help='SNMP simulation data file to read records from')
 
-        if opt[0] == '--mib-source':
-            mibSources.append(opt[1])
+    parser.add_argument(
+        '--output-file', metavar='<FILE>', type=str,
+        help='SNMP simulation data file to write records to')
 
-        if opt[0] == '--start-object':
-            startOID = rfc1902.ObjectIdentity(*opt[1].split('::', 1))
+    args = parser.parse_args()
 
-        if opt[0] == '--stop-object':
-            stopOID = rfc1902.ObjectIdentity(*opt[1].split('::', 1),
-                                             **dict(last=True))
-        if opt[0] == '--source-record-type':
-            if opt[1] not in RECORD_TYPES:
-                if verboseFlag:
-                    sys.stderr.write(
-                        'ERROR: unknown record type <%s> (known types are %s)\r\n'
-                        '%s\r\n' % (opt[1], ', '.join(RECORD_TYPES),
-                                    HELP_MESSAGE))
-                return 1
+    if not args.mib_source:
+        args.mib_source = ['http://mibs.snmplabs.com/asn1/@mib@']
 
-            srcRecordType = opt[1]
+    args.input_files = [
+        RECORD_TYPES[args.source_record_type].open(x)
+        for x in args.input_files]
 
-        if opt[0] == '--destination-record-type':
-            if opt[1] not in RECORD_TYPES:
-                if verboseFlag:
-                    sys.stderr.write(
-                        'ERROR: unknown record type <%s> (known types are %s)\r\n%s'
-                        '\r\n' % (opt[1], ', '.join(RECORD_TYPES),
-                                  HELP_MESSAGE))
-                return 1
+    if args.output_file and args.output_file != '-':
+        ext = os.path.extsep + RECORD_TYPES[args.destination_record_type].ext
 
-            dstRecordType = opt[1]
+        if not args.output_file.endswith(ext):
+            args.output_file += ext
 
-        if opt[0] == '--input-file':
-            inputFiles.append(opt[1])
-
-        if opt[0] == '--output-file':
-            outputFile = opt[1]
-
-    inputFiles = [RECORD_TYPES[srcRecordType].open(x) for x in inputFiles]
-
-    if outputFile:
-        ext = os.path.extsep + RECORD_TYPES[dstRecordType].ext
-
-        if not outputFile.endswith(ext):
-            outputFile += ext
-
-        outputFile = RECORD_TYPES[dstRecordType].open(outputFile, 'wb')
+        args.output_file = RECORD_TYPES[args.destination_record_type].open(
+            args.output_file, 'wb')
 
     else:
-        outputFile = sys.stdout
+        args.output_file = sys.stdout
 
         if sys.version_info >= (3, 0, 0):
             # binary mode write
-            outputFile = sys.stdout.buffer
+            args.output_file = sys.stdout.buffer
 
         elif sys.platform == "win32":
             import msvcrt
 
             msvcrt.setmode(sys.stdout.fileno(), os.O_BINARY)
 
-    if not inputFiles:
-        inputFiles.append(sys.stdin)
+    if not args.input_files:
+        args.input_files.append(sys.stdin)
 
-    if (isinstance(startOID, rfc1902.ObjectIdentity) or
-            isinstance(stopOID, rfc1902.ObjectIdentity)):
+    if (isinstance(args.start_oid, rfc1902.ObjectIdentity) or
+            isinstance(args.stop_oid, rfc1902.ObjectIdentity)):
 
         mibBuilder = builder.MibBuilder()
 
         mibViewController = view.MibViewController(mibBuilder)
 
-        compiler.addMibCompiler(
-            mibBuilder, sources=mibSources or defaultMibSources)
+        compiler.addMibCompiler(mibBuilder, sources=args.mib_sources)
 
         try:
-            if isinstance(startOID, rfc1902.ObjectIdentity):
-                startOID.resolveWithMib(mibViewController)
+            if isinstance(args.start_oid, rfc1902.ObjectIdentity):
+                args.start_oid.resolveWithMib(mibViewController)
 
-            if isinstance(stopOID, rfc1902.ObjectIdentity):
-                stopOID.resolveWithMib(mibViewController)
+            if isinstance(args.stop_oid, rfc1902.ObjectIdentity):
+                args.stop_oid.resolveWithMib(mibViewController)
 
         except PySnmpError as exc:
             sys.stderr.write('ERROR: %s\r\n' % exc)
@@ -263,13 +204,14 @@ Software documentation and support at http://snmplabs.com/snmpsim
 
     recordsList = []
 
-    for inputFile in inputFiles:
+    for inputFile in args.input_files:
 
-        if verboseFlag:
+        if not args.quiet:
             sys.stderr.write(
                 '# Input file #%s, processing records from %s till '
-                '%s\r\n' % (inputFiles.index(inputFile),
-                            startOID or 'the beginning', stopOID or 'the end'))
+                '%s\r\n' % (args.input_files.index(inputFile),
+                            args.start_oid or 'the beginning',
+                            args.stop_oid or 'the end'))
 
         lineNo = 0
 
@@ -280,58 +222,59 @@ Software documentation and support at http://snmplabs.com/snmpsim
                 break
 
             if recLineNo != lineNo + 1:
-                if verboseFlag:
+                if not args.quiet:
                     sys.stderr.write(
                         '# Losing comment at lines %s..%s (input file #'
                         '%s)\r\n' % (lineNo + 1, recLineNo - 1,
-                                     inputFiles.index(inputFile)))
+                                     args.input_files.index(inputFile)))
 
                 lineNo = recLineNo
 
-                lostComments += 1
+                lost_comments += 1
 
             backdoor = {}
 
             try:
-                oid, value = RECORD_TYPES[srcRecordType].evaluate(line, backdoor=backdoor)
+                oid, value = RECORD_TYPES[args.source_record_type].evaluate(
+                    line, backdoor=backdoor)
 
             except error.SnmpsimError as exc:
-                if ignoreBrokenRecords:
-                    if verboseFlag:
+                if args.ignore_broken_records:
+                    if not args.quiet:
                         sys.stderr.write(
                             '# Skipping broken record <%s>: '
                             '%s\r\n' % (line, exc))
-                    brokenCount += 1
+                    broken_count += 1
                     continue
 
                 else:
-                    if verboseFlag:
+                    if not args.quiet:
                         sys.stderr.write(
                             'ERROR: broken record <%s>: '
                             '%s\r\n' % (line, exc))
 
                     return 1
 
-            if (startOID and startOID > oid or
-                    stopOID and stopOID < oid):
-                skippedCount += 1
+            if (args.start_oid and args.start_oid > oid or
+                    args.stop_oid and args.stop_oid < oid):
+                skipped_count += 1
                 continue
 
             recordsList.append((oid, value, backdoor))
 
-    if sortRecords:
+    if args.sort_records:
         recordsList.sort(key=lambda x: x[0])
 
     uniqueIndices = set()
 
     for record in recordsList:
-        if deduplicateRecords:
+        if args.deduplicate_records:
             if record[0] in uniqueIndices:
-                if verboseFlag:
+                if not args.quiet:
                     sys.stderr.write('# Skipping duplicate record '
                                      '<%s>\r\n' % record[0])
 
-                duplicateCount += 1
+                duplicate_count += 1
 
                 continue
 
@@ -339,9 +282,9 @@ Software documentation and support at http://snmplabs.com/snmpsim
                 uniqueIndices.add(record[0])
 
         try:
-            outputFile.write(
-                RECORD_TYPES[dstRecordType].format(
-                    record[0], record[1], backdoor=record[2], nohex=escapedStrings
+            args.output_file.write(
+                RECORD_TYPES[args.destination_record_type].format(
+                    record[0], record[1], backdoor=record[2], nohex=args.escaped_strings
                 )
             )
 
@@ -349,19 +292,20 @@ Software documentation and support at http://snmplabs.com/snmpsim
             sys.stderr.write('ERROR: record not written: %s\r\n' % exc)
             break
 
-        writtenCount += 1
-        if record[2]:
-            variationCount += 1
+        written_count += 1
 
-    if verboseFlag:
+        if record[2]:
+            variation_count += 1
+
+    if not args.quiet:
         sys.stderr.write(
             '# Records: written %s, filtered out %s, de-duplicated %s, ignored '
             '%s, broken %s, variated %s\r\n' % (
-                writtenCount, skippedCount, duplicateCount, lostComments,
-                brokenCount, variationCount))
+                written_count, skipped_count, duplicate_count, lost_comments,
+                broken_count, variation_count))
 
-    outputFile.flush()
-    outputFile.close()
+    args.output_file.flush()
+    args.output_file.close()
 
     return 0
 
