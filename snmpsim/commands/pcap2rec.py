@@ -283,21 +283,17 @@ def main():
             ctx = {'path': mod, 'moduleContext': {}}
 
             try:
-                if sys.version_info[0] > 2:
-                    exec(compile(open(mod).read(), mod, 'exec'), ctx)
-
-                else:
-                    execfile(mod, ctx)
+                with open(mod) as fl:
+                    exec (compile(fl.read(), mod, 'exec'), ctx)
 
             except Exception as exc:
                 log.error('Variation module "%s" execution '
                           'failure: %s' % (mod, exc))
                 return 1
 
-            else:
-                variation_module = ctx
-                log.info('Variation module "%s" loaded' % args.variation_module)
-                break
+            variation_module = ctx
+            log.info('Variation module "%s" loaded' % args.variation_module)
+            break
 
         else:
             log.error('variation module "%s" not found' % args.variation_module)
