@@ -79,30 +79,32 @@ RECORD_TYPES = {
 class SnmprecRecordMixIn(object):
 
     def formatValue(self, oid, value, **context):
-        textOid, textTag, textValue = snmprec.SnmprecRecord.formatValue(
-            self, oid, value
-        )
+        (text_oid,
+         text_tag,
+         text_value) = snmprec.SnmprecRecord.format_value(self, oid, value)
 
         # invoke variation module
         if context['variationModule']:
-            plainOid, plainTag, plainValue = snmprec.SnmprecRecord.formatValue(
+            (plain_oid,
+             plain_tag,
+             plain_value) = snmprec.SnmprecRecord.format_value(
                 self, oid, value, nohex=True)
 
-            if plainTag != textTag:
-                context['hextag'], context['hexvalue'] = textTag, textValue
+            if plain_tag != text_tag:
+                context['hextag'], context['hexvalue'] = text_tag, text_value
 
             else:
-                textTag, textValue = plainTag, plainValue
+                text_tag, text_value = plain_tag, plain_value
 
             handler = context['variationModule']['record']
 
-            textOid, textTag, textValue = handler(
-                textOid, textTag, textValue, **context)
+            text_oid, text_tag, text_value = handler(
+                text_oid, text_tag, text_value, **context)
 
         elif 'stopFlag' in context and context['stopFlag']:
             raise error.NoDataNotification()
 
-        return textOid, textTag, textValue
+        return text_oid, text_tag, text_value
 
 
 class SnmprecRecord(SnmprecRecordMixIn, snmprec.SnmprecRecord):
@@ -507,14 +509,15 @@ def main():
         compiler.addMibCompiler(
             snmp_engine.getMibBuilder(), sources=args.mib_sources)
 
-        mibViewController = view.MibViewController(snmp_engine.getMibBuilder())
+        mib_view_controller = view.MibViewController(
+            snmp_engine.getMibBuilder())
 
         try:
             if isinstance(args.start_object, ObjectIdentity):
-                args.start_object.resolveWithMib(mibViewController)
+                args.start_object.resolveWithMib(mib_view_controller)
 
             if isinstance(args.stop_object, ObjectIdentity):
-                args.stop_object.resolveWithMib(mibViewController)
+                args.stop_object.resolveWithMib(mib_view_controller)
 
         except PySnmpError as exc:
             sys.stderr.write('ERROR: %s\r\n' % exc)
@@ -535,7 +538,8 @@ def main():
             handler = variation_module['init']
 
             handler(snmpEngine=snmp_engine, options=args.variation_module_options,
-                    mode='recording', startOID=args.start_object, stopOID=args.stop_object)
+                    mode='recording', startOID=args.start_object,
+                    stopOID=args.stop_object)
 
         except Exception as exc:
             log.error(
@@ -551,84 +555,84 @@ def main():
 
     # SNMP worker
 
-    def cbFun(snmpEngine, sendRequestHandle, errorIndication,
-              errorStatus, errorIndex, varBindTable, cbCtx):
+    def cbFun(snmp_engine, send_request_handle, error_indication,
+              error_status, error_index, var_bind_table, cb_ctx):
 
-        if errorIndication and not cbCtx['retries']:
-            cbCtx['errors'] += 1
-            log.error('SNMP Engine error: %s' % errorIndication)
+        if error_indication and not cb_ctx['retries']:
+            cb_ctx['errors'] += 1
+            log.error('SNMP Engine error: %s' % error_indication)
             return
 
         # SNMPv1 response may contain noSuchName error *and* SNMPv2c exception,
         # so we ignore noSuchName error here
-        if errorStatus and errorStatus != 2 or errorIndication:
+        if error_status and error_status != 2 or error_indication:
             log.error(
                 'Remote SNMP error %s' % (
-                        errorIndication or errorStatus.prettyPrint()))
+                        error_indication or error_status.prettyPrint()))
 
-            if cbCtx['retries']:
+            if cb_ctx['retries']:
                 try:
-                    nextOID = varBindTable[-1][0][0]
+                    next_oid = var_bind_table[-1][0][0]
 
                 except IndexError:
-                    nextOID = cbCtx['lastOID']
+                    next_oid = cb_ctx['lastOID']
 
                 else:
-                    log.error('Failed OID: %s' % nextOID)
+                    log.error('Failed OID: %s' % next_oid)
 
                 # fuzzy logic of walking a broken OID
-                if len(nextOID) < 4:
+                if len(next_oid) < 4:
                     pass
 
-                elif (args.continue_on_errors - cbCtx['retries']) * 10 / args.continue_on_errors > 5:
-                    nextOID = nextOID[:-2] + (nextOID[-2] + 1,)
+                elif (args.continue_on_errors - cb_ctx['retries']) * 10 / args.continue_on_errors > 5:
+                    next_oid = next_oid[:-2] + (next_oid[-2] + 1,)
 
-                elif nextOID[-1]:
-                    nextOID = nextOID[:-1] + (nextOID[-1] + 1,)
+                elif next_oid[-1]:
+                    next_oid = next_oid[:-1] + (next_oid[-1] + 1,)
 
                 else:
-                    nextOID = nextOID[:-2] + (nextOID[-2] + 1, 0)
+                    next_oid = next_oid[:-2] + (next_oid[-2] + 1, 0)
 
-                cbCtx['retries'] -= 1
-                cbCtx['lastOID'] = nextOID
+                cb_ctx['retries'] -= 1
+                cb_ctx['lastOID'] = next_oid
 
                 log.info(
                     'Retrying with OID %s (%s retries left)'
-                    '...' % (nextOID, cbCtx['retries']))
+                    '...' % (next_oid, cb_ctx['retries']))
 
                 # initiate another SNMP walk iteration
                 if args.use_getbulk:
-                    cmdGen.sendVarBinds(
-                        snmpEngine,
+                    cmd_gen.sendVarBinds(
+                        snmp_engine,
                         'tgt',
                         args.v3_context_engine_id, args.v3_context_name,
                         0, args.getbulk_repetitions,
-                        [(nextOID, None)],
-                        cbFun, cbCtx)
+                        [(next_oid, None)],
+                        cbFun, cb_ctx)
 
                 else:
-                    cmdGen.sendVarBinds(
-                        snmpEngine,
+                    cmd_gen.sendVarBinds(
+                        snmp_engine,
                         'tgt',
                         args.v3_context_engine_id, args.v3_context_name,
-                        [(nextOID, None)],
-                        cbFun, cbCtx)
+                        [(next_oid, None)],
+                        cbFun, cb_ctx)
 
-            cbCtx['errors'] += 1
+            cb_ctx['errors'] += 1
 
             return
 
-        if args.continue_on_errors != cbCtx['retries']:
-            cbCtx['retries'] += 1
+        if args.continue_on_errors != cb_ctx['retries']:
+            cb_ctx['retries'] += 1
 
-        if varBindTable and varBindTable[-1] and varBindTable[-1][0]:
-            cbCtx['lastOID'] = varBindTable[-1][0][0]
+        if var_bind_table and var_bind_table[-1] and var_bind_table[-1][0]:
+            cb_ctx['lastOID'] = var_bind_table[-1][0][0]
 
         stop_flag = False
 
         # Walk var-binds
-        for varBindRow in varBindTable:
-            for oid, value in varBindRow:
+        for var_bind_row in var_bind_table:
+            for oid, value in var_bind_row:
 
                 # EOM
                 if args.stop_object and oid >= args.stop_object:
@@ -655,10 +659,10 @@ def main():
                 context = {
                     'origOid': oid,
                     'origValue': value,
-                    'count': cbCtx['count'],
-                    'total': cbCtx['total'],
-                    'iteration': cbCtx['iteration'],
-                    'reqTime': cbCtx['reqTime'],
+                    'count': cb_ctx['count'],
+                    'total': cb_ctx['total'],
+                    'iteration': cb_ctx['iteration'],
+                    'reqTime': cb_ctx['reqTime'],
                     'args.start_object': args.start_object,
                     'stopOID': args.stop_object,
                     'stopFlag': stop_flag,
@@ -669,36 +673,36 @@ def main():
                     line = data_file_handler.format(oid, value, **context)
 
                 except error.MoreDataNotification as exc:
-                    cbCtx['count'] = 0
-                    cbCtx['iteration'] += 1
+                    cb_ctx['count'] = 0
+                    cb_ctx['iteration'] += 1
 
-                    moreDataNotification = exc
+                    more_data_notification = exc
 
-                    if 'period' in moreDataNotification:
+                    if 'period' in more_data_notification:
                         log.info(
                             '%s OIDs dumped, waiting %.2f sec(s)'
-                            '...' % (cbCtx['total'],
-                                     moreDataNotification['period']))
+                            '...' % (cb_ctx['total'],
+                                     more_data_notification['period']))
 
-                        time.sleep(moreDataNotification['period'])
+                        time.sleep(more_data_notification['period'])
 
                     # initiate another SNMP walk iteration
                     if args.use_getbulk:
-                        cmdGen.sendVarBinds(
-                            snmpEngine,
+                        cmd_gen.sendVarBinds(
+                            snmp_engine,
                             'tgt',
                             args.v3_context_engine_id, args.v3_context_name,
                             0, args.getbulk_repetitions,
                             [(args.start_object, None)],
-                            cbFun, cbCtx)
+                            cbFun, cb_ctx)
 
                     else:
-                        cmdGen.sendVarBinds(
-                            snmpEngine,
+                        cmd_gen.sendVarBinds(
+                            snmp_engine,
                             'tgt',
                             args.v3_context_engine_id, args.v3_context_name,
                             [(args.start_object, None)],
-                            cbFun, cbCtx)
+                            cbFun, cb_ctx)
 
                     stop_flag = True  # stop current iteration
 
@@ -712,20 +716,20 @@ def main():
                 else:
                     args.output_file.write(line)
 
-                    cbCtx['count'] += 1
-                    cbCtx['total'] += 1
+                    cb_ctx['count'] += 1
+                    cb_ctx['total'] += 1
 
-                    if cbCtx['count'] % 100 == 0:
+                    if cb_ctx['count'] % 100 == 0:
                         log.info('OIDs dumped: %s/%s' % (
-                            cbCtx['iteration'], cbCtx['count']))
+                            cb_ctx['iteration'], cb_ctx['count']))
 
         # Next request time
-        cbCtx['reqTime'] = time.time()
+        cb_ctx['reqTime'] = time.time()
 
         # Continue walking
         return not stop_flag
 
-    cbCtx = {
+    cb_ctx = {
         'total': 0,
         'count': 0,
         'errors': 0,
@@ -736,25 +740,25 @@ def main():
     }
 
     if args.use_getbulk:
-        cmdGen = cmdgen.BulkCommandGenerator()
+        cmd_gen = cmdgen.BulkCommandGenerator()
 
-        cmdGen.sendVarBinds(
+        cmd_gen.sendVarBinds(
             snmp_engine,
             'tgt',
             args.v3_context_engine_id, args.v3_context_name,
             0, args.getbulk_repetitions,
             [(args.start_object, rfc1902.Null(''))],
-            cbFun, cbCtx)
+            cbFun, cb_ctx)
 
     else:
-        cmdGen = cmdgen.NextCommandGenerator()
+        cmd_gen = cmdgen.NextCommandGenerator()
 
-        cmdGen.sendVarBinds(
+        cmd_gen.sendVarBinds(
             snmp_engine,
             'tgt',
             args.v3_context_engine_id, args.v3_context_name,
             [(args.start_object, rfc1902.Null(''))],
-            cbFun, cbCtx)
+            cbFun, cb_ctx)
 
     log.info(
         'Sending initial %s request for %s (stop at %s)'
@@ -794,18 +798,18 @@ def main():
 
         started = time.time() - started
 
-        cbCtx['total'] += cbCtx['count']
+        cb_ctx['total'] += cb_ctx['count']
 
         log.info(
             'OIDs dumped: %s, elapsed: %.2f sec, rate: %.2f OIDs/sec, errors: '
-            '%d' % (cbCtx['total'], started,
-                    started and cbCtx['count'] // started or 0,
-                    cbCtx['errors']))
+            '%d' % (cb_ctx['total'], started,
+                    started and cb_ctx['count'] // started or 0,
+                    cb_ctx['errors']))
 
         args.output_file.flush()
         args.output_file.close()
 
-        return 0
+        return cb_ctx.get('errors', 0) and 1 or 0
 
 
 if __name__ == '__main__':

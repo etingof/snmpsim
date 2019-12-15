@@ -34,7 +34,7 @@ class WalkGrammar(abstract.AbstractGrammar):
     }
 
     @staticmethod
-    def _integerFilter(value):
+    def _integer_filter(value):
         try:
             int(value)
             return value
@@ -56,7 +56,7 @@ class WalkGrammar(abstract.AbstractGrammar):
 
     # possible DISPLAY-HINTs parsing should occur here
     @staticmethod
-    def _stringFilter(value):
+    def _string_filter(value):
         if not value:
             return value
 
@@ -71,7 +71,7 @@ class WalkGrammar(abstract.AbstractGrammar):
             return value
 
     @staticmethod
-    def _opaqueFilter(value):
+    def _opaque_filter(value):
         if value.upper().startswith('FLOAT: '):
             return encoder.encode(univ.Real(float(value[7:])))
 
@@ -79,7 +79,7 @@ class WalkGrammar(abstract.AbstractGrammar):
             return [int(y, 16) for y in value.split(' ')]
 
     @staticmethod
-    def _bitsFilter(value):
+    def _bits_filter(value):
         # rfc1902.Bits does not really initialize from sequences
         # Clean bits values
         # .1.3.6.1.2.1.17.6.1.1.1.0 = BITS: 5B 00 00 00   [[...]1 3 4 6 7
@@ -91,7 +91,7 @@ class WalkGrammar(abstract.AbstractGrammar):
         return ints2octs([int(y, 16) for y in value.split(' ')])
 
     @staticmethod
-    def _hexStringFilter(value):
+    def _hex_string_filter(value):
         # .1.3.6.1.2.1.3.1.1.2.2.1.172.30.1.30 = Hex-STRING: 00 C0 FF 43 CE 45   [...C.E]
         match = re.match(r'^([0-9a-fA-F]{2}(\s+[0-9a-fA-F]{2})*)\s+\[', value)
         if match:
@@ -100,7 +100,7 @@ class WalkGrammar(abstract.AbstractGrammar):
         return [int(y, 16) for y in value.split(' ')]
 
     @staticmethod
-    def _gaugeFilter(value):
+    def _gauge_filter(value):
         try:
             int(value)
             return value
@@ -115,11 +115,11 @@ class WalkGrammar(abstract.AbstractGrammar):
             return value
 
     @staticmethod
-    def _netAddressFilter(value):
+    def _net_address_filter(value):
         return '.'.join([str(int(y, 16)) for y in value.split(':')])
 
     @staticmethod
-    def _timeTicksFilter(value):
+    def _time_ticks_filter(value):
         match = re.match(r'.*?\(([0-9]+)\)', value)
         if match:
             return match.group(1)
@@ -129,14 +129,14 @@ class WalkGrammar(abstract.AbstractGrammar):
     def parse(self, line):
 
         filters = {
-            'OPAQUE:': self._opaqueFilter,
-            'INTEGER:': self._integerFilter,
-            'STRING:': self._stringFilter,
-            'BITS:': self._bitsFilter,
-            'HEX-STRING:': self._hexStringFilter,
-            'GAUGE32:': self._gaugeFilter,
-            'NETWORK ADDRESS:': self._netAddressFilter,
-            'TIMETICKS:': self._timeTicksFilter
+            'OPAQUE:': self._opaque_filter,
+            'INTEGER:': self._integer_filter,
+            'STRING:': self._string_filter,
+            'BITS:': self._bits_filter,
+            'HEX-STRING:': self._hex_string_filter,
+            'GAUGE32:': self._gauge_filter,
+            'NETWORK ADDRESS:': self._net_address_filter,
+            'TIMETICKS:': self._time_ticks_filter
         }
 
         # drop possible 8-bits

@@ -7,103 +7,107 @@
 
 import os
 import sys
-if sys.version_info[0] < 3:
-    import anydbm as dbm
-    from whichdb import whichdb
+
+from snmpsim import confdir
+from snmpsim import error
+from snmpsim import log
+from snmpsim import utils
+from snmpsim.record.search.file import get_record
+
+dbm = utils.try_load('anydbm')
+if dbm:
+    whichdb = utils.try_load('whichdb')
 
 else:
-    import dbm
-    whichdb = dbm.whichdb
-
-from snmpsim import confdir, log, error
-from snmpsim.record.search.file import getRecord
+    dbm = utils.try_load('dbm')
+    whichdb = dbm
 
 
 class RecordIndex(object):
 
-    def __init__(self, textFile, textParser):
-        self._textFile = textFile
-        self._textParser = textParser
+    def __init__(self, text_file, text_parser):
+        self._text_file = text_file
+        self._text_parser = text_parser
 
         try:
-            self._dbFile = textFile[:textFile.rindex(os.path.extsep)]
+            self._db_file = text_file[:text_file.rindex(os.path.extsep)]
 
         except ValueError:
-            self._dbFile = textFile
+            self._db_file = text_file
 
-        self._dbFile += os.path.extsep + 'dbm'
+        self._db_file += os.path.extsep + 'dbm'
 
-        self._dbFile = os.path.join(
+        self._db_file = os.path.join(
             confdir.cache, os.path.splitdrive(
-                self._dbFile)[1].replace(os.path.sep, '_'))
+                self._db_file)[1].replace(os.path.sep, '_'))
 
-        self._db = self.__text = None
-        self._dbType = '?'
+        self._db = self._text = None
+        self._db_type = '?'
 
-        self._textFileTime = 0
+        self._text_file_time = 0
 
     def __str__(self):
         return 'Data file %s, %s-indexed, %s' % (
-            self._textFile, self._dbType, self._db and 'opened' or 'closed')
+            self._text_file, self._db_type, self._db and 'opened' or 'closed')
 
-    def isOpen(self):
+    def is_open(self):
         return self._db is not None
 
-    def getHandles(self):
-        if self.isOpen():
-            if self._textFileTime != os.stat(self._textFile)[8]:
-                log.msg('Text file %s modified, closing' % self._textFile)
+    def get_handles(self):
+        if self.is_open():
+            if self._text_file_time != os.stat(self._text_file)[8]:
+                log.msg('Text file %s modified, closing' % self._text_file)
                 self.close()
 
-        if not self.isOpen():
+        if not self.is_open():
             self.create()
             self.open()
 
-        return self.__text, self._db
+        return self._text, self._db
 
     @property
-    def _dbFiles(self):
-        return (self._dbFile + os.path.extsep + 'db',
-                self._dbFile + os.path.extsep + 'dat',
-                self._dbFile)
+    def _db_files(self):
+        return (self._db_file + os.path.extsep + 'db',
+                self._db_file + os.path.extsep + 'dat',
+                self._db_file)
 
-    def create(self, forceIndexBuild=False, validateData=False):
-        textFileTime = os.stat(self._textFile)[8]
+    def create(self, force_index_build=False, validate_data=False):
+        text_file_time = os.stat(self._text_file)[8]
 
         # gdbm on OS X seems to voluntarily append .db, trying to catch that
 
-        indexNeeded = forceIndexBuild
+        index_needed = force_index_build
 
-        for dbFile in self._dbFiles:
+        for db_file in self._db_files:
 
-            if os.path.exists(dbFile):
-                if textFileTime < os.stat(dbFile)[8]:
-                    if indexNeeded:
-                        log.msg('Forced index rebuild %s' % dbFile)
+            if os.path.exists(db_file):
+                if text_file_time < os.stat(db_file)[8]:
+                    if index_needed:
+                        log.msg('Forced index rebuild %s' % db_file)
 
-                    elif not whichdb(self._dbFile):
-                        indexNeeded = True
+                    elif not whichdb.whichdb(self._db_file):
+                        index_needed = True
                         log.msg('Unsupported index format, rebuilding '
-                                'index %s' % dbFile)
+                                'index %s' % db_file)
 
                 else:
-                    indexNeeded = True
-                    log.msg('Index %s out of date' % dbFile)
+                    index_needed = True
+                    log.msg('Index %s out of date' % db_file)
 
                 break
 
         else:
-            indexNeeded = True
+            index_needed = True
             log.msg('Index %s does not exist for data file '
-                    '%s' % (self._dbFile, self._textFile))
+                    '%s' % (self._db_file, self._text_file))
 
-        if indexNeeded:
+        if index_needed:
             # these might speed-up indexing
             open_flags = 'nfu'
 
             while open_flags:
                 try:
-                    db = dbm.open(self._dbFile, open_flags)
+                    db = dbm.open(self._db_file, open_flags)
 
                 except Exception:
                     open_flags = open_flags[:-1]
@@ -114,96 +118,96 @@ class RecordIndex(object):
             else:
                 raise error.SnmpsimError(
                     'Failed to create %s for data file '
-                    '%s' % (self._dbFile, self._textFile))
+                    '%s' % (self._db_file, self._text_file))
 
             try:
-                text = self._textParser.open(self._textFile)
+                text = self._text_parser.open(self._text_file)
 
             except Exception as exc:
                 raise error.SnmpsimError(
-                    'Failed to open data file %s: %s' % (self._dbFile, exc))
+                    'Failed to open data file %s: %s' % (self._db_file, exc))
 
             log.msg(
                 'Building index %s for data file %s (open flags '
-                '\"%s\")...' % (self._dbFile, self._textFile, open_flags))
+                '\"%s\")...' % (self._db_file, self._text_file, open_flags))
 
             sys.stdout.flush()
 
-            lineNo = 0
+            line_no = 0
             offset = 0
-            prevOffset = -1
+            prev_offset = -1
 
             while True:
-                line, lineNo, offset = getRecord(text, lineNo, offset)
+                line, line_no, offset = get_record(text, line_no, offset)
 
                 if not line:
                     # reference to last OID in data file
-                    db['last'] = '%d,%d,%d' % (offset, 0, prevOffset)
+                    db['last'] = '%d,%d,%d' % (offset, 0, prev_offset)
                     break
 
                 try:
-                    oid, tag, val = self._textParser.grammar.parse(line)
+                    oid, tag, val = self._text_parser.grammar.parse(line)
 
                 except Exception as exc:
                     db.close()
 
-                    for dbFile in self._dbFiles:
+                    for db_file in self._db_files:
                         try:
-                            os.remove(dbFile)
+                            os.remove(db_file)
 
                         except OSError:
                             pass
 
                     raise error.SnmpsimError(
                         'Data error at %s:%d:'
-                        ' %s' % (self._textFile, lineNo, exc))
+                        ' %s' % (self._text_file, line_no, exc))
 
-                if validateData:
+                if validate_data:
                     try:
-                        self._textParser.evaluateOid(oid)
+                        self._text_parser.evaluate_oid(oid)
 
                     except Exception as exc:
                         db.close()
 
-                        for dbFile in self._dbFiles:
+                        for db_file in self._db_files:
                             try:
-                                os.remove(dbFile)
+                                os.remove(db_file)
 
                             except OSError:
                                 pass
 
                         raise error.SnmpsimError(
-                            'OID error at %s:%d: %s' % (self._textFile, lineNo, exc))
+                            'OID error at %s:%d: %s' % (self._text_file, line_no, exc))
 
                     try:
-                        self._textParser.evaluateValue(
+                        self._text_parser.evaluate_value(
                             oid, tag, val, dataValidation=True
                         )
 
                     except Exception as exc:
                         log.msg(
                             'ERROR at line %s, value %r: '
-                            '%s' % (lineNo, val, exc))
+                            '%s' % (line_no, val, exc))
 
                 # for lines serving subtrees, type is empty in tag field
-                db[oid] = '%d,%d,%d' % (offset, tag[0] == ':', prevOffset)
+                db[oid] = '%d,%d,%d' % (offset, tag[0] == ':', prev_offset)
 
                 if tag[0] == ':':
-                    prevOffset = offset
+                    prev_offset = offset
 
                 else:
-                    prevOffset = -1   # not a subtree - no back reference
+                    prev_offset = -1   # not a subtree - no back reference
 
                 offset += len(line)
 
             text.close()
             db.close()
 
-            log.msg('...%d entries indexed' % lineNo)
+            log.msg('...%d entries indexed' % line_no)
 
-        self._textFileTime = os.stat(self._textFile)[8]
+        self._text_file_time = os.stat(self._text_file)[8]
 
-        self._dbType = whichdb(self._dbFile)
+        self._db_type = whichdb.whichdb(self._db_file)
 
         return self
 
@@ -211,10 +215,10 @@ class RecordIndex(object):
         return self._db[oid]
 
     def open(self):
-        self.__text = self._textParser.open(self._textFile)
-        self._db = dbm.open(self._dbFile)
+        self._text = self._text_parser.open(self._text_file)
+        self._db = dbm.open(self._db_file)
 
     def close(self):
-        self.__text.close()
+        self._text.close()
         self._db.close()
-        self._db = self.__text = None
+        self._db = self._text = None

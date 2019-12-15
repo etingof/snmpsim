@@ -30,10 +30,10 @@ class AbstractLogger(object):
     def __call__(self, s):
         self._logger.debug(' ' * self._ident + s)
 
-    def incIdent(self, amount=2):
+    def inc_ident(self, amount=2):
         self._ident += amount
 
-    def decIdent(self, amount=2):
+    def dec_ident(self, amount=2):
         self._ident -= amount
         if self._ident < 0:
             self._ident = 0
@@ -115,7 +115,7 @@ class FileLogger(AbstractLogger):
             # implementation does.
             # This is to work-around the increasing rotation intervals
             # on process restart.
-            self.rolloverAt = self.computeRollover(timestamp)
+            self.rollover_at = self.computeRollover(timestamp)
 
         @property
         def _filename(self):
@@ -138,7 +138,7 @@ class FileLogger(AbstractLogger):
             except IOError as exc:
                 # File rotation seems to fail, postpone the next run
                 timestamp = time.time()
-                self.rolloverAt = self.computeRollover(timestamp)
+                self.rollover_at = self.computeRollover(timestamp)
 
                 if not self._failure:
                     self._failure = True
@@ -273,7 +273,7 @@ logLevel = LOG_INFO
 
 def error(message, ctx=''):
     if logLevel <= LOG_ERROR:
-      msg('ERROR %s %s' % (message, ctx))
+        msg('ERROR %s %s' % (message, ctx))
 
 
 def info(message, ctx=''):
@@ -302,8 +302,7 @@ def setLogger(progId, *priv, **options):
     global msg
 
     try:
-        if (not isinstance(msg, AbstractLogger)
-                or options.get('force')):
+        if not isinstance(msg, AbstractLogger) or options.get('force'):
             msg = METHODS_MAP[priv[0]](progId, *priv[1:])
 
     except KeyError:

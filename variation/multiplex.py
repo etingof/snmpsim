@@ -17,15 +17,15 @@ from pysnmp.proto import rfc1902
 from snmpsim import confdir
 from snmpsim import error
 from snmpsim import log
-from snmpsim.mltsplit import split
-from snmpsim.record.search.database import RecordIndex
-from snmpsim.record.search.file import getRecord
-from snmpsim.record.search.file import searchRecordByOid
 from snmpsim.record import dump
 from snmpsim.record import mvc
 from snmpsim.record import sap
 from snmpsim.record import snmprec
 from snmpsim.record import walk
+from snmpsim.record.search.database import RecordIndex
+from snmpsim.record.search.file import get_record
+from snmpsim.record.search.file import search_record_by_oid
+from snmpsim.utils import split
 
 # data file types and parsers
 RECORD_SET = {
@@ -226,7 +226,7 @@ def variate(oid, tag, value, **context):
             'multiplex: switching to data file %s for '
             '%s' % (datafile, context['origOid']))
 
-    text, db = moduleContext[oid]['datafileobj'].getHandles()
+    text, db = moduleContext[oid]['datafileobj'].get_handles()
 
     textOid = str(rfc1902.OctetString(
         '.'.join(['%s' % x for x in context['origOid']])))
@@ -235,7 +235,7 @@ def variate(oid, tag, value, **context):
         line = moduleContext[oid]['datafileobj'].lookup(textOid)
 
     except KeyError:
-        offset = searchRecordByOid(context['origOid'], text, parser)
+        offset = search_record_by_oid(context['origOid'], text, parser)
         exactMatch = False
 
     else:
@@ -244,11 +244,11 @@ def variate(oid, tag, value, **context):
 
     text.seek(int(offset))
 
-    line, _, _ = getRecord(text)  # matched line
+    line, _, _ = get_record(text)  # matched line
 
     if context['nextFlag']:
         if exactMatch:
-            line, _, _ = getRecord(text)
+            line, _, _ = get_record(text)
 
     else:
         if not exactMatch:

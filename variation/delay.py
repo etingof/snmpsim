@@ -10,8 +10,8 @@ import time
 from snmpsim import error
 from snmpsim import log
 from snmpsim.grammar.snmprec import SnmprecGrammar
-from snmpsim.mltsplit import split
 from snmpsim.record.snmprec import SnmprecRecord
+from snmpsim.utils import split
 
 
 def init(**context):
@@ -59,9 +59,9 @@ def variate(oid, tag, value, **context):
 
                 d = int(d)
 
-                typeTag, _ = SnmprecRecord.unpackTag(tag)
+                type_tag, _ = SnmprecRecord.unpack_tag(tag)
 
-                v = SnmprecGrammar.TAG_MAP[typeTag](v)
+                v = SnmprecGrammar.TAG_MAP[type_tag](v)
 
                 if o not in vlist:
                     vlist[o] = {}
@@ -172,17 +172,17 @@ def record(oid, tag, value, **context):
 
     tag += ':delay'
     if 'hexvalue' in context:
-        textValue = 'hexvalue=' + context['hexvalue']
+        text_value = 'hexvalue=' + context['hexvalue']
 
     else:
-        textValue = 'value=' + value
+        text_value = 'value=' + value
 
-    textValue += ',wait=%d' % int((time.time() - context['reqTime']) * 1000)  # ms
+    text_value += ',wait=%d' % int((time.time() - context['reqTime']) * 1000)  # ms
 
     if 'options' in context:
-        textValue += ',' + context['options']
+        text_value += ',' + context['options']
 
-    return oid, tag, textValue
+    return oid, tag, text_value
 
 
 def shutdown(**context):

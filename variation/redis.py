@@ -21,18 +21,15 @@
 import random
 import time
 
-try:
-    from redis import StrictRedis
-except ImportError:
-    StrictRedis = None
-
-from pysnmp.smi.error import WrongValueError
 from pyasn1.compat import octets
+from pysnmp.smi.error import WrongValueError
 
 from snmpsim import error, log
+from snmpsim import utils
 from snmpsim.grammar.snmprec import SnmprecGrammar
-from snmpsim.mltsplit import split
 from snmpsim.record.snmprec import SnmprecRecord
+
+redis = utils.try_load('redis')
 
 random.seed()
 
@@ -42,8 +39,8 @@ def init(**context):
 
     if context['options']:
         options.update(
-            dict([split(x, ':')
-                  for x in split(context['options'], ',')]))
+            dict([utils.split(x, ':')
+                  for x in utils.split(context['options'], ',')]))
 
     connectOpts = 'host', 'port', 'password', 'db', 'unix_socket'
 
@@ -57,10 +54,10 @@ def init(**context):
     if not connectParams:
         raise error.SnmpsimError('Redis connect parameters not specified')
 
-    if StrictRedis is None:
+    if not redis:
         raise error.SnmpsimError('redis-py Python package must be installed!')
 
-    moduleContext['dbConn'] = StrictRedis(**connectParams)
+    moduleContext['dbConn'] = redis.StrictRedis(**connectParams)
 
     if context['mode'] == 'recording':
         if 'key-spaces-id' in options:
@@ -90,7 +87,7 @@ def init(**context):
     moduleContext['ready'] = True
 
 
-unpackTag = SnmprecRecord().unpackTag
+unpackTag = SnmprecRecord().unpack_tag
 
 
 
@@ -131,7 +128,7 @@ def variate(oid, tag, value, **context):
 
     if 'settings' not in recordContext:
         settings = recordContext['settings'] = dict(
-            [split(x, '=') for x in split(value, ',')])
+            [utils.split(x, '=') for x in utils.split(value, ',')])
 
         if 'key-spaces-id' not in settings:
             log.msg('redis:mandatory key-spaces-id option is missing')
@@ -183,7 +180,7 @@ def variate(oid, tag, value, **context):
             textValue = context['hexvalue']
 
         else:
-            textTag = SnmprecGrammar().getTagByType(context['origValue'])
+            textTag = SnmprecGrammar().get_tag_by_type(context['origValue'])
             textValue = str(context['origValue'])
 
         if redisScript:
@@ -317,7 +314,7 @@ def record(oid, tag, value, **context):
         textValue = context['hexvalue']
 
     else:
-        textTag = SnmprecGrammar().getTagByType(context['origValue'])
+        textTag = SnmprecGrammar().get_tag_by_type(context['origValue'])
         textValue = str(context['origValue'])
 
     dbConn.lpush(keySpace + '-temp_oids_ordering', keySpace + '-' + dbOid)
@@ -338,7 +335,7 @@ def record(oid, tag, value, **context):
             settings['period'] = '%.2f' % float(moduleContext['period'])
 
         if 'addon' in moduleContext:
-            settings.update(dict([split(x, '=')
+            settings.update(dict([utils.split(x, '=')
                                   for x in moduleContext['addon']]))
 
         value = ','.join(['%s=%s' % (k, v) for k, v in settings.items()])

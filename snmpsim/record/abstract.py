@@ -12,12 +12,12 @@ class AbstractRecord(object):
     grammar = abstract.AbstractGrammar()
     ext = ''
 
-    def evaluateOid(self, oid):
+    def evaluate_oid(self, oid):
         raise SnmpsimError(
             'Method not implemented at '
             '%s' % self.__class__.__name__)
 
-    def evaluateValue(self, oid, tag, value, **context):
+    def evaluate_value(self, oid, tag, value, **context):
         raise SnmpsimError(
             'Method not implemented at '
             '%s' % self.__class__.__name__)
@@ -27,12 +27,12 @@ class AbstractRecord(object):
             'Method not implemented at '
             '%s' % self.__class__.__name__)
 
-    def formatOid(self, oid):
+    def format_oid(self, oid):
         raise SnmpsimError(
             'Method not implemented at '
             '%s' % self.__class__.__name__)
 
-    def formatValue(self, oid, value, **context):
+    def format_value(self, oid, value, **context):
         raise SnmpsimError(
             'Method not implemented at '
             '%s' % self.__class__.__name__)

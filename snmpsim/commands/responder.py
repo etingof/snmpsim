@@ -48,8 +48,8 @@ from snmpsim.record import sap
 from snmpsim.record import snmprec
 from snmpsim.record import walk
 from snmpsim.record.search.database import RecordIndex
-from snmpsim.record.search.file import getRecord
-from snmpsim.record.search.file import searchRecordByOid
+from snmpsim.record.search.file import get_record
+from snmpsim.record.search.file import search_record_by_oid
 
 AUTH_PROTOCOLS = {
     'MD5': config.usmHMACMD5AuthProtocol,
@@ -157,14 +157,14 @@ class SnmprecRecordMixIn(object):
     def evaluateValue(self, oid, tag, value, **context):
         # Variation module reference
         if ':' in tag:
-            modName, tag = tag[tag.index(':')+1:], tag[:tag.index(':')]
+            mod_name, tag = tag[tag.index(':')+1:], tag[:tag.index(':')]
 
         else:
-            modName = None
+            mod_name = None
 
-        if modName:
+        if mod_name:
             if ('variationModules' in context and
-                    modName in context['variationModules']):
+                    mod_name in context['variationModules']):
 
                 if 'dataValidation' in context:
                     return oid, tag, univ.Null
@@ -172,36 +172,36 @@ class SnmprecRecordMixIn(object):
                 else:
                     if context['setFlag']:
 
-                        hexvalue = self.grammar.hexifyValue(
+                        hexvalue = self.grammar.hexify_value(
                             context['origValue'])
 
                         if hexvalue is not None:
                             context['hexvalue'] = hexvalue
-                            context['hextag'] = self.grammar.getTagByType(
+                            context['hextag'] = self.grammar.get_tag_by_type(
                                 context['origValue'])
                             context['hextag'] += 'x'
 
                     # prepare agent and record contexts on first reference
-                    (variationModule,
-                     agentContexts,
-                     recordContexts) = context['variationModules'][modName]
+                    (variation_module,
+                     agent_contexts,
+                     record_contexts) = context['variationModules'][mod_name]
 
-                    if context['dataFile'] not in agentContexts:
-                        agentContexts[context['dataFile']] = {}
+                    if context['dataFile'] not in agent_contexts:
+                        agent_contexts[context['dataFile']] = {}
 
-                    if context['dataFile'] not in recordContexts:
-                        recordContexts[context['dataFile']] = {}
+                    if context['dataFile'] not in record_contexts:
+                        record_contexts[context['dataFile']] = {}
 
-                    variationModule['agentContext'] = agentContexts[context['dataFile']]
+                    variation_module['agentContext'] = agent_contexts[context['dataFile']]
 
-                    recordContexts = recordContexts[context['dataFile']]
+                    record_contexts = record_contexts[context['dataFile']]
 
-                    if oid not in recordContexts:
-                        recordContexts[oid] = {}
+                    if oid not in record_contexts:
+                        record_contexts[oid] = {}
 
-                    variationModule['recordContext'] = recordContexts[oid]
+                    variation_module['recordContext'] = record_contexts[oid]
 
-                    handler = variationModule['variate']
+                    handler = variation_module['variate']
 
                     # invoke variation module
                     oid, tag, value = handler(oid, tag, value, **context)
@@ -209,11 +209,11 @@ class SnmprecRecordMixIn(object):
             else:
                 raise SnmpsimError(
                     'Variation module "%s" referenced but not '
-                    'loaded\r\n' % modName)
+                    'loaded\r\n' % mod_name)
 
-        if not modName:
+        if not mod_name:
             if 'dataValidation' in context:
-                snmprec.SnmprecRecord.evaluateValue(
+                snmprec.SnmprecRecord.evaluate_value(
                     self, oid, tag, value, **context)
 
             if (not context['nextFlag'] and
@@ -221,7 +221,7 @@ class SnmprecRecordMixIn(object):
                 return context['origOid'], tag, context['errorStatus']
 
         if not hasattr(value, 'tagSet'):  # not already a pyasn1 object
-            return snmprec.SnmprecRecord.evaluateValue(
+            return snmprec.SnmprecRecord.evaluate_value(
                        self, oid, tag, value, **context)
 
         return oid, tag, value
@@ -229,7 +229,7 @@ class SnmprecRecordMixIn(object):
     def evaluate(self, line, **context):
         oid, tag, value = self.grammar.parse(line)
 
-        oid = self.evaluateOid(oid)
+        oid = self.evaluate_oid(oid)
 
         if context.get('oidOnly'):
             value = None
@@ -260,7 +260,7 @@ RECORD_TYPES[SnmprecRecord.ext] = SnmprecRecord()
 
 
 class CompressedSnmprecRecord(
-    SnmprecRecordMixIn, snmprec.CompressedSnmprecRecord):
+        SnmprecRecordMixIn, snmprec.CompressedSnmprecRecord):
     pass
 
 
@@ -273,43 +273,43 @@ class AbstractLayout:
 
 class DataFile(AbstractLayout):
     layout = 'text'
-    openedQueue = []
-    maxQueueEntries = 31  # max number of open text and index files
+    opened_queue = []
+    max_queue_entries = 31  # max number of open text and index files
 
     def __init__(self, textFile, textParser, variationModules):
-        self.__recordIndex = RecordIndex(textFile, textParser)
-        self.__textParser = textParser
-        self.__textFile = os.path.abspath(textFile)
-        self._variationModules = variationModules
+        self._record_index = RecordIndex(textFile, textParser)
+        self._text_parser = textParser
+        self._text_file = os.path.abspath(textFile)
+        self._variation_modules = variationModules
         
     def indexText(self, forceIndexBuild=False, validateData=False):
-        self.__recordIndex.create(forceIndexBuild, validateData)
+        self._record_index.create(forceIndexBuild, validateData)
         return self
 
     def close(self):
-        self.__recordIndex.close()
+        self._record_index.close()
     
     def getHandles(self):
-        if not self.__recordIndex.isOpen():
-            if len(DataFile.openedQueue) > self.maxQueueEntries:
+        if not self._record_index.is_open():
+            if len(DataFile.opened_queue) > self.max_queue_entries:
                 log.info('Closing %s' % self)
-                DataFile.openedQueue[0].close()
-                del DataFile.openedQueue[0]
+                DataFile.opened_queue[0].close()
+                del DataFile.opened_queue[0]
 
-            DataFile.openedQueue.append(self)
+            DataFile.opened_queue.append(self)
 
             log.info('Opening %s' % self)
 
-        return self.__recordIndex.getHandles()
+        return self._record_index.get_handles()
 
-    def processVarBinds(self, varBinds, **context):
-        rspVarBinds = []
+    def processVarBinds(self, var_binds, **context):
+        rsp_var_binds = []
 
         if context.get('nextFlag'):
-            errorStatus = exval.endOfMib
+            error_status = exval.endOfMib
 
         else:
-            errorStatus = exval.noSuchInstance
+            error_status = exval.noSuchInstance
 
         try:
             text, db = self.getHandles()
@@ -318,70 +318,70 @@ class DataFile(AbstractLayout):
             log.error(
                 'Problem with data file or its index: %s' % exc)
 
-            return [(vb[0], errorStatus) for vb in varBinds]
+            return [(vb[0], error_status) for vb in var_binds]
 
-        varsRemaining = varsTotal = len(varBinds)
+        vars_remaining = vars_total = len(var_binds)
 
         log.info(
             'Request var-binds: %s, flags: %s, '
             '%s' % (', '.join(['%s=<%s>' % (vb[0], vb[1].prettyPrint())
-                               for vb in varBinds]),
+                               for vb in var_binds]),
                     context.get('nextFlag') and 'NEXT' or 'EXACT',
                     context.get('setFlag') and 'SET' or 'GET'))
 
-        for oid, val in varBinds:
-            textOid = str(univ.OctetString('.'.join(['%s' % x for x in oid])))
+        for oid, val in var_binds:
+            text_oid = str(univ.OctetString('.'.join(['%s' % x for x in oid])))
 
             try:
-                line = self.__recordIndex.lookup(
+                line = self._record_index.lookup(
                     str(univ.OctetString('.'.join(['%s' % x for x in oid]))))
 
             except KeyError:
-                offset = searchRecordByOid(oid, text, self.__textParser)
-                subtreeFlag = exactMatch = False
+                offset = search_record_by_oid(oid, text, self._text_parser)
+                subtree_flag = exact_match = False
 
             else:
-                offset, subtreeFlag, prevOffset = line.split(str2octs(','), 2)
-                subtreeFlag, exactMatch = int(subtreeFlag), True
+                offset, subtree_flag, prev_offset = line.split(str2octs(','), 2)
+                subtree_flag, exact_match = int(subtree_flag), True
 
             offset = int(offset)
 
             text.seek(offset)
 
-            varsRemaining -= 1
+            vars_remaining -= 1
 
-            line, _, _ = getRecord(text)  # matched line
+            line, _, _ = get_record(text)  # matched line
  
             while True:
-                if exactMatch:
-                    if context.get('nextFlag') and not subtreeFlag:
+                if exact_match:
+                    if context.get('nextFlag') and not subtree_flag:
 
-                        _nextLine, _, _ = getRecord(text)  # next line
+                        _next_line, _, _ = get_record(text)  # next line
 
-                        if _nextLine:
-                            _nextOid, _ = self.__textParser.evaluate(
-                                _nextLine, oidOnly=True)
+                        if _next_line:
+                            _next_oid, _ = self._text_parser.evaluate(
+                                _next_line, oidOnly=True)
 
                             try:
-                                _, subtreeFlag, _ = self.__recordIndex.lookup(
-                                    str(_nextOid)).split(str2octs(','), 2)
+                                _, subtree_flag, _ = self._record_index.lookup(
+                                    str(_next_oid)).split(str2octs(','), 2)
 
                             except KeyError:
                                 log.error(
                                     'data error for %s at %s, index '
-                                    'broken?' % (self, _nextOid))
+                                    'broken?' % (self, _next_oid))
                                 line = ''  # fatal error
 
                             else:
-                                subtreeFlag = int(subtreeFlag)
-                                line = _nextLine
+                                subtree_flag = int(subtree_flag)
+                                line = _next_line
 
                         else:
-                            line = _nextLine
+                            line = _next_line
 
                 else:  # search function above always rounds up to the next OID
                     if line:
-                        _oid, _ = self.__textParser.evaluate(
+                        _oid, _ = self._text_parser.evaluate(
                             line, oidOnly=True
                         )
 
@@ -389,7 +389,7 @@ class DataFile(AbstractLayout):
                         _oid = 'last'
 
                     try:
-                        _, _, _prevOffset = self.__recordIndex.lookup(
+                        _, _, _prev_offset = self._record_index.lookup(
                             str(_oid)).split(str2octs(','), 2)
 
                     except KeyError:
@@ -399,46 +399,46 @@ class DataFile(AbstractLayout):
                         line = ''  # fatal error
 
                     else:
-                        _prevOffset = int(_prevOffset)
+                        _prev_offset = int(_prev_offset)
 
                         # previous line serves a subtree?
-                        if _prevOffset >= 0:
-                            text.seek(_prevOffset)
-                            _prevLine, _, _ = getRecord(text)
-                            _prevOid, _ = self.__textParser.evaluate(
-                                _prevLine, oidOnly=True)
+                        if _prev_offset >= 0:
+                            text.seek(_prev_offset)
+                            _prev_line, _, _ = get_record(text)
+                            _prev_oid, _ = self._text_parser.evaluate(
+                                _prev_line, oidOnly=True)
 
-                            if _prevOid.isPrefixOf(oid):
+                            if _prev_oid.isPrefixOf(oid):
                                 # use previous line to the matched one
-                                line = _prevLine
-                                subtreeFlag = True
+                                line = _prev_line
+                                subtree_flag = True
 
                 if not line:
                     _oid = oid
-                    _val = errorStatus
+                    _val = error_status
                     break
 
-                callContext = context.copy()
-                callContext.update(
+                call_context = context.copy()
+                call_context.update(
                     (),
                     origOid=oid, 
                     origValue=val,
-                    dataFile=self.__textFile,
-                    subtreeFlag=subtreeFlag,
-                    exactMatch=exactMatch,
-                    errorStatus=errorStatus,
-                    varsTotal=varsTotal,
-                    varsRemaining=varsRemaining,
-                    variationModules=self._variationModules
+                    dataFile=self._text_file,
+                    subtreeFlag=subtree_flag,
+                    exactMatch=exact_match,
+                    errorStatus=error_status,
+                    varsTotal=vars_total,
+                    varsRemaining=vars_remaining,
+                    variationModules=self._variation_modules
                 )
  
                 try:
-                    _oid, _val = self.__textParser.evaluate(
-                        line, **callContext)
+                    _oid, _val = self._text_parser.evaluate(
+                        line, **call_context)
 
                     if _val is exval.endOfMib:
-                        exactMatch = True
-                        subtreeFlag = False
+                        exact_match = True
+                        subtree_flag = False
                         continue
 
                 except NoDataNotification:
@@ -449,187 +449,187 @@ class DataFile(AbstractLayout):
 
                 except Exception as exc:
                     _oid = oid
-                    _val = errorStatus
+                    _val = error_status
                     log.error(
-                        'data error at %s for %s: %s' % (self, textOid, exc))
+                        'data error at %s for %s: %s' % (self, text_oid, exc))
 
                 break
 
-            rspVarBinds.append((_oid, _val))
+            rsp_var_binds.append((_oid, _val))
 
         log.info(
             'Response var-binds: %s' % (
                 ', '.join(['%s=<%s>' % (
-                    vb[0], vb[1].prettyPrint()) for vb in rspVarBinds])))
+                    vb[0], vb[1].prettyPrint()) for vb in rsp_var_binds])))
 
-        return rspVarBinds
+        return rsp_var_binds
  
     def __str__(self):
-        return '%s controller' % self.__textFile
+        return '%s controller' % self._text_file
 
 
-def get_data_files(tgtDir, topLen=None):
-    if topLen is None:
-        topLen = len(tgtDir.split(os.path.sep))
+def get_data_files(tgt_dir, top_len=None):
+    if top_len is None:
+        top_len = len(tgt_dir.split(os.path.sep))
 
-    dirContent = []
+    dir_content = []
 
-    for dFile in os.listdir(tgtDir):
-        fullPath = os.path.join(tgtDir, dFile)
+    for d_file in os.listdir(tgt_dir):
+        full_path = os.path.join(tgt_dir, d_file)
 
-        inode = os.lstat(fullPath)
+        inode = os.lstat(full_path)
 
         if stat.S_ISLNK(inode.st_mode):
-            relPath = fullPath.split(os.path.sep)[topLen:]
-            fullPath = os.readlink(fullPath)
+            rel_path = full_path.split(os.path.sep)[top_len:]
+            full_path = os.readlink(full_path)
 
-            if not os.path.isabs(fullPath):
-                fullPath = os.path.join(tgtDir, fullPath)
+            if not os.path.isabs(full_path):
+                full_path = os.path.join(tgt_dir, full_path)
 
-            inode = os.stat(fullPath)
+            inode = os.stat(full_path)
 
         else:
-            relPath = fullPath.split(os.path.sep)[topLen:]
+            rel_path = full_path.split(os.path.sep)[top_len:]
 
         if stat.S_ISDIR(inode.st_mode):
-            dirContent += get_data_files(fullPath, topLen)
+            dir_content += get_data_files(full_path, top_len)
             continue
 
         if not stat.S_ISREG(inode.st_mode):
             continue
 
         for dExt in RECORD_TYPES:
-            if dFile.endswith(dExt):
+            if d_file.endswith(dExt):
                 break
 
         else:
             continue
 
         # just the file name would serve for agent identification
-        if relPath[0] == SELF_LABEL:
-            relPath = relPath[1:]
+        if rel_path[0] == SELF_LABEL:
+            rel_path = rel_path[1:]
 
-        if len(relPath) == 1 and relPath[0] == SELF_LABEL + os.path.extsep + dExt:
-            relPath[0] = relPath[0][4:]
+        if len(rel_path) == 1 and rel_path[0] == SELF_LABEL + os.path.extsep + dExt:
+            rel_path[0] = rel_path[0][4:]
 
-        ident = os.path.join(*relPath)
+        ident = os.path.join(*rel_path)
         ident = ident[:-len(dExt) - 1]
         ident = ident.replace(os.path.sep, '/')
 
-        dirContent.append(
-            (fullPath,
+        dir_content.append(
+            (full_path,
              RECORD_TYPES[dExt],
              ident)
         )
 
-    return dirContent
+    return dir_content
 
 
 class MibInstrumController(object):
     """Lightweight MIB instrumentation (API-compatible with pysnmp's)"""
-    def __init__(self, dataFile):
-        self.__dataFile = dataFile
+    def __init__(self, data_file):
+        self._data_file = data_file
 
     def __str__(self):
-        return str(self.__dataFile)
+        return str(self._data_file)
 
-    def _get_call_context(self, acInfo, nextFlag=False, setFlag=False):
-        if acInfo is None:
-            return {'nextFlag': nextFlag,
-                    'setFlag': setFlag}
+    def _get_call_context(self, ac_info, next_flag=False, set_flag=False):
+        if ac_info is None:
+            return {'nextFlag': next_flag,
+                    'setFlag': set_flag}
 
-        acFun, snmpEngine = acInfo  # we injected snmpEngine object earlier
+        ac_fun, snmp_engine = ac_info  # we injected snmpEngine object earlier
 
         # this API is first introduced in pysnmp 4.2.6
-        execCtx = snmpEngine.observer.getExecutionContext(
+        execCtx = snmp_engine.observer.getExecutionContext(
                 'rfc3412.receiveMessage:request')
 
-        (transportDomain,
-         transportAddress,
-         securityModel,
-         securityName,
-         securityLevel,
-         contextName,
-         pduType) = (execCtx['transportDomain'],
-                     execCtx['transportAddress'],
-                     execCtx['securityModel'],
-                     execCtx['securityName'],
-                     execCtx['securityLevel'],
-                     execCtx['contextName'],
-                     execCtx['pdu'].getTagSet())
+        (transport_domain,
+         transport_address,
+         security_model,
+         security_name,
+         security_level,
+         context_name,
+         pdu_type) = (execCtx['transportDomain'],
+                      execCtx['transportAddress'],
+                      execCtx['securityModel'],
+                      execCtx['securityName'],
+                      execCtx['securityLevel'],
+                      execCtx['contextName'],
+                      execCtx['pdu'].getTagSet())
 
         log.info(
             'SNMP EngineID %s, transportDomain %s, transportAddress %s, '
             'securityModel %s, securityName %s, securityLevel '
-            '%s' % (hasattr(snmpEngine, 'snmpEngineID') and
-                    snmpEngine.snmpEngineID.prettyPrint() or '<unknown>',
-                    transportDomain, transportAddress, securityModel,
-                    securityName, securityLevel))
+            '%s' % (hasattr(snmp_engine, 'snmpEngineID') and
+                    snmp_engine.snmpEngineID.prettyPrint() or '<unknown>',
+                    transport_domain, transport_address, security_model,
+                    security_name, security_level))
 
-        return {'snmpEngine': snmpEngine,
-                'transportDomain': transportDomain,
-                'transportAddress': transportAddress,
-                'securityModel': securityModel,
-                'securityName': securityName,
-                'securityLevel': securityLevel,
-                'contextName': contextName,
-                'nextFlag': nextFlag,
-                'setFlag': setFlag}
+        return {'snmpEngine': snmp_engine,
+                'transportDomain': transport_domain,
+                'transportAddress': transport_address,
+                'securityModel': security_model,
+                'securityName': security_name,
+                'securityLevel': security_level,
+                'contextName': context_name,
+                'nextFlag': next_flag,
+                'setFlag': set_flag}
 
-    def readVars(self, varBinds, acInfo=None):
-        return self.__dataFile.processVarBinds(
-                varBinds, **self._get_call_context(acInfo, False))
+    def readVars(self, var_binds, acInfo=None):
+        return self._data_file.processVarBinds(
+                var_binds, **self._get_call_context(acInfo, False))
 
-    def readNextVars(self, varBinds, acInfo=None):
-        return self.__dataFile.processVarBinds(
-                varBinds, **self._get_call_context(acInfo, True))
+    def readNextVars(self, var_binds, acInfo=None):
+        return self._data_file.processVarBinds(
+                var_binds, **self._get_call_context(acInfo, True))
 
-    def writeVars(self, varBinds, acInfo=None):
-        return self.__dataFile.processVarBinds(
-                varBinds, **self._get_call_context(acInfo, False, True))
+    def writeVars(self, var_binds, acInfo=None):
+        return self._data_file.processVarBinds(
+                var_binds, **self._get_call_context(acInfo, False, True))
 
 
 class DataIndexInstrumController:
     """Data files index as a MIB instrumentation in a dedicated SNMP context"""
 
-    indexSubOid = (1,)
+    index_sub_oid = (1,)
 
-    def __init__(self, baseOid=(1, 3, 6, 1, 4, 1, 20408, 999)):
-        self.__db = indices.OidOrderedDict()
-        self.__indexOid = baseOid + self.indexSubOid
-        self.__idx = 1
+    def __init__(self, base_oid=(1, 3, 6, 1, 4, 1, 20408, 999)):
+        self._db = indices.OidOrderedDict()
+        self._index_oid = base_oid + self.index_sub_oid
+        self._idx = 1
 
     def __str__(self):
         return '<index> controller'
 
-    def readVars(self, varBinds, acInfo=None):
-        return [(vb[0], self.__db.get(vb[0], exval.noSuchInstance))
-                for vb in varBinds]
+    def readVars(self, var_binds, acInfo=None):
+        return [(vb[0], self._db.get(vb[0], exval.noSuchInstance))
+                for vb in var_binds]
 
-    def __getNextVal(self, key, default):
+    def _get_next_val(self, key, default):
         try:
-            key = self.__db.nextKey(key)
+            key = self._db.nextKey(key)
 
         except KeyError:
             return key, default
 
         else:
-            return key, self.__db[key]
+            return key, self._db[key]
                                                             
-    def readNextVars(self, varBinds, acInfo=None):
-        return [self.__getNextVal(vb[0], exval.endOfMib)
-                for vb in varBinds]
+    def readNextVars(self, var_binds, acInfo=None):
+        return [self._get_next_val(vb[0], exval.endOfMib)
+                for vb in var_binds]
 
-    def writeVars(self, varBinds, acInfo=None):
+    def writeVars(self, var_binds, acInfo=None):
         return [(vb[0], exval.noSuchInstance)
-                for vb in varBinds]
+                for vb in var_binds]
     
-    def addDataFile(self, *args):
+    def add_data_file(self, *args):
         for idx in range(len(args)):
-            self.__db[
-                self.__indexOid + (idx+1, self.__idx)
+            self._db[
+                self._index_oid + (idx + 1, self._idx)
                 ] = rfc1902.OctetString(args[idx])
-        self.__idx += 1
+        self._idx += 1
 
 
 mib_instrum_controller_set = {
@@ -638,27 +638,27 @@ mib_instrum_controller_set = {
 
 
 # Suggest variations of context name based on request data
-def probe_context(transportDomain, transportAddress,
-                  contextEngineId, contextName):
-    if contextEngineId:
+def probe_context(transport_domain, transport_address,
+                  context_engine_id, context_name):
+    if context_engine_id:
         candidate = [
-            contextEngineId, contextName, '.'.join(
-                [str(x) for x in transportDomain])]
+            context_engine_id, context_name, '.'.join(
+                [str(x) for x in transport_domain])]
 
     else:
         # try legacy layout w/o contextEnginId in the path
         candidate = [
-            contextName, '.'.join(
-                [str(x) for x in transportDomain])]
+            context_name, '.'.join(
+                [str(x) for x in transport_domain])]
 
-    if transportDomain[:len(udp.domainName)] == udp.domainName:
-        candidate.append(transportAddress[0])
+    if transport_domain[:len(udp.domainName)] == udp.domainName:
+        candidate.append(transport_address[0])
 
-    elif udp6 and transportDomain[:len(udp6.domainName)] == udp6.domainName:
-        candidate.append(str(transportAddress[0]).replace(':', '_'))
+    elif udp6 and transport_domain[:len(udp6.domainName)] == udp6.domainName:
+        candidate.append(str(transport_address[0]).replace(':', '_'))
 
-    elif unix and transportDomain[:len(unix.domainName)] == unix.domainName:
-        candidate.append(transportAddress)
+    elif unix and transport_domain[:len(unix.domainName)] == unix.domainName:
+        candidate.append(transport_address)
 
     candidate = [str(x) for x in candidate if x]
 
@@ -669,46 +669,46 @@ def probe_context(transportDomain, transportAddress,
         del candidate[-1]
 
     # try legacy layout w/o contextEnginId in the path
-    if contextEngineId:
+    if context_engine_id:
         for candidate in probe_context(
-                transportDomain, transportAddress, None, contextName):
+                transport_domain, transport_address, None, context_name):
             yield candidate
 
 
-def probeHashContext(self, snmpEngine):
+def probe_hash_context(self, snmp_engine):
     """v3arch SNMP context name searcher"""
     # this API is first introduced in pysnmp 4.2.6
-    execCtx = snmpEngine.observer.getExecutionContext(
+    execCtx = snmp_engine.observer.getExecutionContext(
         'rfc3412.receiveMessage:request')
 
-    (transportDomain,
-     transportAddress,
-     contextEngineId,
-     contextName) = (
+    (transport_domain,
+     transport_address,
+     context_engine_id,
+     context_name) = (
         execCtx['transportDomain'],
         execCtx['transportAddress'],
         execCtx['contextEngineId'],
         execCtx['contextName'].prettyPrint()
     )
 
-    if contextEngineId == snmpEngine.snmpEngineID:
-        contextEngineId = SELF_LABEL
+    if context_engine_id == snmp_engine.snmpEngineID:
+        context_engine_id = SELF_LABEL
 
     else:
-        contextEngineId = contextEngineId.prettyPrint()
+        context_engine_id = context_engine_id.prettyPrint()
 
     for candidate in probe_context(
-            transportDomain, transportAddress,
-            contextEngineId, contextName):
+            transport_domain, transport_address,
+            context_engine_id, context_name):
 
         if len(candidate) > 32:
-            probedContextName = md5(candidate).hexdigest()
+            probed_context_name = md5(candidate).hexdigest()
 
         else:
-            probedContextName = candidate
+            probed_context_name = candidate
 
         try:
-            mibInstrum = self.snmpContext.getMibInstrum(probedContextName)
+            mib_instrum = self.snmpContext.getMibInstrum(probed_context_name)
 
         except error.PySnmpError:
             pass
@@ -718,86 +718,90 @@ def probeHashContext(self, snmpEngine):
                 'Using %s selected by candidate %s; transport ID %s, '
                 'source address %s, context engine ID %s, '
                 'community name '
-                '"%s"' % (mibInstrum, candidate,
-                          univ.ObjectIdentifier(transportDomain),
-                          transportAddress[0], contextEngineId,
-                          probedContextName))
-            contextName = probedContextName
+                '"%s"' % (mib_instrum, candidate,
+                          univ.ObjectIdentifier(transport_domain),
+                          transport_address[0], context_engine_id,
+                          probed_context_name))
+            context_name = probed_context_name
             break
     else:
-        mibInstrum = self.snmpContext.getMibInstrum(contextName)
+        mib_instrum = self.snmpContext.getMibInstrum(context_name)
         log.info(
             'Using %s selected by contextName "%s", transport ID %s, '
-            'source address %s' % (mibInstrum, contextName,
-                                   univ.ObjectIdentifier(transportDomain),
-                                   transportAddress[0]))
+            'source address %s' % (mib_instrum, context_name,
+                                   univ.ObjectIdentifier(transport_domain),
+                                   transport_address[0]))
 
-    if not isinstance(mibInstrum, (MibInstrumController, DataIndexInstrumController)):
+    if not isinstance(mib_instrum, (MibInstrumController, DataIndexInstrumController)):
         log.error(
             'LCD access denied (contextName does not match any data file)')
         raise NoDataNotification()
 
-    return contextName
+    return context_name
 
 
 class GetCommandResponder(cmdrsp.GetCommandResponder):
     """v3arch GET command handler"""
 
-    def handleMgmtOperation(self, snmpEngine, stateReference, contextName, PDU, acInfo):
+    def handleMgmtOperation(
+            self, snmp_engine, state_reference, context_name, pdu, ac_info):
         try:
             cmdrsp.GetCommandResponder.handleMgmtOperation(
-                self, snmpEngine, stateReference,
-                probeHashContext(self, snmpEngine),
-                PDU, (None, snmpEngine)  # custom acInfo
+                self, snmp_engine, state_reference,
+                probe_hash_context(self, snmp_engine),
+                pdu, (None, snmp_engine)  # custom acInfo
             )
 
         except NoDataNotification:
-            self.releaseStateInformation(stateReference)
+            self.releaseStateInformation(state_reference)
 
 
 class SetCommandResponder(cmdrsp.SetCommandResponder):
     """v3arch SET command handler"""
 
-    def handleMgmtOperation(self, snmpEngine, stateReference, contextName, PDU, acInfo):
+    def handleMgmtOperation(
+            self, snmp_engine, state_reference, context_name, pdu, ac_info):
         try:
             cmdrsp.SetCommandResponder.handleMgmtOperation(
-                self, snmpEngine, stateReference,
-                probeHashContext(self, snmpEngine),
-                PDU, (None, snmpEngine)  # custom acInfo
+                self, snmp_engine, state_reference,
+                probe_hash_context(self, snmp_engine),
+                pdu, (None, snmp_engine)  # custom acInfo
             )
 
         except NoDataNotification:
-            self.releaseStateInformation(stateReference)
+            self.releaseStateInformation(state_reference)
 
 
 class NextCommandResponder(cmdrsp.NextCommandResponder):
     """v3arch GETNEXT command handler"""
 
-    def handleMgmtOperation(self, snmpEngine, stateReference, contextName, PDU, acInfo):
+    def handleMgmtOperation(
+            self, snmp_engine, state_reference, context_name, pdu, ac_info):
         try:
             cmdrsp.NextCommandResponder.handleMgmtOperation(
-                self, snmpEngine, stateReference,
-                probeHashContext(self, snmpEngine),
-                PDU, (None, snmpEngine)  # custom acInfo
+                self, snmp_engine, state_reference,
+                probe_hash_context(self, snmp_engine),
+                pdu, (None, snmp_engine)  # custom acInfo
             )
 
         except NoDataNotification:
-            self.releaseStateInformation(stateReference)
+            self.releaseStateInformation(state_reference)
 
 
 class BulkCommandResponder(cmdrsp.BulkCommandResponder):
     """v3arch GETBULK command handler"""
 
-    def handleMgmtOperation(self, snmpEngine, stateReference, contextName, PDU, acInfo):
+    def handleMgmtOperation(
+            self, snmp_engine, state_reference, context_name, pdu, ac_info):
         try:
             cmdrsp.BulkCommandResponder.handleMgmtOperation(
-                self, snmpEngine, stateReference,
-                probeHashContext(self, snmpEngine),
-                PDU, (None, snmpEngine)  # custom acInfo
+                self, snmp_engine, state_reference,
+                probe_hash_context(self, snmp_engine),
+                pdu, (None, snmp_engine)  # custom acInfo
             )
 
         except NoDataNotification:
-            self.releaseStateInformation(stateReference)
+            self.releaseStateInformation(state_reference)
 
 
 def main():
@@ -1123,7 +1127,7 @@ def main():
                 log.info('Directory "%s" does not exist' % dataDir)
                 continue
 
-            log.msg.incIdent()
+            log.msg.inc_ident()
 
             for full_path, text_parser, community_name in get_data_files(dataDir):
                 if community_name in _data_files:
@@ -1153,7 +1157,7 @@ def main():
                 if args.v2c_arch:
                     contexts[univ.OctetString(community_name)] = mib_instrum
 
-                    data_index_instrum_controller.addDataFile(
+                    data_index_instrum_controller.add_data_file(
                         full_path, community_name
                     )
 
@@ -1161,28 +1165,28 @@ def main():
                     agent_name = md5(
                         univ.OctetString(community_name).asOctets()).hexdigest()
 
-                    contextName = agent_name
+                    context_name = agent_name
 
                     if not args.v3_only:
                         # snmpCommunityTable::snmpCommunityIndex can't be > 32
                         config.addV1System(
                             snmp_engine, agent_name, community_name,
-                            contextName=contextName)
+                            contextName=context_name)
 
-                    snmp_context.registerContextName(contextName, mib_instrum)
+                    snmp_context.registerContextName(context_name, mib_instrum)
 
                     if len(community_name) <= 32:
                         snmp_context.registerContextName(community_name, mib_instrum)
 
-                    data_index_instrum_controller.addDataFile(
-                        full_path, community_name, contextName)
+                    data_index_instrum_controller.add_data_file(
+                        full_path, community_name, context_name)
 
                     log.info(
                         'SNMPv3 Context Name: %s'
-                        '%s' % (contextName, len(community_name) <= 32 and
+                        '%s' % (context_name, len(community_name) <= 32 and
                                 ' or %s' % community_name or ''))
 
-            log.msg.decIdent()
+            log.msg.dec_ident()
 
         del _mib_instrums
         del _data_files
@@ -1237,8 +1241,8 @@ def main():
                 community_name = req_msg.getComponentByPosition(1)
 
                 for candidate in probe_context(transport_domain, transport_address,
-                                               contextEngineId=SELF_LABEL,
-                                               contextName=community_name):
+                                               context_engine_id=SELF_LABEL,
+                                               context_name=community_name):
                     if candidate in contexts:
                         log.info(
                             'Using %s selected by candidate %s; transport ID %s, '
@@ -1421,7 +1425,7 @@ def main():
                     if not v3_context_engine_ids:
                         v3_context_engine_ids.append((None, []))
 
-                    log.msg.incIdent()
+                    log.msg.inc_ident()
 
                     log.info('--- Data directories configuration')
 
@@ -1575,7 +1579,7 @@ def main():
                     BulkCommandResponder(
                         snmp_engine, snmp_context).maxVarBinds = local_max_var_binds
 
-                    log.msg.decIdent()
+                    log.msg.dec_ident()
 
                     if opt[0] == 'end-of-options':
                         # Load up the rest of MIBs while running privileged

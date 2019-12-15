@@ -12,8 +12,8 @@ from pysnmp.hlapi.asyncore import *
 from snmpsim import error
 from snmpsim import log
 from snmpsim.grammar.snmprec import SnmprecGrammar
-from snmpsim.mltsplit import split
 from snmpsim.record.snmprec import SnmprecRecord
+from snmpsim.utils import split
 
 
 def init(**context):
@@ -114,7 +114,7 @@ def variate(oid, tag, value, **context):
                 vlist = recordContext['settings']['vlist'][2:]
                 recordContext['settings']['vlist'] = vlist
 
-                typeTag, _ = SnmprecRecord.unpackTag(tag)
+                typeTag, _ = SnmprecRecord.unpack_tag(tag)
 
                 v = SnmprecGrammar.TAG_MAP[typeTag](v)
 

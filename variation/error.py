@@ -8,8 +8,8 @@ from pysnmp.smi import error
 
 from snmpsim import log
 from snmpsim.grammar.snmprec import SnmprecGrammar
-from snmpsim.mltsplit import split
 from snmpsim.record.snmprec import SnmprecRecord
+from snmpsim.utils import split
 
 ERROR_TYPES = {
     'toobig': error.TooBigError,
@@ -68,7 +68,7 @@ def variate(oid, tag, value, **context):
 
                 recordContext['settings']['vlist'] = recordContext['settings']['vlist'][3:]
 
-                typeTag, _ = SnmprecRecord.unpackTag(tag)
+                typeTag, _ = SnmprecRecord.unpack_tag(tag)
 
                 v = SnmprecGrammar.TAG_MAP[typeTag](v)
 
