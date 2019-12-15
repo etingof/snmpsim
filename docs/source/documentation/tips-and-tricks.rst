@@ -26,8 +26,8 @@ IP interfaces or ports what effectively makes SNMP Simulator executing multiple
 requests at once for as long as they are sent towards different
 *snmpsim-command-responder* instances.
 
-Here is how we invoke two *snmpsim-command-responder* instances at different IP
-interfaces serving the same set of data files:
+Here is how we invoke two *snmpsim-command-responder* instances on
+different IP interfaces serving the same set of data files:
 
 .. code-block:: bash
 
@@ -36,7 +36,6 @@ interfaces serving the same set of data files:
                   --transport-id-offset=1 \
                   --data-dir=/usr/local/share/snmpsim/data \
                   --cache-dir=/var/tmp/snmpsim-A/cache \
-                  --v2c-arch \
                   --process-user=nobody --process-group=nogroup \
                   --daemonize &&
     # snmpsim-command-responder --agent-udpv4-endpoint=127.0.0.3 \
@@ -44,7 +43,6 @@ interfaces serving the same set of data files:
                   --transport-id-offset=3 \
                   --data-dir=/usr/local/share/snmpsim/data \
                   --cache-dir=/var/tmp/snmpsim-B/cache \
-                  --v2c-arch \
                   --process-user=nobody --process-group=nogroup \
                   --daemonize &&
 
@@ -148,16 +146,16 @@ third - SNMPv3 context name.
 
 .. _tips-faster-response:
 
-Faster response
----------------
+Faster operation
+----------------
 
 The SNMPv3 architecture is inherently computationally heavy what makes SNMPv3
 operations slower that SNMPv1/v2c ones. The SNMP Simulator can run
 faster when it uses a much lighter and lower-level SNMPv1/v2c architecture
 at the expense of not supporting v3 operations.
 
-Use the *--v2c-arch* command line parameter to switch *snmpsim-command-responder*
-into SNMPv1/v2c operation mode.
+Invoke *snmpsim-command-responder-lite* tool to leverage the lightweight
+implementation.
 
 .. _tips-quick-startup:
 
@@ -167,5 +165,6 @@ Quicker startup
 When Simulator runs over thousands of device files, startup may take time
 (tens of seconds). Most of it goes into configuring SNMPv1/v2c credentials
 into SNMPv3 engine so startup time can be dramatically reduced by either
-using *--v2c-arch* mode or by turning off SNMPv1/v2c
-configuration at SNMPv3 engine with *--v3-only* command-line flag.
+using the lite version of command responder tool or by turning off
+SNMPv1/v2c configuration at SNMPv3 engine with *--v3-only* command-line
+flag of full version of command responder.

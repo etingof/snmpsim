@@ -9,17 +9,17 @@ particular simulated device instance as mention in the previous section.
 Or it may be useful to present the same simulated device to different
 SNMP managers differently.
 
-.. _v2c-style-variation:
+.. _lite-mode-variation:
 
-Legacy mode
------------
+Lite mode
+---------
 
-When running in the *--v2c-arch* mode, SNMP Simulator is not using SNMPv3
+When running lite command responder, SNMP Simulator is not using SNMPv3
 framework. That implies that SNMPv3 infrastructure can't be used for agent
-addressing. In this mode, only SNMP v1 and v2c versions can be served. The
-main reason for legacy mode support is higher performance.
+addressing. In this mode, only SNMP v1 and v2c versions can be handled. The
+main reason for this lite/legacy mode support is higher performance.
 
-In *--v2c-arch* mode, SNMP Simulator attempts to find a *.snmprec* file to
+In lite mode, SNMP Simulator attempts to find a *.snmprec* file to
 fulfill the request by probing files by paths constructed from pieces of
 SNMPv1/v2c request data. Path construction occurs by these rules and
 in this order:
@@ -46,15 +46,10 @@ by the Simulator on startup for each endpoint it is listening on.
 
 .. code-block:: bash
 
-    $ snmpsim-command-responder --agent-udpv4-endpoint=127.0.0.1:1024 \
+    $ snmpsim-command-responder-lite \
+        --agent-udpv4-endpoint=127.0.0.1:1024 \
         --agent-udpv6-endpoint='[::1]:1161'
     ...
-    SNMPv3 credentials:
-    Username: simulator
-    Authentication key: auctoritas
-    Authentication protocol: MD5
-    Encryption (privacy) key: privatus
-    Encryption protocol: DES
     Listening at:
       UDP/IPv4 endpoint 127.0.0.1:1024, transport ID 1.3.6.1.6.1.1.0
       UDP/IPv6 endpoint ::1:1161, transport ID 1.3.6.1.2.1.100.1.2.0
@@ -68,9 +63,6 @@ rules apply:
 * UDP/IPv6:
     fe80::12e:410f:40d1:2d13 becomes fe80__12e_410f_40d1_2d13
 
-* UNIX local domain sockets:
-    /tmp/snmpmanager.FAB24243 becomes tmp/snmpmanager.FAB24243
-
 For example, to make Simulator reporting from particular file to
 a Manager at 192.168.1.10 whenever community name "public" is used and
 queries are sent to Simulator over UDP/IPv4 to 192.168.1.1 interface
@@ -78,13 +70,13 @@ queries are sent to Simulator over UDP/IPv4 to 192.168.1.1 interface
 device file *self/public/1.3.6.1.6.1.1.0/192.168.1.10.snmprec* would be used
 for building responses.
 
-.. _v3-style-variation:
+.. _full-mode-variation:
 
 SNMPv3 mode
 -----------
 
-When Simulator is NOT running in *--v2c-arch* mode, e.g. SNMPv3 framework is
-used. In this mode, all SNMP versions can be served.
+When using full Simulator, SNMPv3 framework is used and all SNMP versions (1, 2c, 3)
+can be handled.
 
 The same filesystem mapping rules apply to SNMP community name, but also to SNMPv3
 context name. The path to .snmprec file for fulfilling response is probed at these

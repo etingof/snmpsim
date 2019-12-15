@@ -104,6 +104,7 @@ params.update(
             'snmpsim-record-traffic = snmpsim.commands.pcap2rec:main',
             'snmpsim-record-commands = snmpsim.commands.cmd2rec:main',
             'snmpsim-command-responder = snmpsim.commands.responder:main',
+            'snmpsim-command-responder-lite = snmpsim.commands.responder_lite:main',
         ]
      }}
 )

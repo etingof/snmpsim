@@ -9,7 +9,6 @@
 import argparse
 import functools
 import os
-import socket
 import sys
 import time
 import traceback
@@ -32,11 +31,8 @@ from snmpsim import confdir
 from snmpsim import error
 from snmpsim import log
 from snmpsim import utils
-from snmpsim.record import dump
-from snmpsim.record import mvc
-from snmpsim.record import sap
-from snmpsim.record import snmprec
-from snmpsim.record import walk
+from snmpsim import variation
+from snmpsim import endpoints
 
 AUTH_PROTOCOLS = {
     'MD5': config.usmHMACMD5AuthProtocol,
@@ -66,96 +62,8 @@ VERSION_MAP = {
     '3': 3
 }
 
-RECORD_TYPES = {
-    dump.DumpRecord.ext: dump.DumpRecord(),
-    mvc.MvcRecord.ext: mvc.MvcRecord(),
-    sap.SapRecord.ext: sap.SapRecord(),
-    walk.WalkRecord.ext: walk.WalkRecord(),
-    snmprec.SnmprecRecord.ext: snmprec.SnmprecRecord(),
-    snmprec.CompressedSnmprecRecord.ext: snmprec.CompressedSnmprecRecord()
-}
-
-
-class SnmprecRecordMixIn(object):
-
-    def formatValue(self, oid, value, **context):
-        (text_oid,
-         text_tag,
-         text_value) = snmprec.SnmprecRecord.format_value(self, oid, value)
-
-        # invoke variation module
-        if context['variationModule']:
-            (plain_oid,
-             plain_tag,
-             plain_value) = snmprec.SnmprecRecord.format_value(
-                self, oid, value, nohex=True)
-
-            if plain_tag != text_tag:
-                context['hextag'], context['hexvalue'] = text_tag, text_value
-
-            else:
-                text_tag, text_value = plain_tag, plain_value
-
-            handler = context['variationModule']['record']
-
-            text_oid, text_tag, text_value = handler(
-                text_oid, text_tag, text_value, **context)
-
-        elif 'stopFlag' in context and context['stopFlag']:
-            raise error.NoDataNotification()
-
-        return text_oid, text_tag, text_value
-
-
-class SnmprecRecord(SnmprecRecordMixIn, snmprec.SnmprecRecord):
-    pass
-
-
-RECORD_TYPES[SnmprecRecord.ext] = SnmprecRecord()
-
-
-class CompressedSnmprecRecord(
-        SnmprecRecordMixIn, snmprec.CompressedSnmprecRecord):
-    pass
-
-
-RECORD_TYPES[CompressedSnmprecRecord.ext] = CompressedSnmprecRecord()
-
 DESCRIPTION = ('SNMP simulation data recorder. Pull simulation data from '
                'SNMP agent')
-
-
-def _parse_endpoint(arg, ipv6=False):
-    address = arg
-
-    # IPv6 notation
-    if ipv6 and address.startswith('['):
-        address = address.replace('[', '').replace(']', '')
-
-    try:
-        if ':' in address:
-            address, port = address.split(':', 1)
-            port = int(port)
-
-        else:
-            port = 161
-
-    except Exception as exc:
-        raise error.SnmpsimError(
-            'Malformed network endpoint address %s: %s' % (arg, exc))
-
-    try:
-        address, port = socket.getaddrinfo(
-            address, port,
-            socket.AF_INET6 if ipv6 else socket.AF_INET,
-            socket.SOCK_DGRAM,
-            socket.IPPROTO_UDP)[0][4][:2]
-
-    except socket.gaierror as exc:
-        raise error.SnmpsimError(
-            'Unknown hostname %s: %s' % (address, exc))
-
-    return address, port
 
 
 def _parse_mib_object(arg, last=False):
@@ -250,14 +158,14 @@ def main():
     endpoint_group = parser.add_mutually_exclusive_group(required=True)
 
     endpoint_group.add_argument(
-        '--agent-udpv4-endpoint', type=_parse_endpoint,
+        '--agent-udpv4-endpoint', type=endpoints.parse_endpoint,
         metavar='<[X.X.X.X]:NNNNN>',
         help='SNMP agent UDP/IPv4 address to pull simulation data '
              'from (name:port)')
 
     endpoint_group.add_argument(
         '--agent-udpv6-endpoint',
-        type=functools.partial(_parse_endpoint, ipv6=True),
+        type=functools.partial(endpoints.parse_endpoint, ipv6=True),
         metavar='<[X:X:..X]:NNNNN>',
         help='SNMP agent UDP/IPv6 address to pull simulation data '
              'from ([name]:port)')
@@ -291,7 +199,8 @@ def main():
              'name during MIB search.')
 
     parser.add_argument(
-        '--destination-record-type', choices=RECORD_TYPES, default='snmprec',
+        '--destination-record-type', choices=variation.RECORD_TYPES,
+        default='snmprec',
         help='Produce simulation data with record of this type')
 
     parser.add_argument(
@@ -327,13 +236,14 @@ def main():
         pyasn1_debug.setLogger(pyasn1_debug.Debug(*args.debug_asn1))
 
     if args.output_file:
-        ext = os.path.extsep + RECORD_TYPES[args.destination_record_type].ext
+        ext = os.path.extsep
+        ext += variation.RECORD_TYPES[args.destination_record_type].ext
 
         if not args.output_file.endswith(ext):
             args.output_file += ext
 
-        args.output_file = RECORD_TYPES[args.destination_record_type].open(
-            args.output_file, 'wb')
+        record = variation.RECORD_TYPES[args.destination_record_type]
+        args.output_file = record.open(args.output_file, 'wb')
 
     else:
         args.output_file = sys.stdout
@@ -550,7 +460,7 @@ def main():
             log.info(
                 'Variation module "%s" initialization OK' % args.variation_module)
 
-    data_file_handler = RECORD_TYPES[args.destination_record_type]
+    data_file_handler = variation.RECORD_TYPES[args.destination_record_type]
 
 
     # SNMP worker

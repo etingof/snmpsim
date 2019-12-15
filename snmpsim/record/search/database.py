@@ -105,11 +105,16 @@ class RecordIndex(object):
             # these might speed-up indexing
             open_flags = 'nfu'
 
+            errors = []
+
             while open_flags:
                 try:
                     db = dbm.open(self._db_file, open_flags)
 
-                except Exception:
+                except Exception as exc:
+                    log.debug('DBM open with flags "%s" failed on file '
+                              '%s: %s' % (open_flags, self._db_file, exc))
+                    errors.append(exc)
                     open_flags = open_flags[:-1]
                     continue
 
@@ -118,7 +123,8 @@ class RecordIndex(object):
             else:
                 raise error.SnmpsimError(
                     'Failed to create %s for data file '
-                    '%s' % (self._db_file, self._text_file))
+                    '%s: %s' % (self._db_file, self._text_file,
+                                '; '.join(errors)))
 
             try:
                 text = self._text_parser.open(self._text_file)
@@ -129,7 +135,7 @@ class RecordIndex(object):
 
             log.msg(
                 'Building index %s for data file %s (open flags '
-                '\"%s\")...' % (self._db_file, self._text_file, open_flags))
+                '"%s")...' % (self._db_file, self._text_file, open_flags))
 
             sys.stdout.flush()
 
