@@ -13,7 +13,7 @@ import sys
 from pysnmp.proto import rfc1902
 
 from snmpsim import log
-from snmpsim.mltsplit import split
+from snmpsim.utils import split
 
 
 def init(**context):
@@ -33,37 +33,37 @@ def init(**context):
 
 def variate(oid, tag, value, **context):
     # in --v2c-arch some of the items are not defined
-    transportDomain = transportAddress = securityModel = '<undefined>'
-    securityName = securityLevel = contextName = transportDomain
+    transport_domain = transport_address = security_model = '<undefined>'
+    security_name = security_level = context_name = transport_domain
 
     if 'transportDomain' in context:
-        transportDomain = rfc1902.ObjectName(
+        transport_domain = rfc1902.ObjectName(
             context['transportDomain']).prettyPrint()
 
     if 'transportAddress' in context:
-        transportAddress = ':'.join(
+        transport_address = ':'.join(
             [str(x) for x in context['transportAddress']])
 
     if 'securityModel' in context:
-        securityModel = str(context['securityModel'])
+        security_model = str(context['securityModel'])
 
     if 'securityName' in context:
-        securityName = str(context['securityName'])
+        security_name = str(context['securityName'])
 
     if 'securityLevel' in context:
-        securityLevel = str(context['securityLevel'])
+        security_level = str(context['securityLevel'])
 
     if 'contextName' in context:
-        contextName = str(context['contextName'])
+        context_name = str(context['contextName'])
 
     args = [
         (x
-        .replace('@TRANSPORTDOMAIN@', transportDomain)
-        .replace('@TRANSPORTADDRESS@', transportAddress)
-        .replace('@SECURITYMODEL@', securityModel)
-        .replace('@SECURITYNAME@', securityName)
-        .replace('@SECURITYLEVEL@', securityLevel)
-        .replace('@CONTEXTNAME@', contextName)
+        .replace('@TRANSPORTDOMAIN@', transport_domain)
+        .replace('@TRANSPORTADDRESS@', transport_address)
+        .replace('@SECURITYMODEL@', security_model)
+        .replace('@SECURITYNAME@', security_name)
+        .replace('@SECURITYLEVEL@', security_level)
+        .replace('@CONTEXTNAME@', context_name)
         .replace('@DATAFILE@', context['dataFile'])
         .replace('@OID@', str(oid))
         .replace('@TAG@', tag)

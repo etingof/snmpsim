@@ -4,14 +4,16 @@
 # Copyright (c) 2010-2019, Ilya Etingof <etingof@gmail.com>
 # License: http://snmplabs.com/snmpsim/license.html
 #
-# Managed value variation module
-# Simulate a numeric value
+# Managed value variation module: simulate a numeric value
+#
 # Valid values in module options are:
+#
 #   2  - Integer
 #   65 - Counter32
 #   66 - Gauge32
 #   67 - TimeTicks
 #   70 - Counter64
+#
 import math
 import random
 import time
@@ -20,7 +22,7 @@ from pysnmp.proto import rfc1902
 
 from snmpsim import error
 from snmpsim import log
-from snmpsim.mltsplit import split
+from snmpsim.utils import split
 
 BOOTED = time.time()
 

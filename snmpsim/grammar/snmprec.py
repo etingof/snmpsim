@@ -62,14 +62,14 @@ class SnmprecGrammar(AbstractGrammar):
 
     # helper functions
 
-    def getTagByType(self, value):
+    def get_tag_by_type(self, value):
         for tag, typ in self.TAG_MAP.items():
             if typ.tagSet[0] == value.tagSet[0]:
                 return tag
 
         raise Exception('error: unknown type of %s' % (value,))
 
-    def hexifyValue(self, value):
+    def hexify_value(self, value):
         if value.tagSet in (univ.OctetString.tagSet,
                             rfc1902.Opaque.tagSet,
                             rfc1902.IpAddress.tagSet):

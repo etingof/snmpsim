@@ -26,7 +26,7 @@ from snmpsim.record import mvc
 from snmpsim.record import sap
 from snmpsim.record import snmprec
 from snmpsim.record import walk
-from snmpsim.record.search.file import getRecord
+from snmpsim.record.search.file import get_record
 
 
 class SnmprecRecordMixIn(object):
@@ -38,14 +38,14 @@ class SnmprecRecordMixIn(object):
             return oid, '', value
 
         else:
-            return snmprec.SnmprecRecord.evaluateValue(self, oid, tag, value)
+            return snmprec.SnmprecRecord.evaluate_value(self, oid, tag, value)
 
     def formatValue(self, oid, value, **context):
         if 'textTag' in context['backdoor']:
             return self.formatOid(oid), context['backdoor']['textTag'], value
 
         else:
-            return snmprec.SnmprecRecord.formatValue(
+            return snmprec.SnmprecRecord.format_value(
                 self, oid, value, **context)
 
 
@@ -185,50 +185,50 @@ def main():
     if (isinstance(args.start_oid, rfc1902.ObjectIdentity) or
             isinstance(args.stop_oid, rfc1902.ObjectIdentity)):
 
-        mibBuilder = builder.MibBuilder()
+        mib_builder = builder.MibBuilder()
 
-        mibViewController = view.MibViewController(mibBuilder)
+        mib_view_controller = view.MibViewController(mib_builder)
 
-        compiler.addMibCompiler(mibBuilder, sources=args.mib_sources)
+        compiler.addMibCompiler(mib_builder, sources=args.mib_sources)
 
         try:
             if isinstance(args.start_oid, rfc1902.ObjectIdentity):
-                args.start_oid.resolveWithMib(mibViewController)
+                args.start_oid.resolveWithMib(mib_view_controller)
 
             if isinstance(args.stop_oid, rfc1902.ObjectIdentity):
-                args.stop_oid.resolveWithMib(mibViewController)
+                args.stop_oid.resolveWithMib(mib_view_controller)
 
         except PySnmpError as exc:
             sys.stderr.write('ERROR: %s\r\n' % exc)
             return 1
 
-    recordsList = []
+    records_list = []
 
-    for inputFile in args.input_files:
+    for input_file in args.input_files:
 
         if not args.quiet:
             sys.stderr.write(
                 '# Input file #%s, processing records from %s till '
-                '%s\r\n' % (args.input_files.index(inputFile),
+                '%s\r\n' % (args.input_files.index(input_file),
                             args.start_oid or 'the beginning',
                             args.stop_oid or 'the end'))
 
-        lineNo = 0
+        line_no = 0
 
         while True:
-            line, recLineNo, _ = getRecord(inputFile, lineNo)
+            line, rec_line_no, _ = get_record(input_file, line_no)
 
             if not line:
                 break
 
-            if recLineNo != lineNo + 1:
+            if rec_line_no != line_no + 1:
                 if not args.quiet:
                     sys.stderr.write(
                         '# Losing comment at lines %s..%s (input file #'
-                        '%s)\r\n' % (lineNo + 1, recLineNo - 1,
-                                     args.input_files.index(inputFile)))
+                        '%s)\r\n' % (line_no + 1, rec_line_no - 1,
+                                     args.input_files.index(input_file)))
 
-                lineNo = recLineNo
+                line_no = rec_line_no
 
                 lost_comments += 1
 
@@ -260,16 +260,16 @@ def main():
                 skipped_count += 1
                 continue
 
-            recordsList.append((oid, value, backdoor))
+            records_list.append((oid, value, backdoor))
 
     if args.sort_records:
-        recordsList.sort(key=lambda x: x[0])
+        records_list.sort(key=lambda x: x[0])
 
-    uniqueIndices = set()
+    unique_indices = set()
 
-    for record in recordsList:
+    for record in records_list:
         if args.deduplicate_records:
-            if record[0] in uniqueIndices:
+            if record[0] in unique_indices:
                 if not args.quiet:
                     sys.stderr.write('# Skipping duplicate record '
                                      '<%s>\r\n' % record[0])
@@ -279,7 +279,7 @@ def main():
                 continue
 
             else:
-                uniqueIndices.add(record[0])
+                unique_indices.add(record[0])
 
         try:
             args.output_file.write(

@@ -62,7 +62,7 @@ rm -f $SNMPREC_LOG
 snmpsim-record-commands \
     --log-level error \
     --output-file $SNMPREC_LOG \
-    --agent-udpv4-endpoint=127.0.0.1:1165 && { echo Properly timed out; }
+    --agent-udpv4-endpoint=127.0.0.1:1165 || { echo This is the expected timeout; }
 
 # test snmpsimd instance, numeric module
 snmpsim-record-commands \

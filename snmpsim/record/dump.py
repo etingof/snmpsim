@@ -16,10 +16,10 @@ class DumpRecord(abstract.AbstractRecord):
     grammar = dump.DumpGrammar()
     ext = 'dump'
 
-    def evaluateOid(self, oid):
+    def evaluate_oid(self, oid):
         return univ.ObjectIdentifier(oid)
 
-    def evaluateValue(self, oid, tag, value, **context):
+    def evaluate_value(self, oid, tag, value, **context):
         try:
             value = self.grammar.TAG_MAP[tag](value)
 
@@ -42,14 +42,14 @@ class DumpRecord(abstract.AbstractRecord):
 
     def evaluate(self, line, **context):
         oid, tag, value = self.grammar.parse(line)
-        oid = self.evaluateOid(oid)
+        oid = self.evaluate_oid(oid)
 
         if context.get('oidOnly'):
             value = None
 
         else:
             try:
-                oid, tag, value = self.evaluateValue(
+                oid, tag, value = self.evaluate_value(
                     oid, tag, value, **context)
 
             except PyAsn1Error as exc:
@@ -59,11 +59,11 @@ class DumpRecord(abstract.AbstractRecord):
 
         return oid, value
 
-    def formatOid(self, oid):
+    def format_oid(self, oid):
         return univ.ObjectIdentifier(oid).prettyPrint()
 
-    def formatValue(self, oid, value, **context):
-        return self.formatOid(oid), self.grammar.getTagByType(value), str(value)
+    def format_value(self, oid, value, **context):
+        return self.format_oid(oid), self.grammar.get_tag_by_type(value), str(value)
 
     def format(self, oid, value, **context):
-        return self.grammar.build(*self.formatValue(oid, value, **context))
+        return self.grammar.build(*self.format_value(oid, value, **context))

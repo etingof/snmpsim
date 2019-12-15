@@ -16,6 +16,6 @@ class AbstractGrammar(object):
         raise error.SnmpsimError(
             'Method not implemented at %s' % self.__class__.__name__)
 
-    def getTagByType(self, val):
+    def get_tag_by_type(self, val):
         raise error.SnmpsimError(
             'Method not implemented at %s' % self.__class__.__name__)

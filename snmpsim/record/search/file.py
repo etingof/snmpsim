@@ -8,12 +8,12 @@ from pyasn1.compat.octets import str2octs
 
 
 # read lines from text file ignoring #comments and blank lines
-def getRecord(fileObj, lineNo=None, offset=0):
+def get_record(fileObj, line_no=None, offset=0):
 
     line = fileObj.readline()
 
-    if lineNo is not None and line:
-        lineNo += 1
+    if line_no is not None and line:
+        line_no += 1
 
     while line:
         tline = line.strip()
@@ -22,27 +22,27 @@ def getRecord(fileObj, lineNo=None, offset=0):
         if not tline or tline.startswith(str2octs('#')):
             offset += len(line)
             line = fileObj.readline()
-            if lineNo is not None and line:
-                lineNo += 1
+            if line_no is not None and line:
+                line_no += 1
 
         else:
             break
 
-    return line, lineNo, offset
+    return line, line_no, offset
 
 
-def findEol(fileObj, offset, blockSize=256, eol=str2octs('\n')):
+def find_eol(file_obj, offset, block_size=256, eol=str2octs('\n')):
 
     while True:
-        if offset < blockSize:
-            offset, blockSize = 0, offset
+        if offset < block_size:
+            offset, block_size = 0, offset
 
         else:
-            offset -= blockSize
+            offset -= block_size
 
-        fileObj.seek(offset)
+        file_obj.seek(offset)
 
-        chunk = fileObj.read(blockSize)
+        chunk = file_obj.read(block_size)
 
         try:
             return offset + chunk.rindex(eol) + 1
@@ -55,35 +55,35 @@ def findEol(fileObj, offset, blockSize=256, eol=str2octs('\n')):
 
 
 # In-place, by-OID binary search
-def searchRecordByOid(oid, fileObj, textParser):
+def search_record_by_oid(oid, file_obj, text_parser):
 
     lo = mid = 0;
     prev_mid = -1
 
-    fileObj.seek(0, 2)
+    file_obj.seek(0, 2)
 
-    hi = sz = fileObj.tell()
+    hi = sz = file_obj.tell()
 
     while lo < hi:
         mid = (lo + hi) // 2
-        fileObj.seek(mid)
-        mid = findEol(fileObj, mid)
-        fileObj.seek(mid)
+        file_obj.seek(mid)
+        mid = find_eol(file_obj, mid)
+        file_obj.seek(mid)
         if mid == prev_mid:  # loop condition due to stepping back pivot
             break
 
         if mid >= sz:
             return sz
 
-        line, _, skippedOffset = getRecord(fileObj)
+        line, _, skipped_offset = get_record(file_obj)
 
         if not line:
             return hi
 
-        midval, _ = textParser.evaluate(line, oidOnly=True)
+        midval, _ = text_parser.evaluate(line, oidOnly=True)
 
         if midval < oid:
-            lo = mid + skippedOffset + len(line)
+            lo = mid + skipped_offset + len(line)
 
         elif midval > oid:
             hi = mid

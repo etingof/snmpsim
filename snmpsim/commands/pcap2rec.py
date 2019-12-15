@@ -62,29 +62,33 @@ DESCRIPTION = (
 
 class SnmprecRecord(snmprec.SnmprecRecord):
 
-    def formatValue(self, oid, value, **context):
-        textOid, textTag, textValue = snmprec.SnmprecRecord.formatValue(
+    def format_value(self, oid, value, **context):
+        (text_oid,
+         text_tag,
+         text_value) = snmprec.SnmprecRecord.format_value(
             self, oid, value)
 
         if context['variationModule']:
-            plainOid, plainTag, plainValue = snmprec.SnmprecRecord.formatValue(
+            (plain_oid,
+             plain_tag,
+             plain_value) = snmprec.SnmprecRecord.format_value(
                 self, oid, value, nohex=True)
 
-            if plainTag != textTag:
-                context['hextag'], context['hexvalue'] = textTag, textValue
+            if plain_tag != text_tag:
+                context['hextag'], context['hexvalue'] = text_tag, text_value
 
             else:
-                textTag, textValue = plainTag, plainValue
+                text_tag, text_value = plain_tag, plain_value
 
             handler = context['variationModule']['record']
 
-            textOid, textTag, textValue = handler(
-                textOid, textTag, textValue, **context)
+            text_oid, text_tag, text_value = handler(
+                text_oid, text_tag, text_value, **context)
 
         elif 'stopFlag' in context and context['stopFlag']:
             raise error.NoDataNotification()
 
-        return textOid, textTag, textValue
+        return text_oid, text_tag, text_value
 
 
 def _parse_mib_object(arg, last=False):
@@ -245,18 +249,18 @@ def main():
 
     if (isinstance(args.start_object, rfc1902.ObjectIdentity) or
             isinstance(args.stop_object, rfc1902.ObjectIdentity)):
-        mibBuilder = builder.MibBuilder()
+        mib_builder = builder.MibBuilder()
 
-        mibViewController = view.MibViewController(mibBuilder)
+        mib_view_controller = view.MibViewController(mib_builder)
 
-        compiler.addMibCompiler(mibBuilder, sources=args.mib_sources)
+        compiler.addMibCompiler(mib_builder, sources=args.mib_sources)
 
         try:
             if isinstance(args.start_object, rfc1902.ObjectIdentity):
-                args.start_object.resolveWithMib(mibViewController)
+                args.start_object.resolveWithMib(mib_view_controller)
 
             if isinstance(args.stop_object, rfc1902.ObjectIdentity):
-                args.stop_object.resolveWithMib(mibViewController)
+                args.stop_object.resolveWithMib(mib_view_controller)
 
         except PySnmpError as exc:
             sys.stderr.write('ERROR: %s\r\n' % exc)
@@ -324,7 +328,7 @@ def main():
             log.info('Variation module "%s" '
                      'initialization OK' % args.variation_module)
 
-    pcapObj = pcap.pcapObject()
+    pcap_obj = pcap.pcapObject()
 
     if args.listen_interface:
         if not args.quiet:
@@ -334,7 +338,7 @@ def main():
                           '' if args.promiscuous_mode else 'non-'))
 
         try:
-            pcapObj.open_live(
+            pcap_obj.open_live(
                 args.listen_interface, 65536, args.promiscuous_mode, 1000)
 
         except Exception as exc:
@@ -348,7 +352,7 @@ def main():
             log.info('Opening capture file %s' % args.capture_file)
 
         try:
-            pcapObj.open_offline(args.capture_file)
+            pcap_obj.open_offline(args.capture_file)
 
         except Exception as exc:
             log.error('Error opening capture file %s for reading: '
@@ -365,7 +369,7 @@ def main():
         if not args.quiet:
             log.info('Applying packet filter \"%s\"' % args.packet_filter)
 
-        pcapObj.setfilter(args.packet_filter, 0, 0)
+        pcap_obj.setfilter(args.packet_filter, 0, 0)
 
     if not args.quiet:
         log.info('Processing records from %still '
@@ -374,19 +378,19 @@ def main():
                          args.stop_object if args.stop_object
                          else 'the end'))
 
-    def parsePacket(raw):
+    def parse_packet(raw):
         pkt = {}
 
         # http://www.tcpdump.org/linktypes.html
-        llHeaders = {
+        ll_headers = {
             0: 4,
             1: 14,
             108: 4,
             228: 0
         }
 
-        if pcapObj.datalink() in llHeaders:
-            raw = raw[llHeaders[pcapObj.datalink()]:]
+        if pcap_obj.datalink() in ll_headers:
+            raw = raw[ll_headers[pcap_obj.datalink()]:]
 
         else:
             stats['unknown L2 protocol'] += 1
@@ -431,29 +435,29 @@ def main():
 
         return pkt
 
-    def handleSnmpMessage(d, t, private={}):
-        msgVer = api.decodeMessageVersion(d['data'])
+    def handle_snmp_message(d, t, private={}):
+        msg_ver = api.decodeMessageVersion(d['data'])
 
-        if msgVer in api.protoModules:
-            pMod = api.protoModules[msgVer]
+        if msg_ver in api.protoModules:
+            p_mod = api.protoModules[msg_ver]
 
         else:
             stats['bad packets'] += 1
             return
 
         try:
-            rspMsg, wholeMsg = decoder.decode(
-                d['data'], asn1Spec=pMod.Message())
+            rsp_msg, whole_msg = decoder.decode(
+                d['data'], asn1Spec=p_mod.Message())
 
         except PyAsn1Error:
             stats['bad packets'] += 1
             return
 
-        if rspMsg['data'].getName() == 'response':
-            rspPDU = pMod.apiMessage.getPDU(rspMsg)
-            errorStatus = pMod.apiPDU.getErrorStatus(rspPDU)
+        if rsp_msg['data'].getName() == 'response':
+            rsp_pdu = p_mod.apiMessage.getPDU(rsp_msg)
+            error_status = p_mod.apiPDU.getErrorStatus(rsp_pdu)
 
-            if errorStatus:
+            if error_status:
                 stats['SNMP errors'] += 1
 
             else:
@@ -465,23 +469,23 @@ def main():
                     stats['agents seen'] += 1
 
                 context = '%s/%s' % (
-                    pMod.ObjectIdentifier(endpoints[endpoint]),
-                    pMod.apiMessage.getCommunity(rspMsg))
+                    p_mod.ObjectIdentifier(endpoints[endpoint]),
+                    p_mod.apiMessage.getCommunity(rsp_msg))
 
                 if context not in contexts:
                     contexts[context] = {}
                     stats['contexts seen'] += 1
 
                 context = '%s/%s' % (
-                    pMod.ObjectIdentifier(endpoints[endpoint]),
-                    pMod.apiMessage.getCommunity(rspMsg))
+                    p_mod.ObjectIdentifier(endpoints[endpoint]),
+                    p_mod.apiMessage.getCommunity(rsp_msg))
 
                 stats['Response PDUs seen'] += 1
 
                 if 'basetime' not in private:
                     private['basetime'] = t
 
-                for oid, value in pMod.apiPDU.getVarBinds(rspPDU):
+                for oid, value in p_mod.apiPDU.getVarBinds(rsp_pdu):
                     if oid < args.start_object:
                         continue
 
@@ -500,12 +504,12 @@ def main():
 
                     stats['OIDs seen'] += 1
 
-    def handlePacket(pktlen, data, timestamp):
+    def handle_packet(pktlen, data, timestamp):
         if not data:
             stats['empty packets'] += 1
             return
 
-        handleSnmpMessage(parsePacket(data), timestamp)
+        handle_snmp_message(parse_packet(data), timestamp)
 
     try:
         if args.listen_interface:
@@ -514,25 +518,26 @@ def main():
                 'are done.' % args.listen_interface)
 
             while True:
-                pcapObj.dispatch(1, handlePacket)
+                pcap_obj.dispatch(1, handle_packet)
 
         elif args.capture_file:
             log.info('Processing capture file "%s"....' % args.capture_file)
 
-            args = pcapObj.next()
+            args = pcap_obj.next()
 
             while args:
-                handlePacket(*args)
-                args = pcapObj.next()
+                handle_packet(*args)
+                args = pcap_obj.next()
 
     except (TypeError, KeyboardInterrupt):
         log.info('Shutting down process...')
 
     finally:
-        dataFileHandler = SnmprecRecord()
+        data_file_handler = SnmprecRecord()
 
         for context in contexts:
-            ext = os.path.extsep + RECORD_TYPES[args.destination_record_type].ext
+            ext = os.path.extsep
+            ext += RECORD_TYPES[args.destination_record_type].ext
 
             filename = os.path.join(args.output_dir, context + ext)
 
@@ -547,16 +552,18 @@ def main():
             except OSError:
                 pass
 
+            record = RECORD_TYPES[args.destination_record_type]
+
             try:
-                outputFile = RECORD_TYPES[args.destination_record_type].open(filename, 'wb')
+                output_file = record.open(filename, 'wb')
 
             except IOError as exc:
                 log.error('writing %s: %s' % (filename, exc))
                 return 1
 
             count = total = iteration = 0
-            timeOffset = 0
-            reqTime = time.time()
+            time_offset = 0
+            req_time = time.time()
 
             oids = sorted(contexts[context])
             oids.append(oids[-1])  # duplicate last OID to trigger stopFlag
@@ -568,7 +575,7 @@ def main():
 
                     value = values[
                         min(len(values) - 1,
-                            bisect.bisect_left(timeline, timeOffset))
+                            bisect.bisect_left(timeline, time_offset))
                     ]
 
                     if value.tagSet in (rfc1905.NoSuchObject.tagSet,
@@ -596,7 +603,7 @@ def main():
                         'count': count,
                         'total': total,
                         'iteration': iteration,
-                        'reqTime': reqTime,
+                        'reqTime': req_time,
                         'startOID': args.start_object,
                         'stopOID': args.stop_object,
                         'stopFlag': oids.index(oid) == len(oids) - 1,
@@ -604,7 +611,7 @@ def main():
                     }
 
                     try:
-                        line = dataFileHandler.format(oid, value, **ctx)
+                        line = data_file_handler.format(oid, value, **ctx)
 
                     except error.MoreDataNotification as exc:
                         count = 0
@@ -612,10 +619,10 @@ def main():
 
                         moreDataNotification = exc
                         if 'period' in moreDataNotification:
-                            timeOffset += moreDataNotification['period']
+                            time_offset += moreDataNotification['period']
                             log.info(
                                 '%s OIDs dumped, advancing time window to '
-                                '%.2f sec(s)...' % (total, timeOffset))
+                                '%.2f sec(s)...' % (total, time_offset))
                         break
 
                     except error.NoDataNotification:
@@ -626,7 +633,7 @@ def main():
                         continue
 
                     else:
-                        outputFile.write(line)
+                        output_file.write(line)
 
                         count += 1
                         total += 1
@@ -634,8 +641,8 @@ def main():
                 else:
                     break
 
-            outputFile.flush()
-            outputFile.close()
+            output_file.flush()
+            output_file.close()
 
         if variation_module:
             log.info('Shutting down variation module '
@@ -644,21 +651,24 @@ def main():
             handler = variation_module['shutdown']
 
             try:
-                handler(options=args.variation_module_options, mode='recording')
+                handler(options=args.variation_module_options,
+                        mode='recording')
 
             except Exception as exc:
                 log.error('Variation module "%s" shutdown FAILED: '
                           '%s' % (args.variation_module, exc))
 
             else:
-                log.info('Variation module "%s" shutdown OK' % args.variation_module)
+                log.info(
+                    'Variation module "%s" shutdown'
+                    ' OK' % args.variation_module)
 
         log.info("""\
 PCap statistics:
     packets snooped: %s
     packets dropped: %s
     packets dropped: by interface %s\
-    """ % pcapObj.stats())
+    """ % pcap_obj.stats())
 
         log.info("""\
 SNMP statistics:

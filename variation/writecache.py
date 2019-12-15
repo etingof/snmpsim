@@ -5,8 +5,8 @@
 # License: http://snmplabs.com/snmpsim/license.html
 #
 # SNMP Simulator, http://snmplabs.com/snmpsim
-# Managed value variation module
-# Simulate a writable Agent
+#
+# Managed value variation module: simulate a writable Agent
 #
 import shelve
 
@@ -14,8 +14,8 @@ from pysnmp.smi import error
 
 from snmpsim import log
 from snmpsim.grammar.snmprec import SnmprecGrammar
-from snmpsim.mltsplit import split
 from snmpsim.record.snmprec import SnmprecRecord
+from snmpsim.utils import split
 
 ERROR_TYPES = {
     'generror': error.GenError,
@@ -71,9 +71,9 @@ def variate(oid, tag, value, **context):
                 vl = recordContext['settings']['vlist'][3:]
                 recordContext['settings']['vlist'] = vl
 
-                typeTag, _ = SnmprecRecord.unpackTag(tag)
+                type_tag, _ = SnmprecRecord.unpack_tag(tag)
 
-                v = SnmprecGrammar.TAG_MAP[typeTag](v)
+                v = SnmprecGrammar.TAG_MAP[type_tag](v)
 
                 if o not in vlist:
                     vlist[o] = {}
@@ -97,11 +97,11 @@ def variate(oid, tag, value, **context):
     if oid not in moduleContext:
         moduleContext[oid] = {}
 
-        typeTag, _ = SnmprecRecord.unpackTag(tag)
+        type_tag, _ = SnmprecRecord.unpack_tag(tag)
 
-        moduleContext[oid]['type'] = SnmprecGrammar.TAG_MAP[typeTag]()
+        moduleContext[oid]['type'] = SnmprecGrammar.TAG_MAP[type_tag]()
 
-    textOid = str(oid)
+    text_oid = str(oid)
 
     if context['setFlag']:
         if 'vlist' in recordContext['settings']:
@@ -125,7 +125,7 @@ def variate(oid, tag, value, **context):
                 raise ERROR_TYPES[e](name=oid, idx=idx)
 
         if moduleContext[oid]['type'].isSameTypeWith(context['origValue']):
-            moduleContext['cache'][textOid] = context['origValue']
+            moduleContext['cache'][text_oid] = context['origValue']
 
         else:
             return context['origOid'], tag, context['errorStatus']
@@ -143,8 +143,8 @@ def variate(oid, tag, value, **context):
                 idx = max(0, context['varsTotal'] - context['varsRemaining'] - 1)
                 raise ERROR_TYPES[e](name=oid, idx=idx)
 
-    if textOid in moduleContext['cache']:
-        return oid, tag, moduleContext['cache'][textOid]
+    if text_oid in moduleContext['cache']:
+        return oid, tag, moduleContext['cache'][text_oid]
 
     elif 'hexvalue' in recordContext['settings']:
         return oid, tag, moduleContext[oid]['type'].clone(

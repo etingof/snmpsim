@@ -201,14 +201,14 @@ def main():
 
             msvcrt.setmode(sys.stdout.fileno(), os.O_BINARY)
 
-    def getValue(syntax, hint='', automatic_values=args.automatic_values):
+    def get_value(syntax, hint='', automatic_values=args.automatic_values):
 
-        makeGuess = args.automatic_values
+        make_guess = args.automatic_values
 
         val = None
 
         while True:
-            if makeGuess:
+            if make_guess:
                 if isinstance(syntax, rfc1902.IpAddress):
                     val = '.'.join([str(random.randrange(1, 256)) for x in range(4)])
 
@@ -262,13 +262,13 @@ def main():
                 return syntax.clone(val)
 
             except PyAsn1Error as exc:
-                if makeGuess == 1:
+                if make_guess == 1:
                     sys.stderr.write(
                         '*** Inconsistent value: %s\r\n*** See constraints and '
                         'suggest a better one for:\r\n' % exc)
 
-                if makeGuess:
-                    makeGuess -= 1
+                if make_guess:
+                    make_guess -= 1
                     continue
 
             sys.stderr.write('%s# Value [\'%s\'] ? ' % (
@@ -291,15 +291,15 @@ def main():
                 else:
                     val = line
 
-    dataFileHandler = snmprec.SnmprecRecord()
+    data_file_handler = snmprec.SnmprecRecord()
 
-    mibBuilder = builder.MibBuilder()
+    mib_builder = builder.MibBuilder()
 
     # Load MIB tree foundation classes
     (MibScalar,
      MibTable,
      MibTableRow,
-     MibTableColumn) = mibBuilder.importSymbols(
+     MibTableColumn) = mib_builder.importSymbols(
         'SNMPv2-SMI',
         'MibScalar',
         'MibTable',
@@ -307,16 +307,16 @@ def main():
         'MibTableColumn'
     )
 
-    mibViewController = view.MibViewController(mibBuilder)
+    mib_view_controller = view.MibViewController(mib_builder)
 
-    compiler.addMibCompiler(mibBuilder, sources=args.mib_sources)
+    compiler.addMibCompiler(mib_builder, sources=args.mib_sources)
 
     try:
         if isinstance(args.start_object, ObjectIdentity):
-            args.start_object.resolveWithMib(mibViewController)
+            args.start_object.resolveWithMib(mib_view_controller)
 
         if isinstance(args.stop_object, ObjectIdentity):
-            args.stop_object.resolveWithMib(mibViewController)
+            args.stop_object.resolveWithMib(mib_view_controller)
 
     except error.PySnmpError as exc:
         sys.stderr.write('ERROR: %s\r\n' % exc)
@@ -333,63 +333,63 @@ def main():
                             args.stop_object or 'the end'))
 
         try:
-            oid = ObjectIdentity(modName).resolveWithMib(mibViewController)
+            oid = ObjectIdentity(modName).resolveWithMib(mib_view_controller)
 
         except error.PySnmpError as exc:
             sys.stderr.write('ERROR: failed on MIB %s: '
                              '%s\r\n' % (modName, exc))
             return 1
 
-        hint = rowHint = ''
-        rowOID = None
+        hint = row_hint = ''
+        row_oid = None
         suffix = ()
-        thisTableSize = 0
+        this_table_size = 0
 
         while True:
             try:
-                oid, label, _ = mibViewController.getNextNodeName(oid)
+                oid, label, _ = mib_view_controller.getNextNodeName(oid)
 
             except error.NoSuchObjectError:
                 break
 
-            if rowOID and not rowOID.isPrefixOf(oid):
-                thisTableSize += 1
+            if row_oid and not row_oid.isPrefixOf(oid):
+                this_table_size += 1
 
                 if args.automatic_values:
-                    if thisTableSize < args.table_size:
-                        oid = tuple(rowOID)
+                    if this_table_size < args.table_size:
+                        oid = tuple(row_oid)
                         if not args.quiet:
                             sys.stderr.write(
                                 '# Synthesizing row #%d of table %s\r\n' % (
-                                    thisTableSize, rowOID))
+                                    this_table_size, row_oid))
 
                     else:
                         if not args.quiet:
                             sys.stderr.write(
                                 '# Finished table %s (%d rows)\r\n' % (
-                                    rowOID, thisTableSize))
+                                    row_oid, this_table_size))
 
-                        rowOID = None
+                        row_oid = None
 
                 else:
                     while True:
                         sys.stderr.write(
                             '# Synthesize row #%d for table %s (y/n)? ' % (
-                                thisTableSize, rowOID))
+                                this_table_size, row_oid))
                         sys.stderr.flush()
 
                         line = sys.stdin.readline().strip()
                         if line:
                             if line[0] in ('y', 'Y'):
-                                oid = tuple(rowOID)
+                                oid = tuple(row_oid)
                                 break
 
                             elif line[0] in ('n', 'N'):
                                 if not args.quiet:
                                     sys.stderr.write(
                                         '# Finished table %s (%d rows)\r\n' % (
-                                            rowOID, thisTableSize))
-                                rowOID = None
+                                            row_oid, this_table_size))
+                                row_oid = None
                                 break
 
             if args.start_object and oid < args.start_object:
@@ -398,65 +398,73 @@ def main():
             if args.stop_object and oid > args.stop_object:
                 break  # stop on out of range condition
 
-            mibName, symName, _ = mibViewController.getNodeLocation(oid)
-            node, = mibBuilder.importSymbols(mibName, symName)
+            mib_name, sym_name, _ = mib_view_controller.getNodeLocation(oid)
+            node, = mib_builder.importSymbols(mib_name, sym_name)
 
             if isinstance(node, MibTable):
-                hint = '# Table %s::%s\r\n' % (mibName, symName)
+                hint = '# Table %s::%s\r\n' % (mib_name, sym_name)
                 if not args.quiet:
                     sys.stderr.write(
                         '# Starting table %s::%s (%s)\r\n' % (
-                            mibName, symName, univ.ObjectIdentifier(oid)))
+                            mib_name, sym_name, univ.ObjectIdentifier(oid)))
                 continue
 
             elif isinstance(node, MibTableRow):
-                rowIndices = {}
+                row_indices = {}
                 suffix = ()
-                rowHint = hint + '# Row %s::%s\r\n' % (mibName, symName)
+                row_hint = hint + '# Row %s::%s\r\n' % (mib_name, sym_name)
 
-                for impliedFlag, idxModName, idxSymName in node.getIndexNames():
-                    idxNode, = mibBuilder.importSymbols(idxModName, idxSymName)
+                for (implied_flag,
+                     idx_mod_name, idx_sym_name) in node.getIndexNames():
+                    idxNode, = mib_builder.importSymbols(
+                        idx_mod_name, idx_sym_name)
 
-                    rowHint += '# Index %s::%s (type %s)\r\n' % (
-                        idxModName, idxSymName, idxNode.syntax.__class__.__name__)
+                    row_hint += '# Index %s::%s (type %s)\r\n' % (
+                        idx_mod_name, idx_sym_name,
+                        idxNode.syntax.__class__.__name__)
 
-                    rowIndices[idxNode.name] = getValue(
-                        idxNode.syntax, not args.quiet and rowHint or '')
+                    row_indices[idxNode.name] = get_value(
+                        idxNode.syntax, not args.quiet and row_hint or '')
 
                     suffix = suffix + node.getAsName(
-                        rowIndices[idxNode.name], impliedFlag)
+                        row_indices[idxNode.name], implied_flag)
 
-                if not rowIndices:
+                if not row_indices:
                     if not args.quiet:
                         sys.stderr.write(
                             '# WARNING: %s::%s table has no index!\r\n' % (
-                                mibName, symName))
+                                mib_name, sym_name))
 
-                if rowOID is None:
-                    thisTableSize = 0
+                if row_oid is None:
+                    this_table_size = 0
 
-                rowOID = univ.ObjectIdentifier(oid)
+                row_oid = univ.ObjectIdentifier(oid)
                 continue
 
             elif isinstance(node, MibTableColumn):
                 oid = node.name
-                if oid in rowIndices:
-                    val = rowIndices[oid]
+                if oid in row_indices:
+                    val = row_indices[oid]
 
                 else:
-                    val = getValue(
-                        node.syntax, not args.quiet and (
-                                rowHint + '# Column %s::%s (type'
-                                          ' %s)\r\n' % (mibName, symName,
-                                                        node.syntax.__class__.__name__) or ''))
+                    hint = ''
+                    if not args.quiet:
+                        hint += row_hint
+                        hint += ('# Column %s::%s (type'
+                                 ' %s)\r\n' % (mib_name, sym_name,
+                                               node.syntax.__class__.__name__))
+
+                    val = get_value(node.syntax, hint)
 
             elif isinstance(node, MibScalar):
                 hint = ''
+                if not args.row_hint:
+                    hint += ('# Scalar %s::%s (type %s)'
+                             '\r\n' % (mib_name, sym_name,
+                                       node.syntax.__class__.__name__))
                 oid = node.name
                 suffix = (0,)
-                val = getValue(
-                    node.syntax, not args.quiet and '# Scalar %s::%s (type %s)\r\n' % (
-                        mibName, symName, node.syntax.__class__.__name__) or '')
+                val = get_value(node.syntax, hint)
 
             else:
                 hint = ''
@@ -476,7 +484,7 @@ def main():
                             univ.ObjectIdentifier(oid),))
             else:
                 try:
-                    args.output_file.write(dataFileHandler.format(oid, val))
+                    args.output_file.write(data_file_handler.format(oid, val))
 
                 except SnmpsimError as exc:
                     sys.stderr.write('ERROR: %s\r\n' % (exc,))

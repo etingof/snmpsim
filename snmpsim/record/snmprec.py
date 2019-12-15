@@ -32,14 +32,14 @@ class SnmprecRecord(dump.DumpRecord):
     }
 
     @staticmethod
-    def unpackTag(tag):
+    def unpack_tag(tag):
         if tag.endswith('x') or tag.endswith('e'):
             return tag[:-1], tag[-1]
 
         else:
             return tag, None
 
-    def evaluateRawString(self, escaped):
+    def evaluate_raw_string(self, escaped):
         """Evaluates raw Python string like `ast.literal_eval` does"""
         unescaped = []
         hexdigit = None
@@ -79,17 +79,17 @@ class SnmprecRecord(dump.DumpRecord):
 
         return unescaped
 
-    def evaluateValue(self, oid, tag, value, **context):
-        tag, encodingId = self.unpackTag(tag)
+    def evaluate_value(self, oid, tag, value, **context):
+        tag, encoding_id = self.unpack_tag(tag)
 
         try:
-            if encodingId == 'e':
+            if encoding_id == 'e':
 
-                value = self.evaluateRawString(value)
+                value = self.evaluate_raw_string(value)
 
                 return oid, tag, self.grammar.TAG_MAP[tag](value)
 
-            elif encodingId == 'x':
+            elif encoding_id == 'x':
                 if octets.isOctetsType(value):
                     value = octets.octs2str(value)
 
@@ -103,34 +103,34 @@ class SnmprecRecord(dump.DumpRecord):
                 'value evaluation error for tag %r, value '
                 '%r: %s' % (tag, value, exc))
 
-    def formatValue(self, oid, value, **context):
+    def format_value(self, oid, value, **context):
         if 'nohex' in context and context['nohex']:
             hexvalue = None
 
         else:
-            hexvalue = self.grammar.hexifyValue(value)
+            hexvalue = self.grammar.hexify_value(value)
 
-        textTag = self.grammar.getTagByType(value)
+        text_tag = self.grammar.get_tag_by_type(value)
 
         if hexvalue:
-            textTag, textValue = textTag + 'x', hexvalue
+            text_tag, text_value = text_tag + 'x', hexvalue
 
         else:
             try:
-                textValue = repr(value.asOctets())
+                text_value = repr(value.asOctets())
 
-                if textValue.startswith('b'):
-                    textValue = textValue[1:]
+                if text_value.startswith('b'):
+                    text_value = text_value[1:]
 
-                textValue = textValue[1:-1]
+                text_value = text_value[1:-1]
 
-                if '\\' in textValue:
-                    textTag += 'e'
+                if '\\' in text_value:
+                    text_tag += 'e'
 
             except AttributeError:
-                textValue = str(value)
+                text_value = str(value)
 
-        return self.formatOid(oid), textTag, textValue
+        return self.format_oid(oid), text_tag, text_value
 
 
 class CompressedSnmprecRecord(SnmprecRecord):

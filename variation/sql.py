@@ -15,7 +15,7 @@
 from snmpsim import error
 from snmpsim import log
 from snmpsim.grammar.snmprec import SnmprecGrammar
-from snmpsim.mltsplit import split
+from snmpsim.utils import split
 
 ISOLATION_LEVELS = {
     '0': 'READ UNCOMMITTED',
@@ -102,12 +102,12 @@ def init(**context):
 
 def variate(oid, tag, value, **context):
     if 'dbConn' in moduleContext:
-        dbConn = moduleContext['dbConn']
+        db_conn = moduleContext['dbConn']
 
     else:
         raise error.SnmpsimError('variation module not initialized')
 
-    cursor = dbConn.cursor()
+    cursor = db_conn.cursor()
 
     try:
         cursor.execute(
@@ -119,31 +119,31 @@ def variate(oid, tag, value, **context):
         pass
 
     if value:
-        dbTable = value.split(',').pop(0)
+        db_table = value.split(',').pop(0)
 
     elif 'dbTable' in moduleContext:
-        dbTable = moduleContext['dbTable']
+        db_table = moduleContext['dbTable']
 
     else:
         log.msg('SQL table not specified for OID '
                 '%s' % (context['origOid'],))
         return context['origOid'], tag, context['errorStatus']
 
-    origOid = context['origOid']
-    sqlOid = '.'.join(['%10s' % x for x in str(origOid).split('.')])
+    orig_oid = context['origOid']
+    sql_oid = '.'.join(['%10s' % x for x in str(orig_oid).split('.')])
 
     if context['setFlag']:
         if 'hexvalue' in context:
-            textTag = context['hextag']
-            textValue = context['hexvalue']
+            text_tag = context['hextag']
+            text_value = context['hexvalue']
 
         else:
-            textTag = SnmprecGrammar().getTagByType(context['origValue'])
-            textValue = str(context['origValue'])
+            text_tag = SnmprecGrammar().get_tag_by_type(context['origValue'])
+            text_value = str(context['origValue'])
 
         cursor.execute(
             'select maxaccess,tag from %s where oid=\'%s\''
-            ' limit 1' % (dbTable, sqlOid)
+            ' limit 1' % (db_table, sql_oid)
         )
 
         resultset = cursor.fetchone()
@@ -151,107 +151,107 @@ def variate(oid, tag, value, **context):
         if resultset:
             maxaccess = resultset[0]
             if maxaccess != 'read-write':
-                return origOid, tag, context['errorStatus']
+                return orig_oid, tag, context['errorStatus']
 
             cursor.execute(
                 'update %s set tag=\'%s\',value=\'%s\' where '
-                'oid=\'%s\'' % (dbTable, textTag, textValue, sqlOid))
+                'oid=\'%s\'' % (db_table, text_tag, text_value, sql_oid))
 
         else:
             cursor.execute(
                 'insert into %s values (\'%s\', \'%s\', \'%s\', '
-                '\'read-write\')' % (dbTable, sqlOid, textTag, textValue))
+                '\'read-write\')' % (db_table, sql_oid, text_tag, text_value))
 
         if context['varsRemaining'] == 0:  # last OID in PDU
-            dbConn.commit()
+            db_conn.commit()
 
         cursor.close()
 
-        return origOid, textTag, context['origValue']
+        return orig_oid, text_tag, context['origValue']
 
     else:
         if context['nextFlag']:
             cursor.execute(
                 'select oid from %s where oid>\'%s\' order by oid '
-                'limit 1' % (dbTable, sqlOid))
+                'limit 1' % (db_table, sql_oid))
 
             resultset = cursor.fetchone()
 
             if resultset:
-                origOid = origOid.clone(
+                orig_oid = orig_oid.clone(
                     '.'.join([x.strip() for x in str(resultset[0]).split('.')]))
 
-                sqlOid = '.'.join(['%10s' % x for x in str(origOid).split('.')])
+                sql_oid = '.'.join(['%10s' % x for x in str(orig_oid).split('.')])
 
             else:
                 cursor.close()
-                return origOid, tag, context['errorStatus']
+                return orig_oid, tag, context['errorStatus']
 
         cursor.execute(
             'select tag, value from %s where oid=\'%s\' '
-            'limit 1' % (dbTable, sqlOid))
+            'limit 1' % (db_table, sql_oid))
 
         resultset = cursor.fetchone()
 
         cursor.close()
 
         if resultset:
-            return origOid, str(resultset[0]), str(resultset[1])
+            return orig_oid, str(resultset[0]), str(resultset[1])
 
         else:
-            return origOid, tag, context['errorStatus']
+            return orig_oid, tag, context['errorStatus']
 
 
 def record(oid, tag, value, **context):
     if 'dbConn' in moduleContext:
-        dbConn = moduleContext['dbConn']
+        db_conn = moduleContext['dbConn']
 
     else:
         raise error.SnmpsimError('variation module not initialized')
 
-    dbTable = moduleContext['dbTable']
+    db_table = moduleContext['dbTable']
 
     if context['stopFlag']:
         raise error.NoDataNotification()
 
-    sqlOid = '.'.join(['%10s' % x for x in oid.split('.')])
+    sql_oid = '.'.join(['%10s' % x for x in oid.split('.')])
     if 'hexvalue' in context:
-        textTag = context['hextag']
-        textValue = context['hexvalue']
+        text_tag = context['hextag']
+        text_value = context['hexvalue']
 
     else:
-        textTag = SnmprecGrammar().getTagByType(context['origValue'])
-        textValue = str(context['origValue'])
+        text_tag = SnmprecGrammar().get_tag_by_type(context['origValue'])
+        text_value = str(context['origValue'])
 
-    cursor = dbConn.cursor()
+    cursor = db_conn.cursor()
 
     cursor.execute(
         'select oid from %s where oid=\'%s\' '
-        'limit 1' % (dbTable, sqlOid))
+        'limit 1' % (db_table, sql_oid))
 
     if cursor.fetchone():
         cursor.execute(
             'update %s set tag=\'%s\',value=\'%s\' where '
-            'oid=\'%s\'' % (dbTable, textTag, textValue, sqlOid))
+            'oid=\'%s\'' % (db_table, text_tag, text_value, sql_oid))
 
     else:
         cursor.execute(
             'insert into %s values (\'%s\', \'%s\', \'%s\', '
-            '\'read-write\')' % (dbTable, sqlOid, textTag, textValue))
+            '\'read-write\')' % (db_table, sql_oid, text_tag, text_value))
 
     cursor.close()
 
     if not context['count']:
-        return str(context['startOID']), ':sql', dbTable
+        return str(context['startOID']), ':sql', db_table
 
     else:
         raise error.NoDataNotification()
 
 
 def shutdown(**context):
-    dbConn = moduleContext.get('dbConn')
-    if dbConn:
+    db_conn = moduleContext.get('dbConn')
+    if db_conn:
         if 'mode' in context and context['mode'] == 'recording':
-            dbConn.commit()
+            db_conn.commit()
 
-        dbConn.close()
+        db_conn.close()

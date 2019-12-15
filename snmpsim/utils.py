@@ -28,3 +28,11 @@ def try_load(module, package=None):
 
     except ImportError:
         return
+
+
+def split(val, sep):
+    for x in (3, 2, 1):
+        if val.find(sep * x) != -1:
+            return val.split(sep * x)
+
+    return [val]
