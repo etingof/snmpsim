@@ -25,6 +25,8 @@ Revision 1.0.0, released XX-12-2019
   Some legacy, backward compatibility CLI options have been dropped by
   way of this change.
 
+- Remove `execfile` use on Py2.
+
 Revision 0.4.8, released XX-08-2019
 -----------------------------------
 

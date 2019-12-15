@@ -163,3 +163,5 @@ rm -f $SNMPREC_LOG
 #[ -z $MIB2DEV_LOG ] && { echo "Empty .snmprec generated"; exit 1 ; }
 #
 #rm -f $MIB2DEV_LOG
+
+echo "It works! \o/"

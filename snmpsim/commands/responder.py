@@ -1037,11 +1037,8 @@ def main():
                 }
 
                 try:
-                    if sys.version_info[0] > 2:
-                        exec(compile(open(mod).read(), mod, 'exec'), ctx)
-
-                    else:
-                        execfile(mod, ctx)
+                    with open(mod) as fl:
+                        exec(compile(fl.read(), mod, 'exec'), ctx)
 
                 except Exception as exc:
                     log.error(
@@ -1049,9 +1046,8 @@ def main():
                         '%s' % (mod, exc))
                     return 1
 
-                else:
-                    # moduleContext, agentContexts, recordContexts
-                    variation_modules[alias] = ctx, {}, {}
+                # moduleContext, agentContexts, recordContexts
+                variation_modules[alias] = ctx, {}, {}
 
         log.info('A total of %s modules found in '
                  '%s' % (len(variation_modules), variation_modules_dir))
