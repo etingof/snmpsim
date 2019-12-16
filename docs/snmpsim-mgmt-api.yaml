@@ -77,7 +77,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/Endpoint'
+              $ref: "#/components/schemas/Endpoint"
       responses:
         "201":
           description: Null response
@@ -178,7 +178,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/Recording'
+              $ref: "#/components/schemas/Recording"
           text/plain:
             schema:
               type: string
@@ -277,7 +277,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/Agent'
+              $ref: "#/components/schemas/Agent"
       responses:
         "201":
           description: Null response
@@ -362,7 +362,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/User'
+              $ref: "#/components/schemas/User"
       responses:
         "204":
           description: Null response
@@ -428,7 +428,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/Community'
+              $ref: "#/components/schemas/Community"
       responses:
         "204":
           description: Null response
@@ -505,7 +505,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/Lab'
+              $ref: "#/components/schemas/Lab"
       responses:
         "201":
           description: Null response
@@ -649,7 +649,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/LabPowerState'
+              $ref: "#/components/schemas/LabPowerState"
       responses:
         "204":
           description: Null response
@@ -683,7 +683,7 @@ components:
           description: >
             SNMP security level.
           type: string
-          enum: [noAuthNoPriv, authNoPriv, authPriv]
+          enum: ["noAuthNoPriv", "authNoPriv", "authPriv"]
         user:
           description: >
             USM user name.
@@ -700,7 +700,7 @@ components:
           description: >
             User authentication protocol
           type: string
-          enum: [md5, sha, sha224, sha256, sha384, sha512, none]
+          enum: ["md5", "sha", "sha224", "sha256", "sha384", "sha512", "none"]
         privKey:
           description: >
             USM user privacy (encryption) key
@@ -709,8 +709,8 @@ components:
           maxLength: 32
         privProtocol:
           type: string
-          enum: [des, 3des, aes, aes128, aes192, aes192blmt, aes256,
-                 aes256blmt, none]
+          enum: ["des", "3des", "aes", "aes128", "aes192", "aes192blmt", "aes256",
+                 "aes256blmt", "none"]
 
     Community:
       description: >
@@ -734,7 +734,7 @@ components:
           description: >
             SNMP security model.
           type: string
-          enum: [v1, v2c]
+          enum: ["v1", "v2c"]
         community:
           type: string
 
@@ -787,7 +787,7 @@ components:
           format: int64
         domain:
           type: string
-          enum: [udpv4, udpv6]
+          enum: ["udpv4", "udpv6"]
         address:
           type: string
           pattern: ".*"  # IPv4:port, IPv6:port, FQDN(?)
@@ -828,8 +828,8 @@ components:
           description: >
             SNMP type of the value associated with this managed object instance.
           type: string
-          enum: [integer32, octetstring, counter32, counter64, gauge32,
-                 opaque, ipaddress, null, timeticks]
+          enum: ["integer32", "octetstring", "counter32", "counter64", "gauge32",
+                 "opaque", "ipaddress", "null", "timeticks"]
         value:
           description: >
             Static value returned by this managed object instance
@@ -838,8 +838,8 @@ components:
           description: >
             Variation module invoked when serving this managed object instance
           type: string
-          enum: [numeric, error, delay, notification, multiplex, redis,
-                 sql, subprocess, writecache]
+          enum: ["numeric", "error", "delay", "notification", "multiplex", "redis",
+                 "sql", "subprocess", "writecache"]
         variationOptions:
           type: string
 
@@ -953,7 +953,7 @@ components:
           description: >
             State of SNMP agents in this lab
           type: string
-          enum: [up, down]
+          enum: ["up", "down"]
 
     Labs:
       description: >
@@ -971,7 +971,7 @@ components:
           description: >
             Power state of all SNMP agents in this lab
           type: string
-          enum: [up, down]
+          enum: ["up", "down"]
 
     Error:
       type: object
