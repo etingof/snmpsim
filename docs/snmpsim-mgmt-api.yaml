@@ -139,104 +139,6 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
-  /selectors:
-    description: >
-      This resource represents a list of all existing simulation data
-      selectors.
-    get:
-      summary: >
-        List all existing simulation data selectors
-      operationId: listSelectors
-      tags:
-        - selectors
-      responses:
-        "200":
-          description: >
-            An array of simulation data selectors
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Selectors"
-        default:
-          description: Unspecified error
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
-    post:
-      summary: Create a new simulation data selector
-      operationId: createSelector
-      tags:
-        - selectors
-      requestBody:
-        description: >
-          Receive a new selector object referring to an existing simulation
-          data object.
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Selector'
-      responses:
-        "201":
-          description: Null response
-        default:
-          description: Unspecified error
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
-
-  /selectors/{selectorId}:
-    description: >
-      This resource represents a single simulation data selector identified
-      by `selectorId`.
-    get:
-      summary: Info for a specific simulation data selectors
-      operationId: showSelectorById
-      tags:
-        - selectors
-      parameters:
-        - name: selectorId
-          in: path
-          required: true
-          description: The ID of the selector to retrieve
-          schema:
-            type: integer
-      responses:
-        "200":
-          description: Expected response to a valid request
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Selector"
-        default:
-          description: unexpected error
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
-    delete:
-      summary: Delete simulation data selector
-      operationId: deleteSelector
-      tags:
-        - selectors
-      parameters:
-        - name: selectorId
-          in: path
-          required: true
-          description: The ID of the selector to retrieve
-          schema:
-            type: integer
-      responses:
-        "201":
-          description: Null response
-        default:
-          description: Unspecified error
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
 
   /recordings:
     description: >
@@ -952,6 +854,10 @@ components:
           description: >
             Descriptive name of this recording e.g. "cisco5300 routing and L2 tables"
           type: string
+        path:
+          description: >
+            Path to the `.snmprec` file on the filesystem under a simulation data
+            directory where this recording resides.
         records:
           type: array
           items:
@@ -970,80 +876,6 @@ components:
           items:
             $ref: "#/components/schemas/Recording"
 
-    Selector:
-      description: >
-        Set of rules for SNMP agent to choose recordings collection
-        associated with this selector. All of the fields in the selector must
-        match for this selector to be chosen.
-      type: object
-      required:
-        - id
-      properties:
-        id:
-          type: integer
-          format: int64
-        name:
-          description: >
-            Descriptive name of this selector e.g. "agentA at endpointB when
-            queried from addressC using SNMP community `secret`"
-          type: string
-        contextEngineId:
-          description: >
-            This context is applicable for queries for this SNMP context engine ID.
-            Empty value matches SNMP engine ID of SNMP engine considering this
-            selector.
-          type: string
-        contextName:
-          description: >
-            This context is applicable for queries for this SNMP context name.
-          type: string
-        endpoint:
-          description: >
-            This context is applicable for queries coming via this endpoint.
-            Empty value matches any endpoint.
-          type: integer
-          format: int64
-        source:
-          description: >
-            This context is applicable for queries coming from this network
-            address. Empty value matches any source.
-          type: string
-        model:
-          description: >
-            This context is applicable for queries coming over this SNMP
-            security model.
-          type: string
-          enum: [v1, v2c, any]
-        level:
-          description: >
-            This context is applicable for queries coming at this SNMP security
-            level.
-          type: string
-          enum: [noAuthNoPriv, authNoPriv, authPriv, any]
-        username:
-          description: >
-            This context is applicable for queries coming with this SNMPv3 USM
-            user name. Empty value matches any user name.
-          type: string
-        community:
-          description: >
-            This context is applicable for queries coming with this SNMPv1/v2c
-            community name. Empty value matches any community name.
-          type: string
-        recordings:
-          description: >
-            ID of SNMP recording associated with this selector.
-          type: integer
-          format: int64
-
-    Selectors:
-      description: >
-        Ordered list of selector IDs for SNMP agent to consider. First match
-        satisfies the query.
-      type: array
-      items:
-        $ref: "#/components/schemas/Selector"
-
     Agent:
       description: >
         Represents SNMP agent. Consists of SNMP engine and transport
@@ -1059,6 +891,39 @@ components:
           type: string
         engine:
           $ref: "#/components/schemas/Engine"
+        selectors:
+          description: >
+            Ordered list of selectors probed by the agent to find a simulation
+            data file. Default selector set is:
+
+            1. ${context-engine-id}/${context-name}/${transport-id}/${source-address}.snmprec
+
+            2. ${context-engine-id}/${context-name}/${transport-id}.snmprec
+
+            3. ${context-engine-id}/${context-name}.snmprec
+
+            4. ${context-engine-id}.snmprec
+
+          type: array
+          items:
+            description: >
+              Each selector should end up being a path to a simulation data
+              file relative to the command responder's data directory. The
+              value of the selector can be static or, more likely, it contains
+              templates that are expanded at run time. Each template can expand
+              into some property of the inbound request.
+
+              Known templates include:
+
+              * ${context-engine-id}
+
+              * ${context-name}
+
+              * ${endpoint-id}
+
+              * ${source-address}
+
+            type: string
 
     Agents:
       type: array
