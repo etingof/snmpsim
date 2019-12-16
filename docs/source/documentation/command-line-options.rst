@@ -125,11 +125,18 @@ Recognized log levels are:
 * *info* - log informational and error messages only
 * *error* - log error messages only
 
-SNMP Simulator options
-----------------------
+SNMP command responders
+-----------------------
 
-SNMP Simulator can be run as the *snmpsim-command-responder* program taking
-the following command-line options.
+SNMP Simulator can be run as *snmpsim-command-responder* (full version) or
+*snmpsim-command-responder-lite* (lightweight version). Both programs
+take the following common command-line options.
+
+Lite command responder options
+------------------------------
+
+The lightweight SNMP command responder implementation is limited to SNMP v1
+and v2c protocol versions.
 
 **--daemonize**
 +++++++++++++++
@@ -223,12 +230,13 @@ startup.
 
 The default is off.
 
-**--args-from-file**
-++++++++++++++++++++
+**--max-varbinds**
+++++++++++++++++++
 
-All command-line options to *snmpsim-command-responder* could be stored in a
-file and passes through this option. File could be easier to manage, and does
-not impose any limit on the length of the command line.
+Maximum number of SNMP objects to serve in response to the *GETBULK* command
+per each requested variable-binding.
+
+The default is *64*.
 
 **--transport-id-offset**
 +++++++++++++++++++++++++
@@ -243,14 +251,72 @@ this offset.
 
 The default is one.
 
-**--v2c-arch**
+**--data-dir**
 ++++++++++++++
 
-With *--v2c-arch* flag on, SNMP simulator will use the lightweight SNMP
-implementation limited to SNMP v1 and v2c protocol versions. Use this
-for faster operation.
+Specifies path to the directory where SNMP simulator should look for simulation
+data in form of *.snmprec*, *.snmprec.bz2*, *.snmpwalk* or *.sapwalk* files.
+All files found beneath *--data-dir* will be considered as sources of SNMP
+simulation data and their paths will be used for SNMP configuration purposes.
 
-Default is to use SNMPv3 framework.
+Default search path is dependent on the platform. On Linux it is:
+
+* `$HOME/.snmpsim/data`
+* `/usr/snmpsim/data`
+* `/usr/share/snmpsim/data`
+* `<program dir>/data`
+
+**--agent-udpv4-endpoint**
+++++++++++++++++++++++++++
+
+Bind SNMP agent to the given UDP-over-IPv4 transport endpoint in the form of
+*IP:port*.
+
+Each occurrence of this option creates a new transport endpoint. All SNMP
+engines created afterwards (by *--v3-engine-id* option) up to the next
+*--agent-* option will reside behind this transport endpoint.
+
+.. code-block:: bash
+
+   $ snmpsim-command-responder --agent-udpv4-endpoint=127.0.0.1:161
+
+.. note::
+
+   Binding ports less than 1024 on UNIX requires superuser privileges.
+
+**--agent-udpv6-endpoint**
+++++++++++++++++++++++++++
+
+Bind SNMP agent to the given UDP-over-IPv6 transport endpoint in the form of
+*[IP]:port*.
+
+Each occurrence of this option creates a new transport endpoint. All SNMP
+engines created afterwards (by *--v3-engine-id* option) up to the next
+*--agent-* option will reside behind this transport endpoint.
+
+.. code-block:: bash
+
+   $ snmpsim-command-responder --agent-udpv4-endpoint=[::1]:161
+
+.. note::
+
+   Binding ports less than 1024 on UNIX requires superuser privileges.
+
+Full version command responder options
+--------------------------------------
+
+Full version of SNMP command responder is based on SNMPv3 architecture,
+it is capable of handling all SNMP versions i.e. 1, 2c qnd 3.
+
+Full version of SNMP command responder understand all options of the lite
+version, plus the following SNMPv3-specific options.
+
+**--args-from-file**
+++++++++++++++++++++
+
+All command-line options to *snmpsim-command-responder* could be stored in a
+file and passes through this option. File could be easier to manage, and does
+not impose any limit on the length of the command line.
 
 **--v3-only**
 +++++++++++++
@@ -367,62 +433,3 @@ SNMPv3 message encryption protocol to use. Valid values are:
 +------------+------------------------+----------------------+
 | 3DES       | Triple DES EDE         | RFC Draft            |
 +------------+------------------------+----------------------+
-
-**--data-dir**
-++++++++++++++
-
-Specifies path to the directory where SNMP simulator should look for simulation
-data in form of *.snmprec*, *.snmprec.bz2*, *.snmpwalk* or *.sapwalk* files.
-All files found beneath *--data-dir* will be considered as sources of SNMP
-simulation data and their paths will be used for SNMP configuration purposes.
-
-Default search path is dependent on the platform. On Linux it is:
-
-* `$HOME/.snmpsim/data`
-* `/usr/snmpsim/data`
-* `/usr/share/snmpsim/data`
-* `<program dir>/data`
-
-**--max-varbinds**
-++++++++++++++++++
-
-Maximum number of SNMP objects to serve in response to the *GETBULK* command
-per each requested variable-binding.
-
-The default is *64*.
-
-**--agent-udpv4-endpoint**
-++++++++++++++++++++++++++
-
-Bind SNMP agent to the given UDP-over-IPv4 transport endpoint in the form of
-*IP:port*.
-
-Each occurrence of this option creates a new transport endpoint. All SNMP
-engines created afterwards (by *--v3-engine-id* option) up to the next
-*--agent-* option will reside behind this transport endpoint.
-
-.. code-block:: bash
-
-   $ snmpsim-command-responder --agent-udpv4-endpoint=127.0.0.1:161
-
-.. note::
-
-   Binding ports less than 1024 on UNIX requires superuser privileges.
-
-**--agent-udpv6-endpoint**
-++++++++++++++++++++++++++
-
-Bind SNMP agent to the given UDP-over-IPv6 transport endpoint in the form of
-*[IP]:port*.
-
-Each occurrence of this option creates a new transport endpoint. All SNMP
-engines created afterwards (by *--v3-engine-id* option) up to the next
-*--agent-* option will reside behind this transport endpoint.
-
-.. code-block:: bash
-
-   $ snmpsim-command-responder --agent-udpv4-endpoint=[::1]:161
-
-.. note::
-
-   Binding ports less than 1024 on UNIX requires superuser privileges.

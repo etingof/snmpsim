@@ -17,11 +17,10 @@ snmpsim-command-responder \
 
 SNMPSIMD_1_PID=$!
 
-snmpsim-command-responder \
+snmpsim-command-responder-lite \
     --log-level error \
     --data-dir data \
     --variation-modules-dir variation \
-    --v2c-arch \
     --agent-udpv4-endpoint 127.0.0.1:1163 &
 
 SNMPSIMD_2_PID=$!
@@ -144,7 +143,7 @@ snmpsim-record-commands \
 
 rm -f $SNMPREC_LOG
 
-# test --v2c-arch snmpsim instance
+# test lite snmpsim instance
 snmpsim-record-commands \
     --log-level error \
     --output-file $SNMPREC_LOG \

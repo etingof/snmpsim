@@ -27,6 +27,17 @@ Revision 1.0.0, released XX-12-2019
 
 - Remove `execfile` use on Py2.
 
+- Split monolithic command responder onto many specialized modules and
+  two command responder applications: one implementing fully-fledged
+  SNMPv3 architecture (supporting all SNMP versions) and the other
+  implementing just v1 and v2c. The second one is lighter on the
+  resources.
+
+  So we now have two daemons:
+
+  * snmpsim-command-responder
+  * snmpsim-command-responder-lite
+
 Revision 0.4.8, released XX-08-2019
 -----------------------------------
 
