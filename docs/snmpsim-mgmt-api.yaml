@@ -476,6 +476,156 @@ paths:
               schema:
                 $ref: "#/components/schemas/Error"
 
+  /engines/{id}/endpoint/{endpoint_id}:
+    description: >
+      This resource represents a SNMP transport endpoint identified by
+      `endpoint_id` associated with SNMP engine `id`.
+    put:
+      summary: Attach existing SNMP transport endpoint to SNMP engine
+      tags:
+        - engines
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: The ID of the SNMP engine
+          schema:
+            type: integer
+        - name: endpoint_id
+          in: path
+          required: true
+          description: The ID of the SNMP transport endpoint
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Null response
+        default:
+          description: Unspecified error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    delete:
+      summary: Remove SNMP USM user from SNMP engine
+      tags:
+        - engines
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: The ID of the SNMP engine
+          schema:
+            type: integer
+        - name: endpoint_id
+          in: path
+          required: true
+          description: The ID of the SNMP transport endpoint
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Null response
+        default:
+          description: Unspecified error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+
+  /selectors:
+    description: >
+      This resource represents a list of all SNMP simulation data selectors.
+    get:
+      summary: >
+        List all existing SNMP simulation data selectors
+      tags:
+        - selectors
+      responses:
+        "200":
+          description: >
+            An array of SNMP simulation data selectors
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Selectors"
+        default:
+          description: Unspecified error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    post:
+      summary: Create a new SNMP simulation data selector
+      tags:
+        - selectors
+      requestBody:
+        description: >
+          New SNMP data selectors
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Selector"
+      responses:
+        "201":
+          description: Null response
+        default:
+          description: Unspecified error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /selectors/{id}:
+    description: >
+      This resource represents a single SNMP simulation data selector
+      by `id`.
+    get:
+      summary: Info for a specific SNMP simulation data selector
+      tags:
+        - selectors
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: The ID of the selector to retrieve
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Expected response to a valid request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Selector"
+        default:
+          description: unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    delete:
+      summary: Delete SNMP simulation data selector
+      tags:
+        - agents
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: The ID of the selector to retrieve
+          schema:
+            type: integer
+      responses:
+        "201":
+          description: Null response
+        default:
+          description: Unspecified error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
   /agents:
     description: >
       This resource represents a list of all SNMP agents.
@@ -613,6 +763,74 @@ paths:
           in: path
           required: true
           description: The ID of the SNMP engine
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Null response
+        default:
+          description: Unspecified error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /agents/{id}/selector/{selector_id}/{order}:
+    description: >
+      This resource represents simulation data selector identified by
+      `selector_id` associated with SNMP agent `id`.
+    put:
+      summary: Add existing simulation data selecltor to SNMP agent
+      tags:
+        - agents
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: The ID of the SNMP agent
+          schema:
+            type: integer
+        - name: selector_id
+          in: path
+          required: true
+          description: The ID of the simulation data selector
+          schema:
+            type: integer
+        - name: order
+          in: path
+          required: true
+          description: Relative matching order of this selector
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Null response
+        default:
+          description: Unspecified error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /agents/{id}/selector/{selector_id}:
+    description: >
+      This resource represents simulation data selector identified by
+      `selector_id` associated with SNMP agent `id`.
+    delete:
+      summary: Remove simulation data selector from SNMP agent
+      tags:
+        - agents
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: The ID of the SNMP agent
+          schema:
+            type: integer
+        - name: selector_id
+          in: path
+          required: true
+          description: The ID of the simulation data selector
           schema:
             type: integer
       responses:
@@ -828,11 +1046,6 @@ components:
           description: >
             Descriptive name of this transport endpoint e.g. "port123 at vif456"
           type: string
-        engine_id:
-          description: >
-            SNMP engine ID binding this endpoint
-          type: integer
-          format: int64
         domain:
           type: string
           enum: ["udpv4", "udpv6"]
@@ -928,6 +1141,13 @@ components:
           items:
             type: integer
             format: int64
+        endpoints:
+          description: >
+            SNMP transport endpoint IDs associated with this SNMP engine
+          type: array
+          items:
+            type: integer
+            format: int64
 
     Engines:
       description: >
@@ -959,9 +1179,9 @@ components:
         id:
           type: integer
           format: int64
-        name:
+        comment:
           description: >
-            Descriptive name of this selector
+            Description of this selector
           type: string
 
         template:
@@ -1060,11 +1280,11 @@ components:
           items:
             type: integer
             format: int64
-        state:
+        power:
           description: >
-            State of SNMP agents in this lab
+            Power state of SNMP agents in this lab
           type: string
-          enum: ["up", "down"]
+          enum: ["on", "off"]
 
     Labs:
       description: >
