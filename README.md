@@ -25,6 +25,7 @@ Features
 * Can gather simulation data from external program invocation or a SQL database
 * Can trigger SNMP TRAP/INFORMs on SET operations
 * Capable to simultaneously simulate tens of thousands of Agents
+* Offers REST API based control plane
 * Easy to extend by Python scripting
 
 
@@ -105,6 +106,11 @@ key-value stores and other sources of information.
 We maintain publicly available SNMP simulator instance at 
 [demo.snmplabs.com](http://snmplabs.com/snmpsim/public-snmp-simulator.html). You are
 welcome to query it as much as you wish.
+
+Besides stand-alone deployment described above, third-party
+[SNMP Simulator control plane](https://github.com/etingof/snmpsim-control-plane)
+project offers REST API managed mass deployment of multiple `snmpsim-command-responder`
+instances.
 
 Documentation
 -------------
