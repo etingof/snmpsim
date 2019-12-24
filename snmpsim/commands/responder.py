@@ -35,6 +35,7 @@ from snmpsim import utils
 from snmpsim import variation
 from snmpsim.error import NoDataNotification
 from snmpsim.error import SnmpsimError
+from snmpsim.reporting.manager import ReportingManager
 
 AUTH_PROTOCOLS = {
     'MD5': config.usmHMACMD5AuthProtocol,
@@ -227,6 +228,11 @@ def main():
         type=str, default='info', help='Logging level.')
 
     parser.add_argument(
+        '--reporting-method', type=lambda x: x.split(':'),
+        metavar='=<%s[:args]>]' % '|'.join(ReportingManager.REPORTERS),
+        default='null', help='Activity metrics reporting method.')
+
+    parser.add_argument(
         '--daemonize', action='store_true',
         help='Disengage from controlling terminal and become a daemon')
 
@@ -345,6 +351,14 @@ def main():
             sys.stderr.write('%s\r\n' % exc)
             parser.print_usage(sys.stderr)
             return 1
+
+    try:
+        ReportingManager.configure(*args.reporting_method)
+
+    except SnmpsimError as exc:
+        sys.stderr.write('%s\r\n' % exc)
+        parser.print_usage(sys.stderr)
+        return 1
 
     if args.daemonize:
         try:

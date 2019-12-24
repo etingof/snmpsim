@@ -13,6 +13,7 @@ from pyasn1.type import univ
 from pysnmp import error
 from pysnmp.smi.error import MibOperationError
 
+from snmpsim import log
 from snmpsim.error import NoDataNotification
 from snmpsim.error import SnmpsimError
 from snmpsim.record import dump
@@ -20,7 +21,7 @@ from snmpsim.record import mvc
 from snmpsim.record import sap
 from snmpsim.record import snmprec
 from snmpsim.record import walk
-from snmpsim import log
+from snmpsim.reporting.manager import ReportingManager
 
 RECORD_TYPES = {
     dump.DumpRecord.ext: dump.DumpRecord(),
@@ -84,7 +85,13 @@ class SnmprecRecordMixIn(object):
                     # invoke variation module
                     oid, tag, value = handler(oid, tag, value, **context)
 
+                    ReportingManager.update_metrics(
+                        variation=mod_name, variation_call_count=1, **context)
+
             else:
+                ReportingManager.update_metrics(
+                    variation=mod_name, variation_failure_count=1, **context)
+
                 raise SnmpsimError(
                     'Variation module "%s" referenced but not '
                     'loaded\r\n' % mod_name)
@@ -153,7 +160,7 @@ class SnmprecRecordMixIn(object):
                 text_oid, text_tag, text_value, **context)
 
         elif 'stopFlag' in context and context['stopFlag']:
-            raise error.NoDataNotification()
+            raise NoDataNotification()
 
         return text_oid, text_tag, text_value
 

@@ -33,6 +33,7 @@ from snmpsim import utils
 from snmpsim import variation
 from snmpsim.error import NoDataNotification
 from snmpsim.error import SnmpsimError
+from snmpsim.reporting.manager import ReportingManager
 
 SNMP_2TO1_ERROR_MAP = {
     rfc1902.Counter64.tagSet: 5,
@@ -77,6 +78,11 @@ def main():
     parser.add_argument(
         '--log-level', choices=log.LEVELS_MAP,
         type=str, default='info', help='Logging level.')
+
+    parser.add_argument(
+        '--reporting-method', type=lambda x: x.split(':'),
+        metavar='=<%s[:args]>]' % '|'.join(ReportingManager.REPORTERS),
+        default='null', help='Activity metrics reporting method.')
 
     parser.add_argument(
         '--daemonize', action='store_true',
@@ -182,6 +188,14 @@ def main():
             sys.stderr.write('%s\r\n' % exc)
             parser.print_usage(sys.stderr)
             return 1
+
+    try:
+        ReportingManager.configure(*args.reporting_method)
+
+    except SnmpsimError as exc:
+        sys.stderr.write('%s\r\n' % exc)
+        parser.print_usage(sys.stderr)
+        return 1
 
     if args.daemonize:
         try:
