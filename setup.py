@@ -14,6 +14,7 @@
 import glob
 import os
 import sys
+import setuptools
 
 classifiers = """\
 Development Status :: 5 - Production/Stable
@@ -58,23 +59,10 @@ if sys.version_info[:2] < (2, 7):
     print("ERROR: this package requires Python 2.7 or later!")
     sys.exit(1)
 
-try:
-    from setuptools import setup
-
-    params = {
-        'install_requires': ['pysnmp>=4.4.3,<5.0.0'],
-        'zip_safe': False  # this is due to data and variation dirs
-    }
-
-except ImportError:
-    for arg in sys.argv:
-        if 'egg' in arg:
-            howto_install_setuptools()
-            sys.exit(1)
-
-    from distutils.core import setup
-
-    params = {'requires': ['pysnmp(>=4.4.3,<5.0.0)']}
+params = {
+    'install_requires': ['pysnmp>=4.4.3,<5.0.0'],
+    'zip_safe': False  # this is due to data and variation dirs
+}
 
 doclines = [x.strip() for x in (__doc__ or '').split('\n') if x]
 
@@ -90,13 +78,8 @@ params.update(
      'license': 'BSD',
      'platforms': ['any'],
      'classifiers': [x for x in classifiers.split('\n') if x],
-     'packages': [
-        'snmpsim',
-        'snmpsim.grammar',
-        'snmpsim.record',
-        'snmpsim.record.search',
-        'snmpsim.commands'
-     ],
+     'packages': setuptools.find_packages(),
+     'include_package_data': True,
      'entry_points': {
         'console_scripts': [
             'snmpsim-manage-records = snmpsim.commands.rec2rec:main',
@@ -163,4 +146,4 @@ if 'py2exe' in sys.argv:
 
     print("!!! Make sure your pysnmp/pyasn1 packages are NOT .egg'ed!!!")
 
-setup(**params)
+setuptools.setup(**params)

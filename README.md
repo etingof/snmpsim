@@ -12,7 +12,6 @@ distributed under 2-clause [BSD license](http://snmplabs.com/snmpsim/license.htm
 Features
 --------
 
-* Pure-Python, easy to deploy and highly portable
 * SNMPv1/v2c/v3 support
 * SNMPv3 USM supports MD5/SHA/SHA224/SHA256/SHA384/SHA512 auth and
   DES/3DES/AES128/AES192/AES256 privacy crypto algorithms
@@ -26,8 +25,9 @@ Features
 * Can trigger SNMP TRAP/INFORMs on SET operations
 * Capable to simultaneously simulate tens of thousands of Agents
 * Offers REST API based control plane
-* Easy to extend by Python scripting
-
+* Gathers and reports extensive activity metrics
+* Pure-Python, easy to deploy and highly portable
+* Can be extended by loadable Python snippets
 
 Download
 --------
