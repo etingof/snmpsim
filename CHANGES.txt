@@ -38,6 +38,21 @@ Revision 1.0.0, released XX-12-2019
   * snmpsim-command-responder
   * snmpsim-command-responder-lite
 
+- Add activity reporting feature
+
+  On every query, SNMP simulator command responder calls its
+  "reporting" subsystem. If configured, it invokes one of the
+  "modules" responsible for doing something with request
+  information.
+
+  Included modules ("fulljson" and "minimaljson" reporters) accumulate
+  and periodically dump JSON documents containing request counters scoped
+  by SNMP command processing steps.
+
+  Future modules may just send out the information to external
+  collectors e.g. Graphite/Carbon or store it in some other format
+  e.g. Prometheus.
+
 Revision 0.4.8, released XX-08-2019
 -----------------------------------
 

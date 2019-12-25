@@ -6,46 +6,26 @@
 #
 # Simulation data file management tools
 #
-import argparse
 import os
 import stat
-import sys
-import traceback
-from hashlib import md5
 
-from pyasn1 import debug as pyasn1_debug
-from pyasn1.codec.ber import decoder
-from pyasn1.codec.ber import encoder
-from pyasn1.compat.octets import null
 from pyasn1.compat.octets import str2octs
 from pyasn1.type import univ
-from pysnmp import debug as pysnmp_debug
-from pysnmp import error
 from pysnmp.carrier.asyncore.dgram import udp
 from pysnmp.carrier.asyncore.dgram import udp6
 from pysnmp.carrier.asyncore.dgram import unix
-from pysnmp.carrier.asyncore.dispatch import AsyncoreDispatcher
-from pysnmp.entity import config
-from pysnmp.entity import engine
-from pysnmp.entity.rfc3413 import cmdrsp
-from pysnmp.entity.rfc3413 import context
-from pysnmp.proto import api
 from pysnmp.proto import rfc1902
-from pysnmp.proto import rfc1905
-from pysnmp.smi import exval, indices
+from pysnmp.smi import exval
 from pysnmp.smi.error import MibOperationError
 
-from snmpsim import confdir
-from snmpsim import daemon
-from snmpsim import endpoints
 from snmpsim import log
-from snmpsim import utils
 from snmpsim import variation
 from snmpsim.error import NoDataNotification
 from snmpsim.error import SnmpsimError
 from snmpsim.record.search.database import RecordIndex
 from snmpsim.record.search.file import get_record
 from snmpsim.record.search.file import search_record_by_oid
+from snmpsim.reporting.manager import ReportingManager
 
 SELF_LABEL = 'self'
 
@@ -62,7 +42,7 @@ class DataFile(AbstractLayout):
     def __init__(self, textFile, textParser, variationModules):
         self._record_index = RecordIndex(textFile, textParser)
         self._text_parser = textParser
-        self._text_file = os.path.abspath(textFile)
+        self._text_file = textFile
         self._variation_modules = variationModules
 
     def index_text(self, forceIndexBuild=False, validateData=False):
@@ -101,9 +81,14 @@ class DataFile(AbstractLayout):
             log.error(
                 'Problem with data file or its index: %s' % exc)
 
+            ReportingManager.update_metrics(
+                data_file=self._text_file, datafile_failure_count=1,
+                transport_call_count=1, **context)
+
             return [(vb[0], error_status) for vb in var_binds]
 
         vars_remaining = vars_total = len(var_binds)
+        err_total = 0
 
         log.info(
             'Request var-binds: %s, flags: %s, '
@@ -233,6 +218,7 @@ class DataFile(AbstractLayout):
                 except Exception as exc:
                     _oid = oid
                     _val = error_status
+                    err_total += 1
                     log.error(
                         'data error at %s for %s: %s' % (self, text_oid, exc))
 
@@ -244,6 +230,11 @@ class DataFile(AbstractLayout):
             'Response var-binds: %s' % (
                 ', '.join(['%s=<%s>' % (
                     vb[0], vb[1].prettyPrint()) for vb in rsp_var_binds])))
+
+        ReportingManager.update_metrics(
+            data_file=self._text_file, varbind_count=vars_total,
+            datafile_failure_count=err_total, transport_call_count=1,
+            **context)
 
         return rsp_var_binds
 

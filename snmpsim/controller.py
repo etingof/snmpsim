@@ -39,14 +39,16 @@ class MibInstrumController(object):
          security_model,
          security_name,
          security_level,
+         context_engine_id,
          context_name,
          pdu_type) = (execCtx['transportDomain'],
                       execCtx['transportAddress'],
                       execCtx['securityModel'],
                       execCtx['securityName'],
                       execCtx['securityLevel'],
+                      execCtx['contextEngineId'],
                       execCtx['contextName'],
-                      execCtx['pdu'].getTagSet())
+                      execCtx['pdu'].__class__.__name__)
 
         log.info(
             'SNMP EngineID %s, transportDomain %s, transportAddress %s, '
@@ -57,12 +59,14 @@ class MibInstrumController(object):
                     security_name, security_level))
 
         return {'snmpEngine': snmp_engine,
-                'transportDomain': transport_domain,
+                'transportDomain': rfc1902.ObjectIdentifier(transport_domain),
                 'transportAddress': transport_address,
                 'securityModel': security_model,
                 'securityName': security_name,
                 'securityLevel': security_level,
+                'contextEngineId': context_engine_id,
                 'contextName': context_name,
+                'pduType': pdu_type,
                 'nextFlag': next_flag,
                 'setFlag': set_flag}
 

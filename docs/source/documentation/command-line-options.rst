@@ -132,11 +132,15 @@ SNMP Simulator can be run as *snmpsim-command-responder* (full version) or
 *snmpsim-command-responder-lite* (lightweight version). Both programs
 take the following common command-line options.
 
-Lite command responder options
-------------------------------
+Common command responders options
+---------------------------------
 
 The lightweight SNMP command responder implementation is limited to SNMP v1
-and v2c protocol versions.
+and v2c protocol versions. Full SNMP command responder implementation supports
+all SNMP versions.
+
+The following options are respected by both SNMP command responder
+applications.
 
 **--daemonize**
 +++++++++++++++
@@ -175,6 +179,50 @@ data lookup. The indices for all .snmprec files will be built on process
 start unless they already exist and not outdated.
 
 Default is `$TEMPDIR/snmpsim`.
+
+**--reporting-method**
+++++++++++++++++++++++
+
+SNMP command responder applications can collect and periodically emit
+various activity metrics.
+
+The default is *null* that disables activity collection and reporting.
+
+**--reporting-method=fulljson**
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The *fulljson* activity reporting method collects and reports highly
+detailed activity metrics. It may become expensive when simulating thousands
+of transport endpoints or SNMP agents.
+
+The *fulljson* reporting method supports the following sub-options:
+
+.. code-block:: bash
+
+    --reporting-method=fulljson:reports-dir
+
+Where:
+
+* *reports-dir* -- location on the filesystem where this reporting module
+  should dump collected metrics.
+
+**--reporting-method=minimaljson**
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The *minimaljson* activity reporting method collects and reports minimal
+activity metrics. Essentially, it collapses individual metrics for transport
+endpoints, agents, data files into one.
+
+The *minimaljson* reporting method supports the following sub-options:
+
+.. code-block:: bash
+
+    --reporting-method=minimaljson:reports-dir
+
+Where:
+
+* *reports-dir* -- location on the filesystem where this reporting module
+  should dump collected metrics.
 
 **--variation-modules-dir**
 +++++++++++++++++++++++++++
