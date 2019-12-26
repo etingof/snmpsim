@@ -7,6 +7,7 @@
 # SNMP Agent Simulator: fully-fledged SNMP v1/v2c/v3 command responder
 #
 import argparse
+import functools
 import os
 import sys
 import traceback
@@ -63,6 +64,8 @@ DESCRIPTION = (
     'SNMP agent simulator: responds to SNMP v1/v2c/v3 requests, variate '
     'responses based on transport addresses, SNMP community name, SNMPv3 '
     'context or via variation modules.')
+
+V3_OPTIONS = ('SNMPv3 options')
 
 
 def probe_hash_context(responder, snmp_engine):
@@ -198,11 +201,19 @@ class BulkCommandResponder(cmdrsp.BulkCommandResponder):
 
 def main():
 
-    parser = argparse.ArgumentParser(description=DESCRIPTION)
+    parser = argparse.ArgumentParser(add_help=False)
 
     parser.add_argument(
         '-v', '--version', action='version',
         version=utils.TITLE)
+
+    parser.add_argument(
+        '-h', action='store_true', dest='usage',
+        help='Brief usage message')
+
+    parser.add_argument(
+        '--help', action='store_true',
+        help='Detailed help message')
 
     parser.add_argument(
         '--quiet', action='store_true',
@@ -294,7 +305,94 @@ def main():
         help='Read SNMP engine(s) command-line configuration from this '
              'file. Can be useful when command-line is too long')
 
+    # We do not parse SNMP params with argparse, but we want its -h/--help
+    snmp_helper = argparse.ArgumentParser(
+        description=DESCRIPTION, add_help=False, parents=[parser])
+
+    v3_usage = """\
+Configure one or more independent SNMP engines. Each SNMP engine has a
+distinct engine ID, its own set of SNMP USM users, one or more network
+transport endpoints to listen on and its own simulation data directory.
+
+Each SNMP engine configuration starts with `--v3-engine-id <arg>` parameter
+followed by other configuration options up to the next `--v3-engine-id`
+option or end of command line
+
+Example
+-------
+
+$ snmp-command-responder \\
+    --v3-engine-id auto \\
+        --data-dir ./data --agent-udpv4-endpoint=127.0.0.1:1024 \\
+    --v3-engine-id auto \\
+        --data-dir ./data --agent-udpv4-endpoint=127.0.0.1:1025 \\ 
+        --data-dir ./data --agent-udpv4-endpoint=127.0.0.1:1026
+
+Besides network endpoints, simulated agents can be addressed by SNMPv1/v2c
+community name or SNMPv3 context engine ID/name. These parameters are
+configured automatically based on simulation data file paths relative to
+`--data-dir`.
+"""
+    v3_group = snmp_helper.add_argument_group(v3_usage)
+
+    v3_group.add_argument(
+        '--v3-engine-id', type=str, metavar='<HEX|auto>', default='auto',
+        help='SNMPv3 engine ID')
+
+    v3_group.add_argument(
+        '--v3-user', type=str,
+        help='SNMPv3 USM user (security) name')
+
+    v3_group.add_argument(
+        '--v3-auth-key', type=str,
+        help='SNMPv3 USM authentication key (must be > 8 chars)')
+
+    v3_group.add_argument(
+        '--v3-auth-proto', choices=AUTH_PROTOCOLS, default='NONE',
+        help='SNMPv3 USM authentication protocol')
+
+    v3_group.add_argument(
+        '--v3-priv-key', type=str,
+        help='SNMPv3 USM privacy (encryption) key (must be > 8 chars)')
+
+    v3_group.add_argument(
+        '--v3-priv-proto', choices=PRIV_PROTOCOLS, default='NONE',
+        help='SNMPv3 USM privacy (encryption) protocol')
+
+    v3_group.add_argument(
+        '--v3-context-engine-id',
+        type=lambda x: univ.OctetString(hexValue=x[2:]),
+        help='SNMPv3 context engine ID')
+
+    v3_group.add_argument(
+        '--v3-context-name', type=str, default='',
+        help='SNMPv3 context engine ID')
+
+    v3_group.add_argument(
+        '--agent-udpv4-endpoint', type=endpoints.parse_endpoint,
+        metavar='<[X.X.X.X]:NNNNN>',
+        help='SNMP agent UDP/IPv4 address to listen on (name:port)')
+
+    v3_group.add_argument(
+        '--agent-udpv6-endpoint',
+        type=functools.partial(endpoints.parse_endpoint, ipv6=True),
+        metavar='<[X:X:..X]:NNNNN>',
+        help='SNMP agent UDP/IPv6 address to listen on ([name]:port)')
+
+    v3_group.add_argument(
+        '--data-dir',
+        type=str, metavar='<DIR>',
+        help='SNMP simulation data recordings directory.')
+
     args, unparsed_args = parser.parse_known_args()
+
+    if args.usage:
+        snmp_helper.print_usage(sys.stderr)
+        return 1
+
+    if args.help:
+        snmp_helper.print_help(sys.stderr)
+        return 1
 
     # Reformat unparsed args into a list of (option, value) tuples
     snmp_args = []
@@ -315,7 +413,7 @@ def main():
         sys.stderr.write(
             'ERROR: Non-paired command-line key-value parameter '
             '%s\r\n' % name)
-        parser.print_usage(sys.stderr)
+        snmp_helper.print_usage(sys.stderr)
         return 1
 
     if args.cache_dir:
@@ -336,7 +434,7 @@ def main():
             sys.stderr.write(
                 'ERROR: file %s opening failure: '
                 '%s\r\n' % (args.args_from_file, exc))
-            parser.print_usage(sys.stderr)
+            snmp_helper.print_usage(sys.stderr)
             return 1
 
     with daemon.PrivilegesOf(args.process_user, args.process_group):
@@ -351,7 +449,7 @@ def main():
 
         except SnmpsimError as exc:
             sys.stderr.write('%s\r\n' % exc)
-            parser.print_usage(sys.stderr)
+            snmp_helper.print_usage(sys.stderr)
             return 1
 
         try:
@@ -359,7 +457,7 @@ def main():
 
         except SnmpsimError as exc:
             sys.stderr.write('%s\r\n' % exc)
-            parser.print_usage(sys.stderr)
+            snmp_helper.print_usage(sys.stderr)
             return 1
 
     if args.daemonize:
@@ -369,7 +467,7 @@ def main():
         except Exception as exc:
             sys.stderr.write(
                 'ERROR: cant daemonize process: %s\r\n' % exc)
-            parser.print_usage(sys.stderr)
+            snmp_helper.print_usage(sys.stderr)
             return 1
 
     if not os.path.exists(confdir.cache):
@@ -519,7 +617,7 @@ def main():
 
                 log.msg.inc_ident()
 
-                log.info('--- Data directories configuration')
+                log.info('--- Simulation data recordings configuration')
 
                 for v3_context_engine_id, ctx_data_dirs in v3_context_engine_ids:
                     snmp_context = context.SnmpContext(snmp_engine, v3_context_engine_id)

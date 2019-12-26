@@ -149,7 +149,7 @@ def main():
     parser.add_argument(
         '--data-dir', type=str, action='append', metavar='<DIR>',
         dest='data_dirs',
-        help='The location of SNMP simulation data files')
+        help='SNMP simulation data recordings directory.')
 
     endpoint_group = parser.add_mutually_exclusive_group(required=True)
 
@@ -157,13 +157,13 @@ def main():
         '--agent-udpv4-endpoint', type=str,
         action='append', metavar='<[X.X.X.X]:NNNNN>',
         dest='agent_udpv4_endpoints', default=[],
-        help='SNMP agent UDP/IPv4 address to listen for SNMP requests at')
+        help='SNMP agent UDP/IPv4 address to listen on (name:port)')
 
     endpoint_group.add_argument(
         '--agent-udpv6-endpoint', type=str,
         action='append', metavar='<[X:X:..X]:NNNNN>',
         dest='agent_udpv6_endpoints', default=[],
-        help='SNMP agent UDP/IPv6 address to listen for SNMP requests at')
+        help='SNMP agent UDP/IPv6 address to listen on ([name]:port)')
 
     args = parser.parse_args()
 
