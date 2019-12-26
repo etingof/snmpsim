@@ -264,8 +264,10 @@ class FullJsonReporter(BaseJsonReporter):
         'version': 1,
         'first_update': '{timestamp}',
         'last_update': '{timestamp}',
-        '{transport_domain}': {
-            'transport_address': '{transport_address}',
+        '{transport_protocol}': {
+            'transport_address': '{transport_address}',  # peer address
+            'transport_endpoint': '{transport_endpoint}',  # local address
+            'transport_domain': '{transport_domain}',  # endpoint ID
             'total': 0,
             '{snmp_engine}': {
                 '{security_model}': {
