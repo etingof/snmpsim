@@ -19,8 +19,8 @@ from pysnmp.carrier.asyncore.dgram import udp6
 from pysnmp.entity import engine
 
 from snmpsim import error
-from snmpsim.reporting.formats import base
 from snmpsim import log
+from snmpsim.reporting.formats import base
 
 
 def camel2snake(name):
@@ -47,7 +47,7 @@ def ensure_base_types(f):
             return item
 
         if isinstance(item, (udp.UdpTransportAddress, udp6.Udp6TransportAddress)):
-            return '%s:%s' % item.getLocalAddress()
+            return str(item[0])
 
         return item
 
@@ -90,7 +90,7 @@ class BaseJsonReporter(base.BaseReporter):
     """Common base for JSON-backed family of reporters.
     """
 
-    REPORTING_PERIOD = 3
+    REPORTING_PERIOD = 300
     REPORTING_FORMAT = ''
     REPORTING_VERSION = 1
 
@@ -323,7 +323,7 @@ class FullJsonReporter(BaseJsonReporter):
 
         try:
             metrics = metrics[kwargs['transport_domain']]
-            metrics['transport_address'] = kwargs['transport_address']
+            metrics['transport_endpoint'] = '%s:%s' % kwargs['transport_endpoint']
             metrics['total'] = (
                     metrics.get('total', 0)
                     + kwargs.get('transport_call_count', 0))
@@ -345,13 +345,19 @@ class FullJsonReporter(BaseJsonReporter):
                     metrics.get('failures', 0)
                     + kwargs.get('datafile_failure_count', 0))
 
-            metrics = metrics['variation']
-            metrics = metrics[kwargs['variation']]
-            metrics['total'] = (
-                    metrics.get('total', 0)
+            peers_metrics = metrics['peers']
+            peer_metrics = peers_metrics[kwargs['transport_address']]
+            peer_metrics['total'] = (
+                    peer_metrics.get('total', 0)
+                    + kwargs.get('transport_call_count', 0))
+
+            variations_metrics = metrics['variation']
+            variation_metrics = variations_metrics[kwargs['variation']]
+            variation_metrics['total'] = (
+                    variation_metrics.get('total', 0)
                     + kwargs.get('variation_call_count', 0))
-            metrics['failures'] = (
-                    metrics.get('failures', 0)
+            variation_metrics['failures'] = (
+                    variation_metrics.get('failures', 0)
                     + kwargs.get('variation_failure_count', 0))
 
         except KeyError:
