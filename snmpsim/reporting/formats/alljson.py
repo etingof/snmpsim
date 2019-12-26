@@ -322,7 +322,8 @@ class FullJsonReporter(BaseJsonReporter):
         metrics['last_update'] = now
 
         try:
-            metrics = metrics[kwargs['transport_domain']]
+            metrics = metrics[kwargs['transport_protocol']]
+            metrics['transport_domain'] = kwargs['transport_domain']
             metrics['transport_endpoint'] = '%s:%s' % kwargs['transport_endpoint']
             metrics['total'] = (
                     metrics.get('total', 0)

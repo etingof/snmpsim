@@ -9,6 +9,8 @@
 
 from pysnmp.proto import rfc1902
 from pysnmp.smi import exval, indices
+from pysnmp.carrier.asyncore.dgram import udp
+from pysnmp.carrier.asyncore.dgram import udp6
 
 from snmpsim import datafile
 from snmpsim import log
@@ -50,6 +52,15 @@ class MibInstrumController(object):
                       execCtx['contextName'],
                       execCtx['pdu'].__class__.__name__)
 
+        if isinstance(transport_address, udp.UdpTransportAddress):
+            transport_protocol = 'udpv4'
+
+        elif isinstance(transport_address, udp6.Udp6TransportAddress):
+            transport_protocol = 'udpv6'
+
+        else:
+            transport_protocol = 'unknown'
+
         log.info(
             'SNMP EngineID %s, transportDomain %s, transportAddress %s, '
             'securityModel %s, securityName %s, securityLevel '
@@ -62,6 +73,7 @@ class MibInstrumController(object):
                 'transportDomain': rfc1902.ObjectIdentifier(transport_domain),
                 'transportAddress': transport_address,
                 'transportEndpoint': transport_address.getLocalAddress(),
+                'transportProtocol': transport_protocol,
                 'securityModel': security_model,
                 'securityName': security_name,
                 'securityLevel': security_level,
