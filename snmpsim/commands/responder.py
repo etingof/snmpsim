@@ -392,16 +392,6 @@ def main():
         variation.initialize_variation_modules(
             variation_modules, mode='variating')
 
-    # Bind transport endpoints
-    for idx, opt in enumerate(snmp_args):
-        if opt[0] == '--agent-udpv4-endpoint':
-            snmp_args[idx] = (
-                opt[0], endpoints.IPv4TransportEndpoints().add(opt[1]))
-
-        elif opt[0] == '--agent-udpv6-endpoint':
-            snmp_args[idx] = (
-                opt[0], endpoints.IPv6TransportEndpoints().add(opt[1]))
-
     def configure_managed_objects(
             data_dirs, data_index_instrum_controller, snmp_engine=None,
             snmp_context=None):
@@ -482,16 +472,27 @@ def main():
         del _mib_instrums
         del _data_files
 
+    # Bind transport endpoints
+    for idx, opt in enumerate(snmp_args):
+        if opt[0] == '--agent-udpv4-endpoint':
+            snmp_args[idx] = (
+                opt[0], endpoints.IPv4TransportEndpoints().add(opt[1]))
+
+        elif opt[0] == '--agent-udpv6-endpoint':
+            snmp_args[idx] = (
+                opt[0], endpoints.IPv6TransportEndpoints().add(opt[1]))
+
     # Start configuring SNMP engine(s)
 
     transport_dispatcher = AsyncoreDispatcher()
 
     transport_dispatcher.registerRoutingCbFun(lambda td, t, d: td)
 
-    if snmp_args and snmp_args[0][0] != '--v3-engine-id':
+    if not snmp_args or snmp_args[0][0] != '--v3-engine-id':
         snmp_args.insert(0, ('--v3-engine-id', 'auto'))
 
-    snmp_args.append(('end-of-options', ''))
+    if snmp_args and snmp_args[-1][0] != 'end-of-options':
+        snmp_args.append(('end-of-options', ''))
 
     snmp_engine = None
 
@@ -695,7 +696,7 @@ def main():
 
             try:
                 v3_engine_id = opt[1]
-                if v3_engine_id.lower() == 'auto':
+                if not v3_engine_id or v3_engine_id.lower() == 'auto':
                     snmp_engine = engine.SnmpEngine()
 
                 else:
