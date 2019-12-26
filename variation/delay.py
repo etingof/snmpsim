@@ -73,7 +73,7 @@ def variate(oid, tag, value, **context):
                     vlist[o] = v, d
 
                 else:
-                    log.msg('delay: bad vlist syntax: '
+                    log.info('delay: bad vlist syntax: '
                             '%s' % recordContext['settings']['vlist'])
 
             recordContext['settings']['vlist'] = vlist
@@ -102,7 +102,7 @@ def variate(oid, tag, value, **context):
                     tlist[o] = v, d
 
                 else:
-                    log.msg('delay: bad tlist syntax: '
+                    log.info('delay: bad tlist syntax: '
                             '%s' % recordContext['settings']['tlist'])
 
             recordContext['settings']['tlist'] = tlist
@@ -152,10 +152,10 @@ def variate(oid, tag, value, **context):
         delay = 0
 
     elif delay > 99999:
-        log.msg('delay: dropping response for %s' % oid)
+        log.info('delay: dropping response for %s' % oid)
         raise error.NoDataNotification()
 
-    log.msg('delay: waiting %d milliseconds for %s' % (delay, oid))
+    log.info('delay: waiting %d milliseconds for %s' % (delay, oid))
 
     time.sleep(delay / 1000)  # ms
 

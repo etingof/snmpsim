@@ -624,7 +624,7 @@ configured automatically based on simulation data file paths relative to
                     # unregister default context
                     snmp_context.unregisterContextName(null)
 
-                    log.msg(
+                    log.info(
                         'SNMPv3 Context Engine ID: '
                         '%s' % snmp_context.contextEngineId.prettyPrint())
 

@@ -85,7 +85,7 @@ def variate(oid, tag, value, **context):
                     vlist[o] = v, e
 
                 else:
-                    log.msg('writecache: bad vlist syntax: '
+                    log.info('writecache: bad vlist syntax: '
                             '%s' % recordContext['settings']['vlist'])
 
             recordContext['settings']['vlist'] = vlist

@@ -7,7 +7,6 @@
 import logging
 import os
 import socket
-import stat
 import sys
 import time
 from logging import handlers

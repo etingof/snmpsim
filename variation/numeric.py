@@ -239,7 +239,7 @@ def record(oid, tag, value, **context):
 
     if moduleContext['iterations']:
         if context['stopFlag']:  # switching to final iteration
-            log.msg('numeric: %s iterations '
+            log.info('numeric: %s iterations '
                     'remaining' % moduleContext['iterations'])
 
             moduleContext['iterations'] -= 1

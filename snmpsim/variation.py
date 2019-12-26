@@ -245,7 +245,7 @@ def load_variation_modules(search_path, modules_options):
                  '%s' % (len(variation_modules), variation_modules_dir))
 
     if modules_options:
-        log.msg('WARNING: unused options for variation modules: '
+        log.info('WARNING: unused options for variation modules: '
                 '%s' % ', '.join(modules_options))
 
     return variation_modules

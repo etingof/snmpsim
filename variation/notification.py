@@ -52,7 +52,7 @@ def _cbFun(sendRequestHandle, errorIndication, errorStatus,
     oid, value = cbCtx
 
     if errorIndication or errorStatus:
-        log.msg(
+        log.info(
             'notification: for %s=%r failed with errorIndication %s, '
             'errorStatus %s' % (oid, value, errorIndication,
                                 errorStatus))
@@ -128,7 +128,7 @@ def variate(oid, tag, value, **context):
                     vlist[o] = v
 
                 else:
-                    log.msg(
+                    log.info(
                         'notification: bad vlist syntax: '
                         '%s' % recordContext['settings']['vlist'])
 
@@ -153,7 +153,7 @@ def variate(oid, tag, value, **context):
             return oid, tag, context['origValue']
 
     if args['op'] not in ('get', 'set', 'any', '*'):
-        log.msg(
+        log.info(
             'notification: unknown SNMP request type configured: '
             '%s' % args['op'])
         return context['origOid'], tag, context['errorStatus']
@@ -177,7 +177,7 @@ def variate(oid, tag, value, **context):
                 authProtocol = usmNoAuthProtocol
 
             else:
-                log.msg('notification: unknown auth proto '
+                log.info('notification: unknown auth proto '
                         '%s' % args['authproto'])
                 return context['origOid'], tag, context['errorStatus']
 
@@ -191,7 +191,7 @@ def variate(oid, tag, value, **context):
                 privProtocol = usmNoPrivProtocol
 
             else:
-                log.msg('notification: unknown privacy proto '
+                log.info('notification: unknown privacy proto '
                         '%s' % args['privproto'])
                 return context['origOid'], tag, context['errorStatus']
 
@@ -201,11 +201,11 @@ def variate(oid, tag, value, **context):
                 privProtocol=privProtocol)
 
         else:
-            log.msg('notification: unknown SNMP version %s' % args['version'])
+            log.info('notification: unknown SNMP version %s' % args['version'])
             return context['origOid'], tag, context['errorStatus']
 
         if 'host' not in args:
-            log.msg('notification: target hostname not configured for '
+            log.info('notification: target hostname not configured for '
                     'OID %s' % (oid,))
             return context['origOid'], tag, context['errorStatus']
 
@@ -216,7 +216,7 @@ def variate(oid, tag, value, **context):
             target = Udp6TransportTarget((args['host'], int(args['port'])))
 
         else:
-            log.msg('notification: unknown transport %s' % args['proto'])
+            log.info('notification: unknown transport %s' % args['proto'])
             return context['origOid'], tag, context['errorStatus']
 
         localAddress = None
@@ -231,14 +231,14 @@ def variate(oid, tag, value, **context):
                     context['transportDomain']).getLocalAddress()[0]
 
             else:
-                log.msg('notification: incompatible network transport types used by '
+                log.info('notification: incompatible network transport types used by '
                         'CommandResponder vs NotificationOriginator')
 
                 if 'bindaddr' in args:
                     localAddress = args['bindaddr']
 
         if localAddress:
-            log.msg('notification: binding to local address %s' % localAddress)
+            log.info('notification: binding to local address %s' % localAddress)
             target.setLocalAddress((localAddress, 0))
 
         # this will make target objects different based on their bind address 
@@ -278,7 +278,7 @@ def variate(oid, tag, value, **context):
             cbFun=_cbFun, cbCtx=(oid, value)
         )
 
-        log.msg('notification: sending Notification to %s with credentials '
+        log.info('notification: sending Notification to %s with credentials '
                 '%s' % (authData, target))
 
     if context['setFlag'] or 'value' not in args:

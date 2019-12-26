@@ -125,7 +125,7 @@ def variate(oid, tag, value, **context):
         db_table = moduleContext['dbTable']
 
     else:
-        log.msg('SQL table not specified for OID '
+        log.info('SQL table not specified for OID '
                 '%s' % (context['origOid'],))
         return context['origOid'], tag, context['errorStatus']
 

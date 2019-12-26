@@ -66,7 +66,7 @@ def init(**context):
         else:
             moduleContext['key-spaces-id'] = random.randrange(0, 0xffffffff)
 
-        log.msg('redis: using key-spaces-id %s' % moduleContext['key-spaces-id'])
+        log.info('redis: using key-spaces-id %s' % moduleContext['key-spaces-id'])
 
         if 'iterations' in options:
             moduleContext['iterations'] = max(0, int(options['iterations']) - 1)
@@ -79,7 +79,7 @@ def init(**context):
 
         redisScript = options.get('evalsha')
         if redisScript:
-            log.msg('redis: using server-side script %s' % redisScript)
+            log.info('redis: using server-side script %s' % redisScript)
 
     elif context['mode'] == 'variating':
         moduleContext['booted'] = time.time()
@@ -131,14 +131,14 @@ def variate(oid, tag, value, **context):
             [utils.split(x, '=') for x in utils.split(value, ',')])
 
         if 'key-spaces-id' not in settings:
-            log.msg('redis:mandatory key-spaces-id option is missing')
+            log.info('redis:mandatory key-spaces-id option is missing')
             return context['origOid'], tag, context['errorStatus']
 
         settings['period'] = float(settings.get('period', 60))
 
         if 'evalsha' in settings:
             if not dbConn.script_exists(settings['evalsha']):
-                log.msg('redis: lua script %s does not exist '
+                log.info('redis: lua script %s does not exist '
                         'at Redis' % settings['evalsha'])
                 return context['origOid'], tag, context['errorStatus']
 
@@ -162,7 +162,7 @@ def variate(oid, tag, value, **context):
 
     if ('current-keyspace' not in recordContext or
             recordContext['current-keyspace'] != keySpace):
-        log.msg('redis: now using keyspace %s (cycling period'
+        log.info('redis: now using keyspace %s (cycling period'
                 ' %s)' % (
             keySpace, recordContext['settings']['period'] or '<disabled>'))
 
@@ -291,10 +291,10 @@ def record(oid, tag, value, **context):
         dbConn.delete(keySpace + '-' + 'temp_oids_ordering')
         dbConn.rpush(moduleContext['key-spaces-id'], keySpace)
 
-        log.msg('redis: done with key-space %s' % keySpace)
+        log.info('redis: done with key-space %s' % keySpace)
 
         if 'iterations' in moduleContext and moduleContext['iterations']:
-            log.msg('redis: %s iterations remaining' % moduleContext['iterations'])
+            log.info('redis: %s iterations remaining' % moduleContext['iterations'])
 
             moduleContext['started'] = time.time()
             moduleContext['iterations'] -= 1

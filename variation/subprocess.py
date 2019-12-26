@@ -75,13 +75,13 @@ def variate(oid, tag, value, **context):
         .replace('@SUBTREEFLAG@', str(int(context['subtreeFlag']))))
         for x in split(value, ' ')]
 
-    log.msg('subprocess: executing external process "%s"' % ' '.join(args))
+    log.info('subprocess: executing external process "%s"' % ' '.join(args))
 
     try:
         handler = subprocess.check_output
 
     except AttributeError:
-        log.msg('subprocess: old Python, expect no output!')
+        log.info('subprocess: old Python, expect no output!')
 
         try:
             handler = subprocess.check_call
@@ -94,7 +94,7 @@ def variate(oid, tag, value, **context):
             args, shell=moduleContext['settings']['shell'])
 
     except getattr(subprocess, 'CalledProcessError', Exception):
-        log.msg('subprocess: external program execution failed')
+        log.info('subprocess: external program execution failed')
         return context['origOid'], tag, context['errorStatus']
 
 

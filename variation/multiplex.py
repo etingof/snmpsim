@@ -62,7 +62,7 @@ def init(**context):
                 'SNMP snapshots directory not specified')
 
         if not os.path.exists(moduleContext['dir']):
-            log.msg('multiplex: creating '
+            log.info('multiplex: creating '
                     '%s...' % moduleContext['dir'])
 
             os.makedirs(moduleContext['dir'])
@@ -87,7 +87,7 @@ def variate(oid, tag, value, **context):
             [split(x, '=') for x in split(value, ',')])
 
         if 'dir' not in recordContext['settings']:
-            log.msg('multiplex: snapshot directory not specified')
+            log.info('multiplex: snapshot directory not specified')
             return context['origOid'], tag, context['errorStatus']
 
         recordContext['settings']['dir'] = recordContext[
@@ -100,7 +100,7 @@ def variate(oid, tag, value, **context):
                     break
 
             else:
-                log.msg('multiplex: directory %s not '
+                log.info('multiplex: directory %s not '
                         'found' % recordContext['settings']['dir'])
                 return context['origOid'], tag, context['errorStatus']
 
@@ -142,7 +142,7 @@ def variate(oid, tag, value, **context):
             recordContext['settings']['control'] = rfc1902.ObjectName(
                 recordContext['settings']['control'])
 
-            log.msg(
+            log.info(
                 'multiplex: using control OID %s for subtree %s, '
                 'time-based multiplexing '
                 'disabled' % (recordContext['settings']['control'], oid))
@@ -162,14 +162,14 @@ def variate(oid, tag, value, **context):
 
             fileno = int(context['origValue'])
             if fileno >= len(recordContext['keys']):
-                log.msg('multiplex: .snmprec file number %s over limit of'
+                log.info('multiplex: .snmprec file number %s over limit of'
                         ' %s' % (fileno, len(recordContext['keys'])))
 
                 return context['origOid'], tag, context['errorStatus']
 
             moduleContext[oid]['fileno'] = fileno
 
-            log.msg(
+            log.info(
                 'multiplex: switched to file #%s '
                 '(%s)' % (recordContext['keys'][fileno],
                           recordContext['dirmap'][recordContext['keys'][fileno]]))
@@ -222,7 +222,7 @@ def variate(oid, tag, value, **context):
 
         moduleContext[oid]['datafile'] = datafile
 
-        log.msg(
+        log.info(
             'multiplex: switching to data file %s for '
             '%s' % (datafile, context['origOid']))
 
@@ -282,7 +282,7 @@ def record(oid, tag, value, **context):
             moduleContext['filenum'] = 0
 
         if 'iterations' in moduleContext and moduleContext['iterations']:
-            log.msg('multiplex: %s iterations '
+            log.info('multiplex: %s iterations '
                     'remaining' % moduleContext['iterations'])
 
             moduleContext['started'] = time.time()
@@ -312,7 +312,7 @@ def record(oid, tag, value, **context):
         moduleContext['parser'] = RECORD_SET[dstRecordType]
         moduleContext['file'] = moduleContext['parser'].open(snmprecfile, 'wb')
 
-        log.msg('multiplex: writing into %s file...' % snmprecfile)
+        log.info('multiplex: writing into %s file...' % snmprecfile)
 
     record = moduleContext['parser'].format(
         context['origOid'], context['origValue'])

@@ -56,7 +56,7 @@ class RecordIndex(object):
     def get_handles(self):
         if self.is_open():
             if self._text_file_time != os.stat(self._text_file)[8]:
-                log.msg('Text file %s modified, closing' % self._text_file)
+                log.info('Text file %s modified, closing' % self._text_file)
                 self.close()
 
         if not self.is_open():
@@ -83,22 +83,22 @@ class RecordIndex(object):
             if os.path.exists(db_file):
                 if text_file_time < os.stat(db_file)[8]:
                     if index_needed:
-                        log.msg('Forced index rebuild %s' % db_file)
+                        log.info('Forced index rebuild %s' % db_file)
 
                     elif not whichdb.whichdb(self._db_file):
                         index_needed = True
-                        log.msg('Unsupported index format, rebuilding '
+                        log.info('Unsupported index format, rebuilding '
                                 'index %s' % db_file)
 
                 else:
                     index_needed = True
-                    log.msg('Index %s out of date' % db_file)
+                    log.info('Index %s out of date' % db_file)
 
                 break
 
         else:
             index_needed = True
-            log.msg('Index %s does not exist for data file '
+            log.info('Index %s does not exist for data file '
                     '%s' % (self._db_file, self._text_file))
 
         if index_needed:
@@ -133,7 +133,7 @@ class RecordIndex(object):
                 raise error.SnmpsimError(
                     'Failed to open data file %s: %s' % (self._db_file, exc))
 
-            log.msg(
+            log.info(
                 'Building index %s for data file %s (open flags '
                 '"%s")...' % (self._db_file, self._text_file, open_flags))
 
@@ -191,7 +191,7 @@ class RecordIndex(object):
                         )
 
                     except Exception as exc:
-                        log.msg(
+                        log.info(
                             'ERROR at line %s, value %r: '
                             '%s' % (line_no, val, exc))
 
@@ -209,7 +209,7 @@ class RecordIndex(object):
             text.close()
             db.close()
 
-            log.msg('...%d entries indexed' % line_no)
+            log.info('...%d entries indexed' % line_no)
 
         self._text_file_time = os.stat(self._text_file)[8]
 
