@@ -104,11 +104,10 @@ class FileLogger(AbstractLogger):
 
             self._failure = False
 
-            try:
-                timestamp = os.stat(self._filename)[stat.ST_MTIME]
-
-            except IOError:
+            if not os.path.exists(self._filename):
                 return
+
+            timestamp = os.stat(self._filename).st_mtime
 
             # Use a stand-aside file metadata time instead of the last
             # modification of the log file itself, as the stock
@@ -268,29 +267,29 @@ LEVELS_MAP = {
 
 msg = lambda x: None
 
-logLevel = LOG_INFO
+log_level = LOG_INFO
 
 
 def error(message, ctx=''):
-    if logLevel <= LOG_ERROR:
+    if log_level <= LOG_ERROR:
         msg('ERROR %s %s' % (message, ctx))
 
 
 def info(message, ctx=''):
-    if logLevel <= LOG_INFO:
+    if log_level <= LOG_INFO:
         msg('%s %s' % (message, ctx))
 
 
 def debug(message, ctx=''):
-    if logLevel <= LOG_DEBUG:
+    if log_level <= LOG_DEBUG:
         msg('DEBUG %s %s' % (message, ctx))
 
 
-def setLevel(level):
-    global logLevel
+def set_level(level):
+    global log_level
 
     try:
-        logLevel = LEVELS_MAP[level]
+        log_level = LEVELS_MAP[level]
 
     except KeyError:
         raise SnmpsimError(
@@ -298,7 +297,7 @@ def setLevel(level):
             '%s' % (level, ', '.join(LEVELS_MAP)))
 
 
-def setLogger(progId, *priv, **options):
+def set_logger(progId, *priv, **options):
     global msg
 
     try:

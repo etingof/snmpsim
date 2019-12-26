@@ -7,19 +7,20 @@
 # SNMP Agent Simulator
 #
 import json
-import time
 import os
-import tempfile
-from functools import wraps
 import re
+import tempfile
+import time
+from functools import wraps
 
-from snmpsim.reporting.formats import base
-from snmpsim import error
-
+from pyasn1.type import univ
 from pysnmp.carrier.asyncore.dgram import udp
 from pysnmp.carrier.asyncore.dgram import udp6
-from pysnmp.proto import rfc1902
 from pysnmp.entity import engine
+
+from snmpsim import error
+from snmpsim.reporting.formats import base
+from snmpsim import log
 
 
 def camel2snake(name):
@@ -36,7 +37,8 @@ def ensure_base_types(f):
         if isinstance(item, engine.SnmpEngine):
             item = item.snmpEngineID
 
-        if isinstance(item, (rfc1902.OctetString, rfc1902.ObjectIdentifier)):
+        if isinstance(item, (univ.Integer, univ.OctetString,
+                             univ.ObjectIdentifier)):
             item = item.prettyPrint()
 
             if item.startswith('0x'):
@@ -88,7 +90,7 @@ class BaseJsonReporter(base.BaseReporter):
     """Common base for JSON-backed family of reporters.
     """
 
-    REPORTING_PERIOD = 300
+    REPORTING_PERIOD = 3
     REPORTING_FORMAT = ''
     REPORTING_VERSION = 1
 
@@ -132,10 +134,16 @@ class BaseJsonReporter(base.BaseReporter):
 
         dump_path = os.path.join(self._reports_dir, '%s.json' % now)
 
-        with tempfile.NamedTemporaryFile(mode='w+t', delete=False) as fl:
-            json.dump(self._metrics, fl, indent=2)
+        try:
+            json_doc = json.dumps(self._metrics, indent=2)
 
-        os.rename(fl.name, dump_path)
+            with tempfile.NamedTemporaryFile(delete=False) as fl:
+                fl.write(json_doc)
+
+            os.rename(fl.name, dump_path)
+
+        except Exception as exc:
+            log.error('Metrics reporting failure: %s' % exc)
 
         self._metrics.clear()
 

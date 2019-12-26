@@ -236,11 +236,13 @@ def main():
         parser.print_usage(sys.stderr)
         return 1
 
+    proc_name = os.path.basename(sys.argv[0])
+
     try:
-        log.setLogger(__name__, *args.logging_method, force=True)
+        log.set_logger(proc_name, *args.logging_method, force=True)
 
         if args.log_level:
-            log.setLevel(args.log_level)
+            log.set_level(args.log_level)
 
     except error.SnmpsimError as exc:
         sys.stderr.write('%s\r\n%s\r\n' % exc)

@@ -341,24 +341,26 @@ def main():
 
     with daemon.PrivilegesOf(args.process_user, args.process_group):
 
+        proc_name = os.path.basename(sys.argv[0])
+
         try:
-            log.setLogger(__name__, *args.logging_method, force=True)
+            log.set_logger(proc_name, *args.logging_method, force=True)
 
             if args.log_level:
-                log.setLevel(args.log_level)
+                log.set_level(args.log_level)
 
         except SnmpsimError as exc:
             sys.stderr.write('%s\r\n' % exc)
             parser.print_usage(sys.stderr)
             return 1
 
-    try:
-        ReportingManager.configure(*args.reporting_method)
+        try:
+            ReportingManager.configure(*args.reporting_method)
 
-    except SnmpsimError as exc:
-        sys.stderr.write('%s\r\n' % exc)
-        parser.print_usage(sys.stderr)
-        return 1
+        except SnmpsimError as exc:
+            sys.stderr.write('%s\r\n' % exc)
+            parser.print_usage(sys.stderr)
+            return 1
 
     if args.daemonize:
         try:
