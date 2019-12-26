@@ -265,25 +265,27 @@ class FullJsonReporter(BaseJsonReporter):
         'first_update': '{timestamp}',
         'last_update': '{timestamp}',
         '{transport_protocol}': {
-            'transport_address': '{transport_address}',  # peer address
-            'transport_endpoint': '{transport_endpoint}',  # local address
-            'transport_domain': '{transport_domain}',  # endpoint ID
-            'total': 0,
-            '{snmp_engine}': {
-                '{security_model}': {
-                    '{security_level}': {
-                        '{security_name}': {
-                            '{context_engine_id}': {
-                                '{context_name}': {
-                                    '{pdu_type}': {
-                                        'total': 0,
-                                        '{data_file}': {
-                                            'total': 0,
-                                            'failures': 0,
-                                            'variation': {
-                                                '{module}': {
-                                                    'total: 0,
-                                                    'failures': 0
+            '{transport_endpoint}': {  # local address
+                'transport_domain': '{transport_domain}',  # endpoint ID
+                'total': 0,
+                '{snmp_engine}': {
+                    '{security_model}': {
+                        '{security_level}': {
+                            '{security_name}': {
+                                '{context_engine_id}': {
+                                    '{context_name}': {
+                                        '{pdu_type}': {
+                                            '{data_file}': {
+                                                'variation': {
+                                                    '{module}': {
+                                                        'total: 0,
+                                                        'failures': 0
+                                                    }
+                                                },
+                                                '{transport_address}', { # peer address
+                                                    'total': 0,
+                                                    'failures': 0,
+                                                    'varbinds': 0
                                                 }
                                             }
                                         }
@@ -292,7 +294,6 @@ class FullJsonReporter(BaseJsonReporter):
                             }
                         }
                     }
-                }
             }
         }
     }
@@ -325,8 +326,8 @@ class FullJsonReporter(BaseJsonReporter):
 
         try:
             metrics = metrics[kwargs['transport_protocol']]
+            metrics = metrics['%s:%s' % kwargs['transport_endpoint']]
             metrics['transport_domain'] = kwargs['transport_domain']
-            metrics['transport_endpoint'] = '%s:%s' % kwargs['transport_endpoint']
             metrics['total'] = (
                     metrics.get('total', 0)
                     + kwargs.get('transport_call_count', 0))
@@ -337,22 +338,19 @@ class FullJsonReporter(BaseJsonReporter):
             metrics = metrics[kwargs['security_name']]
             metrics = metrics[kwargs['context_engine_id']]
             metrics = metrics[kwargs['pdu_type']]
-            metrics['total'] = (
-                    metrics.get('total', 0)
-                    + kwargs.get('pdu_count', 0))
-
             metrics = metrics[kwargs['data_file']]
-            metrics['total'] = (metrics.get('total', 0)
-                                + kwargs.get('varbind_count', 0))
-            metrics['failures'] = (
-                    metrics.get('failures', 0)
-                    + kwargs.get('datafile_failure_count', 0))
 
             peers_metrics = metrics['peers']
             peer_metrics = peers_metrics[kwargs['transport_address']]
             peer_metrics['total'] = (
                     peer_metrics.get('total', 0)
-                    + kwargs.get('transport_call_count', 0))
+                    + kwargs.get('datafile_call_count', 0))
+            peer_metrics['failures'] = (
+                    peer_metrics.get('failures', 0)
+                    + kwargs.get('datafile_failure_count', 0))
+            peer_metrics['varbinds'] = (
+                    peer_metrics.get('varbinds', 0)
+                    + kwargs.get('varbind_count', 0))
 
             variations_metrics = metrics['variation']
             variation_metrics = variations_metrics[kwargs['variation']]

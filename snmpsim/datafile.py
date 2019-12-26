@@ -233,7 +233,8 @@ class DataFile(AbstractLayout):
 
         ReportingManager.update_metrics(
             data_file=self._text_file, varbind_count=vars_total,
-            datafile_failure_count=err_total, transport_call_count=1,
+            datafile_call_count=1, datafile_failure_count=err_total,
+            transport_call_count=1,
             **context)
 
         return rsp_var_binds
