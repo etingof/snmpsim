@@ -340,7 +340,6 @@ class FullJsonReporter(BaseJsonReporter):
             metrics = metrics[kwargs['pdu_type']]
             metrics = metrics[kwargs['data_file']]
 
-            metrics = metrics['peers']
             metrics = metrics[kwargs['transport_address']]
             metrics['pdus'] = (
                     metrics.get('pdus', 0)
