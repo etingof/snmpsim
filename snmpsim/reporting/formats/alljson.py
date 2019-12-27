@@ -267,7 +267,7 @@ class FullJsonReporter(BaseJsonReporter):
         '{transport_protocol}': {
             '{transport_endpoint}': {  # local address
                 'transport_domain': '{transport_domain}',  # endpoint ID
-                'total': 0,
+                'packets': 0,
                 '{snmp_engine}': {
                     '{security_model}': {
                         '{security_level}': {
@@ -276,16 +276,16 @@ class FullJsonReporter(BaseJsonReporter):
                                     '{context_name}': {
                                         '{pdu_type}': {
                                             '{data_file}': {
-                                                'variation': {
-                                                    '{module}': {
-                                                        'total: 0,
-                                                        'failures': 0
-                                                    }
-                                                },
                                                 '{transport_address}', { # peer address
-                                                    'total': 0,
+                                                    'pdus': 0,
+                                                    'varbinds': 0,
                                                     'failures': 0,
-                                                    'varbinds': 0
+                                                    'variation': {
+                                                        '{module}': {
+                                                            'pdus: 0,
+                                                            'failures': 0
+                                                        }
+                                                    }
                                                 }
                                             }
                                         }
@@ -328,8 +328,8 @@ class FullJsonReporter(BaseJsonReporter):
             metrics = metrics[kwargs['transport_protocol']]
             metrics = metrics['%s:%s' % kwargs['transport_endpoint']]
             metrics['transport_domain'] = kwargs['transport_domain']
-            metrics['total'] = (
-                    metrics.get('total', 0)
+            metrics['packets'] = (
+                    metrics.get('packets', 0)
                     + kwargs.get('transport_call_count', 0))
 
             metrics = metrics[kwargs['snmp_engine']]
@@ -340,25 +340,25 @@ class FullJsonReporter(BaseJsonReporter):
             metrics = metrics[kwargs['pdu_type']]
             metrics = metrics[kwargs['data_file']]
 
-            peers_metrics = metrics['peers']
-            peer_metrics = peers_metrics[kwargs['transport_address']]
-            peer_metrics['total'] = (
-                    peer_metrics.get('total', 0)
+            metrics = metrics['peers']
+            metrics = metrics[kwargs['transport_address']]
+            metrics['pdus'] = (
+                    metrics.get('pdus', 0)
                     + kwargs.get('datafile_call_count', 0))
-            peer_metrics['failures'] = (
-                    peer_metrics.get('failures', 0)
+            metrics['failures'] = (
+                    metrics.get('failures', 0)
                     + kwargs.get('datafile_failure_count', 0))
-            peer_metrics['varbinds'] = (
-                    peer_metrics.get('varbinds', 0)
+            metrics['varbinds'] = (
+                    metrics.get('varbinds', 0)
                     + kwargs.get('varbind_count', 0))
 
-            variations_metrics = metrics['variation']
-            variation_metrics = variations_metrics[kwargs['variation']]
-            variation_metrics['total'] = (
-                    variation_metrics.get('total', 0)
+            metrics = metrics['variation']
+            metrics = metrics[kwargs['variation']]
+            metrics['pdus'] = (
+                    metrics.get('pdus', 0)
                     + kwargs.get('variation_call_count', 0))
-            variation_metrics['failures'] = (
-                    variation_metrics.get('failures', 0)
+            metrics['failures'] = (
+                    metrics.get('failures', 0)
                     + kwargs.get('variation_failure_count', 0))
 
         except KeyError:
