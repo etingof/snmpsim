@@ -280,10 +280,11 @@ class FullJsonReporter(BaseJsonReporter):
                                         '{context_name}': {
                                             '{pdu_type}': {
                                                 '{data_file}': {
-                                                    # "" indicates all datafile hits
+                                                    'pdus': 0,
+                                                    'varbinds': 0,
+                                                    'failures': 0,
                                                     '{variation_module}': {
-                                                        'pdus': 0,
-                                                        'varbinds': 0,
+                                                        'calls': 0,
                                                         'failures': 0
                                                     }
                                                 }
@@ -333,6 +334,11 @@ class FullJsonReporter(BaseJsonReporter):
                     metrics.get('packets', 0)
                     + kwargs.get('transport_call_count', 0))
 
+            # TODO: collect these counters
+            metrics['parse_failures'] = 0
+            metrics['auth_failures'] = 0
+            metrics['context_failures'] = 0
+
             metrics = metrics[kwargs['snmp_engine']]
             metrics = metrics[kwargs['security_model']]
             metrics = metrics[kwargs['security_level']]
@@ -341,23 +347,23 @@ class FullJsonReporter(BaseJsonReporter):
             metrics = metrics[kwargs['pdu_type']]
             metrics = metrics[kwargs['data_file']]
 
-            counters = metrics['']  # all data file hits
-            counters['pdus'] = (
-                    counters.get('pdus', 0)
+            metrics['pdus'] = (
+                    metrics.get('pdus', 0)
                     + kwargs.get('datafile_call_count', 0))
-            counters['failures'] = (
-                    counters.get('failures', 0)
+            metrics['failures'] = (
+                    metrics.get('failures', 0)
                     + kwargs.get('datafile_failure_count', 0))
-            counters['varbinds'] = (
-                    counters.get('varbinds', 0)
+            metrics['varbinds'] = (
+                    metrics.get('varbinds', 0)
                     + kwargs.get('varbind_count', 0))
 
-            counters = metrics[kwargs['variation']]
-            counters['pdus'] = (
-                    counters.get('pdus', 0)
+            metrics = metrics['variations']
+            metrics = metrics[kwargs['variation']]
+            metrics['calls'] = (
+                    metrics.get('pdus', 0)
                     + kwargs.get('variation_call_count', 0))
-            counters['failures'] = (
-                    counters.get('failures', 0)
+            metrics['failures'] = (
+                    metrics.get('failures', 0)
                     + kwargs.get('variation_failure_count', 0))
 
         except KeyError:
