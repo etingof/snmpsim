@@ -10,7 +10,6 @@ import os
 
 from pyasn1.error import PyAsn1Error
 from pyasn1.type import univ
-from pysnmp import error
 from pysnmp.smi.error import MibOperationError
 
 from snmpsim import log

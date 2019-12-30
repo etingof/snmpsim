@@ -94,7 +94,7 @@ class BaseJsonReporter(base.BaseReporter):
     REPORTING_PERIOD = 300
     REPORTING_FORMAT = ''
     REPORTING_VERSION = 1
-    PRODUCER_UUID = uuid.uuid1()
+    PRODUCER_UUID = str(uuid.uuid1())
 
     def __init__(self, *args):
         if not args:
@@ -133,7 +133,7 @@ class BaseJsonReporter(base.BaseReporter):
 
         self._metrics['format'] = self.REPORTING_FORMAT
         self._metrics['version'] = self.REPORTING_VERSION
-        self._metrics['producer'] = str(self.PRODUCER_UUID)
+        self._metrics['producer'] = self.PRODUCER_UUID
 
         dump_path = os.path.join(self._reports_dir, '%s.json' % now)
 
@@ -300,6 +300,7 @@ class FullJsonReporter(BaseJsonReporter):
                             }
                         }
                     }
+                }
             }
         }
     }
