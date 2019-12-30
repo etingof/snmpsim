@@ -114,7 +114,7 @@ class RecordIndex(object):
                 except Exception as exc:
                     log.debug('DBM open with flags "%s" failed on file '
                               '%s: %s' % (open_flags, self._db_file, exc))
-                    errors.append(exc)
+                    errors.append(str(exc))
                     open_flags = open_flags[:-1]
                     continue
 
