@@ -24,7 +24,7 @@ Features
 * Can gather simulation data from external program invocation or a SQL database
 * Can trigger SNMP TRAP/INFORMs on SET operations
 * Capable to simultaneously simulate tens of thousands of Agents
-* Offers REST API based control plane
+* Offers REST API based [control plane](http://snmplabs.com/snmpsim-control-plane)
 * Gathers and reports extensive activity metrics
 * Pure-Python, easy to deploy and highly portable
 * Can be extended by loadable Python snippets

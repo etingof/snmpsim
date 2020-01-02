@@ -3,11 +3,11 @@ SNMP Agent Simulator
 ====================
 
 SNMP Simulator tool can simulate many thousands of different
-SNMP speaking devices on a network. It is primarily used for testing
+SNMP speaking devices on a network. It is primarily being used for testing
 and development purposes.
 
-It is free, open source and immediately available to anyone for whatever
-purpose free of charge.
+The software is free, open source and immediately available to anyone for
+whatever purpose.
 
 How to use SNMP Simulator
 -------------------------
@@ -24,6 +24,10 @@ SNMP Simulator suite
 
 Detailed documentation explaining the entire work flow and SNMP simulator
 tool set.
+
+For larger-scale, automated deployments REST API based
+`control plane <http://snmplabs.com/snmpsim-control-plane>`_ can be used for
+centralized management and monitoring purposes.
 
 .. toctree::
    :maxdepth: 2
