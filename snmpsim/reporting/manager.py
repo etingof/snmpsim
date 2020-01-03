@@ -41,7 +41,8 @@ class ReportingManager(object):
 
         cls._reporter = reporter(*args)
 
-        log.info('Using "%s" activity reporting method' % cls._reporter)
+        log.info('Using "%s" activity reporting method with '
+                 'params %s' % (cls._reporter, ', '.join(args)))
 
     @classmethod
     def update_metrics(cls, **kwargs):

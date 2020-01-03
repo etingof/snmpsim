@@ -124,6 +124,12 @@ class BaseJsonReporter(base.BaseReporter):
         self._metrics = NestingDict()
         self._next_dump = time.time() + self.REPORTING_PERIOD
 
+        log.debug(
+            'Initialized %s metrics reporter for instance %s, metrics '
+            'directory %s, dumping period is %s seconds' % (
+                self.__class__.__name__, self.PRODUCER_UUID, self._reports_dir,
+                self.REPORTING_PERIOD))
+
     def flush(self):
         """Dump accumulated metrics into a JSON file.
 
@@ -145,6 +151,8 @@ class BaseJsonReporter(base.BaseReporter):
 
         dump_path = os.path.join(self._reports_dir, '%s.json' % now)
 
+        log.debug('Dumping JSON metrics to %s' % dump_path)
+
         try:
             json_doc = json.dumps(self._metrics, indent=2)
 
@@ -154,7 +162,9 @@ class BaseJsonReporter(base.BaseReporter):
             os.rename(fl.name, dump_path)
 
         except Exception as exc:
-            log.error('Metrics reporting failure: %s' % exc)
+            log.error(
+                'Failure while dumping metrics into '
+                '%s: %s' % (dump_path, exc))
 
         self._metrics.clear()
 
@@ -382,4 +392,3 @@ class FullJsonReporter(BaseJsonReporter):
 
         except KeyError:
             return
-
