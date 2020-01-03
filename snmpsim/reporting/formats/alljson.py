@@ -99,10 +99,18 @@ class BaseJsonReporter(base.BaseReporter):
     def __init__(self, *args):
         if not args:
             raise error.SnmpsimError(
-                'Missing %s parameters. Expected: '
-                '<method>:<reports-dir>' % self.__class__.__name__)
+                'Missing %s parameter(s). Expected: '
+                '<method>:<reports-dir>[:dumping-period]' % self.__class__.__name__)
 
         self._reports_dir = os.path.join(args[0], self.REPORTING_FORMAT)
+
+        if len(args) > 1:
+            try:
+                self.REPORTING_PERIOD = int(args[1])
+
+            except Exception as exc:
+                raise error.SnmpsimError(
+                    'Malformed reports dumping period: %s' % args[1])
 
         try:
             if not os.path.exists(self._reports_dir):
