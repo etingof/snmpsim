@@ -118,10 +118,16 @@ else:
         def __enter__(self):
             if os.getuid() != 0:
                 if self._uname or self._gname:
-                    pw_name = pwd.getpwnam(self._uname).pw_name
-                    gr_name = grp.getgrnam(self._gname).gr_name
+                    try:
+                        pw_name = pwd.getpwnam(self._uname).pw_name
+                        gr_name = grp.getgrnam(self._gname).gr_name
 
-                    if self._uname != pw_name or  self._gname != gr_name:
+                    except Exception as exc:
+                        raise error.SnmpsimError(
+                            'getpwnam()/getgrnam() failed for %s/%s: '
+                            '%s' % (self._uname, self._gname, exc))
+
+                    if self._uname != pw_name or self._gname != gr_name:
                         raise error.SnmpsimError(
                             'Process is running under different UID/GID')
                 else:

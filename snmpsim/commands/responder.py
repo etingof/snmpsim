@@ -394,6 +394,14 @@ configured automatically based on simulation data file paths relative to
         snmp_helper.print_help(sys.stderr)
         return 1
 
+    _, unknown_args = snmp_helper.parse_known_args(unparsed_args)
+    if unknown_args:
+        sys.stderr.write(
+            'ERROR: Unknown command-line parameter(s) '
+            '%s\r\n' % ' '.join(unknown_args))
+        snmp_helper.print_usage(sys.stderr)
+        return 1
+
     # Reformat unparsed args into a list of (option, value) tuples
     snmp_args = []
     name = None
