@@ -157,7 +157,7 @@ class BaseJsonReporter(base.BaseReporter):
             json_doc = json.dumps(self._metrics, indent=2)
 
             with tempfile.NamedTemporaryFile(delete=False) as fl:
-                fl.write(json_doc)
+                fl.write(json_doc.encode('utf-8'))
 
             os.rename(fl.name, dump_path)
 
