@@ -199,6 +199,14 @@ class BulkCommandResponder(cmdrsp.BulkCommandResponder):
             self.releaseStateInformation(state_reference)
 
 
+def _parse_sized_string(arg, min_length=8):
+    if len(arg) < min_length:
+        raise argparse.ArgumentTypeError(
+            'Value "%s" must be %s+ chars of length' % (arg, min_length))
+
+    return arg
+
+
 def main():
 
     parser = argparse.ArgumentParser(add_help=False)
@@ -340,23 +348,26 @@ configured automatically based on simulation data file paths relative to
         help='SNMPv3 engine ID')
 
     v3_group.add_argument(
-        '--v3-user', type=str,
+        '--v3-user', metavar='<STRING>',
+        type=functools.partial(_parse_sized_string, min_length=1),
         help='SNMPv3 USM user (security) name')
 
     v3_group.add_argument(
-        '--v3-auth-key', type=str,
+        '--v3-auth-key', type=_parse_sized_string,
         help='SNMPv3 USM authentication key (must be > 8 chars)')
 
     v3_group.add_argument(
-        '--v3-auth-proto', choices=AUTH_PROTOCOLS, default='NONE',
+        '--v3-auth-proto', choices=AUTH_PROTOCOLS,
+        type=lambda x: x.upper(), default='NONE',
         help='SNMPv3 USM authentication protocol')
 
     v3_group.add_argument(
-        '--v3-priv-key', type=str,
+        '--v3-priv-key', type=_parse_sized_string,
         help='SNMPv3 USM privacy (encryption) key (must be > 8 chars)')
 
     v3_group.add_argument(
-        '--v3-priv-proto', choices=PRIV_PROTOCOLS, default='NONE',
+        '--v3-priv-proto', choices=PRIV_PROTOCOLS,
+        type=lambda x: x.upper(), default='NONE',
         help='SNMPv3 USM privacy (encryption) protocol')
 
     v3_group.add_argument(
