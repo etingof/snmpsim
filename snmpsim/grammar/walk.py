@@ -20,6 +20,7 @@ class WalkGrammar(abstract.AbstractGrammar):
     # case-insensitive keys as snmpwalk output tend to vary
     TAG_MAP = {
         'OID:': rfc1902.ObjectName,
+        'NULL:': univ.Null,
         'INTEGER:': rfc1902.Integer,
         'STRING:': rfc1902.OctetString,
         'BITS:': rfc1902.Bits,
@@ -165,6 +166,10 @@ class WalkGrammar(abstract.AbstractGrammar):
         # this is implicit snmpwalk's fuzziness
         elif value == '""' or value == 'STRING:':
             tag = 'STRING:'
+            value = ''
+
+        elif value == 'NULL':
+            tag = 'NULL:'
             value = ''
 
         else:
