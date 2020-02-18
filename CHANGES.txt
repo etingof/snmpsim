@@ -82,6 +82,7 @@ Revision 0.4.8, released XX-08-2019
 - Fixed `redis` variation module to run under Py3
 - Fixed broken indices clean-up, especially on Mac OS
 - Fixed broken `multiplex` module initialization
+- Fixed broken NULL value parsing in .snmpwalk files
 
 Revision 0.4.7, released 09-02-2019
 -----------------------------------
