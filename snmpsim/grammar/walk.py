@@ -19,6 +19,7 @@ class WalkGrammar(abstract.AbstractGrammar):
     # case-insensitive keys as snmpwalk output tend to vary
     TAG_MAP = {
         'OID:': rfc1902.ObjectName,
+        'NULL:': univ.Null,
         'INTEGER:': rfc1902.Integer,
         'STRING:': rfc1902.OctetString,
         'BITS:': rfc1902.Bits,
@@ -165,8 +166,12 @@ class WalkGrammar(abstract.AbstractGrammar):
                 tag = 'STRING:'
                 value = ''
 
-            else:
-                tag = 'TimeTicks:'
+        elif value == 'NULL':
+            tag = 'NULL:'
+            value = ''
+
+        else:
+            tag = 'TimeTicks:'
 
         if oid and tag:
             handler = filters.get(tag.upper(), lambda x: x)
