@@ -166,12 +166,12 @@ class WalkGrammar(abstract.AbstractGrammar):
                 tag = 'STRING:'
                 value = ''
 
-        elif value == 'NULL':
-            tag = 'NULL:'
-            value = ''
+            elif value == 'NULL':
+                tag = 'NULL:'
+                value = ''
 
-        else:
-            tag = 'TimeTicks:'
+            else:
+                tag = 'TimeTicks:'
 
         if oid and tag:
             handler = filters.get(tag.upper(), lambda x: x)
