@@ -73,6 +73,7 @@ class WalkGrammar(abstract.AbstractGrammar):
 
     @staticmethod
     def _opaque_filter(value):
+        opaque_tag = ''
         match = re.match(r'^(\w+: +)', value)
         if match:
             opaque_tag = match.group(1).upper()
