@@ -73,11 +73,52 @@ class WalkGrammar(abstract.AbstractGrammar):
 
     @staticmethod
     def _opaque_filter(value):
-        if value.upper().startswith('FLOAT: '):
+        match = re.match(r'^(\w+: +)', value)
+        if match:
+            opaque_tag = match.group(1).upper()
+            value = value[len(opaque_tag):]
+
+        if opaque_tag.startswith('FLOAT: '):
+            # .1.3.6.1.4.1.6574.4.3.1.1.0 = Opaque: Float: 100.000000
             return encoder.encode(univ.Real(float(value[7:])))
 
-        else:
-            return [int(y, 16) for y in value.split(' ')]
+        elif opaque_tag.startswith('UINT64: '):
+            # .1.3.6.1.4.1.2021.10.1.6.2 = Opaque: UInt64: 18446744073709551614
+            # there should be BER encoder, but really I not how do this,
+            # I just convert to HEX value instead
+            hex = format(int(value), '#0x').replace('0x', '').upper()
+            add = len(hex) % 2
+            hex = add * '0' + hex
+            parts = [hex[i:i + 2] for i in range(0, len(hex), 2)]
+
+            # value len
+            hex = format(len(parts), '#0x').replace('0x', '').upper()
+            add = len(hex) % 2
+            hex = add * '0' + hex
+            parts = [hex[i:i + 2] for i in range(0, len(hex), 2)] + parts
+
+            # UInt64 subtag is 9f7b
+            value = '9F 7B ' + ' '.join(parts)
+
+        elif opaque_tag.startswith('INT64: '):
+            # .1.3.6.1.4.1.2021.10.1.6.3 = Opaque: Int64: 9223372036854775806
+            # .1.3.6.1.4.1.2021.10.1.6.4 = Opaque: Int64: -2
+            # really not know how operate with signed integers (currently support only positive numbers)
+            hex = format(int(value), '#0x').replace('0x', '').upper()
+            add = len(hex) % 2
+            hex = add * '0' + hex
+            parts = [hex[i:i + 2] for i in range(0, len(hex), 2)]
+
+            # value len
+            hex = format(len(parts), '#0x').replace('0x', '').upper()
+            add = len(hex) % 2
+            hex = add * '0' + hex
+            parts = [hex[i:i + 2] for i in range(0, len(hex), 2)] + parts
+
+            # Int64 subtag is 9f7a
+            value = '9F 7A ' + ' '.join(parts)
+
+        return [int(y, 16) for y in value.split(' ')]
 
     @staticmethod
     def _bits_filter(value):
