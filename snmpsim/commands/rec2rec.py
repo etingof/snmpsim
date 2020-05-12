@@ -115,12 +115,12 @@ def main():
              'values')
 
     parser.add_argument(
-        '--start-object', metavar='<MIB::Object|OID>', type=_parse_mib_object,
+        '--start-object', dest='start_oid', metavar='<MIB::Object|OID>', type=_parse_mib_object,
         help='Drop all simulation data records prior to this OID specified '
              'as MIB object (MIB::Object) or OID (1.3.6.)')
 
     parser.add_argument(
-        '--stop-object', metavar='<MIB::Object|OID>',
+        '--stop-object', dest='stop_oid', metavar='<MIB::Object|OID>',
         type=functools.partial(_parse_mib_object, last=True),
         help='Drop all simulation data records after this OID specified '
              'as MIB object (MIB::Object) or OID (1.3.6.)')
@@ -151,8 +151,8 @@ def main():
 
     args = parser.parse_args()
 
-    if not args.mib_source:
-        args.mib_source = ['http://mibs.snmplabs.com/asn1/@mib@']
+    if not args.mib_sources:
+        args.mib_sources = ['http://mibs.snmplabs.com/asn1/@mib@']
 
     args.input_files = [
         RECORD_TYPES[args.source_record_type].open(x)
