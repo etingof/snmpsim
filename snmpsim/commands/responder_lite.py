@@ -299,7 +299,7 @@ def main():
         R = max(len(req_var_binds) - N, 0)
 
         if R:
-            M = min(M, args.max_var_binds / R)
+            M = min(M, int(args.max_var_binds / R))
 
         if N:
             rsp_var_binds = read_next_vars(req_var_binds[:N])
