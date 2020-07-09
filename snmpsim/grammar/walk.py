@@ -97,8 +97,12 @@ class WalkGrammar(abstract.AbstractGrammar):
         match = re.match(r'^([0-9a-fA-F]{2}(\s+[0-9a-fA-F]{2})*)\s+\[', value)
         if match:
             return [int(y, 16) for y in match.group(1).split(' ')]
-        
-        return [int(y, 16) for y in value.split(' ')]
+        elif ' ' in value:
+            return [int(y, 16) for y in value.split(' ')]
+        else:
+            # This could be the format returned by some unknown windows snmpwalk tool:
+            # .1.3.6.1.2.1.2.2.1.6.1 = HEX-STRING: 00029929AE3C
+            return [int(value[i:i+2], 16) for i in range(0, len(value), 2)]
 
     @staticmethod
     def _gauge_filter(value):
