@@ -82,6 +82,10 @@ def main():
         help='Enable one or more categories of SNMP debugging.')
 
     parser.add_argument(
+        '--row-hint', dest='row_hint', action='store_true',
+        help='Hint for MIBs Type')
+
+    parser.add_argument(
         '--mib-source', dest='mib_sources', metavar='<URI|PATH>',
         action='append', type=str,
         default=['http://mibs.snmplabs.com/asn1/@mib@'],
