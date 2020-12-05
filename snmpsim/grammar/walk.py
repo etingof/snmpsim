@@ -82,6 +82,10 @@ class WalkGrammar(abstract.AbstractGrammar):
     @staticmethod
     def _bits_filter(value):
         # rfc1902.Bits does not really initialize from sequences
+        if value == '':
+            # .1.3.6.1.2.1.10.7.9.1.1.509 = BITS:
+            return value
+        
         # Clean bits values
         # .1.3.6.1.2.1.17.6.1.1.1.0 = BITS: 5B 00 00 00   [[...]1 3 4 6 7
         # .1.3.6.1.2.1.17.6.1.1.1.0 = BITS: 5B 00 00 00   clear(1)        
