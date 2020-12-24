@@ -47,7 +47,7 @@ MODULE_OPTIONS = (
 )
 
 
-def _cbFun(sendRequestHandle, errorIndication, errorStatus,
+def _cbFun(snmpEngine, sendRequestHandle, errorIndication, errorStatus,
            errorIndex, varBinds, cbCtx):
     oid, value = cbCtx
 
