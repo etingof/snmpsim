@@ -176,7 +176,7 @@ def main():
         with open(args.string_pool_file) as fl:
             args.string_pool = fl.read().split()
 
-    elif args.string_pool:
+    elif not args.string_pool:
         args.string_pool = ['Jaded', 'zombies', 'acted', 'quaintly', 'but',
                             'kept', 'driving', 'their', 'oxen', 'forward']
 
