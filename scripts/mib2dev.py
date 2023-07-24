@@ -455,6 +455,8 @@ for modName in modNames:
     suffix = ()
     thisTableSize = 0
 
+    globalIndices = {}
+
     while True:
         try:
             oid, label, _ = mibViewController.getNextNodeName(oid)
@@ -530,8 +532,15 @@ for modName in modNames:
                 rowHint += '# Index %s::%s (type %s)\r\n' % (
                     idxModName, idxSymName, idxNode.syntax.__class__.__name__)
 
-                rowIndices[idxNode.name] = getValue(
-                    idxNode.syntax, verboseFlag and rowHint or '')
+                if idxSymName in globalIndices and len(globalIndices[idxSymName]) == tableSize:
+                    # We've already generated indexes for this row
+                    rowIndices[idxNode.name] = globalIndices[idxSymName][thisTableSize - 1]
+                else:
+                    if idxSymName not in globalIndices:
+                        globalIndices[idxSymName] = []
+                    rowIndices[idxNode.name] = getValue(
+                        idxNode.syntax, verboseFlag and rowHint or '')
+                    globalIndices[idxSymName].append(rowIndices[idxNode.name])
 
                 suffix = suffix + node.getAsName(
                     rowIndices[idxNode.name], impliedFlag)
